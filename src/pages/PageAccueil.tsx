@@ -26,7 +26,7 @@ const PageAccueil = () => {
             <button onClick={() => navigate('/connexion')} className="btn-secondary py-2 px-5 text-sm">
               Connexion
             </button>
-            <button onClick={() => navigate('/abonnement')} className="btn-primary accent py-2 px-5 text-sm hidden md:flex">
+            <button onClick={() => navigate('/inscription')} className="btn-primary accent py-2 px-5 text-sm hidden md:flex">
               Essai Gratuit
             </button>
           </div>
@@ -65,7 +65,7 @@ const PageAccueil = () => {
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}
               className="flex flex-col sm:flex-row gap-4 w-full justify-center"
             >
-              <button onClick={() => navigate('/abonnement')} className="btn-primary accent text-lg px-10 py-4">
+              <button onClick={() => navigate('/inscription')} className="btn-primary accent text-lg px-10 py-4">
                 Démarrer mon essai <ArrowRight size={20} />
               </button>
               <button className="btn-secondary text-lg px-10 py-4 group">

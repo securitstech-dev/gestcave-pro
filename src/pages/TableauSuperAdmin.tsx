@@ -45,11 +45,16 @@ const TableauSuperAdmin = () => {
   const approuverDemande = async (demandeId: string, demande: any) => {
     const toastId = toast.loading('Approbation en cours...');
     try {
-      // 1. Créer l'établissement
+      // 1. Créer l'établissement (Compte Officiel)
       const etabRef = await addDoc(collection(db, 'etablissements'), {
         nom: demande.nom_etablissement,
+        adresse: demande.adresse_etablissement || 'N/A',
+        telephone: demande.telephone_contact || 'N/A',
+        contact_principal: demande.nom_contact,
+        email_contact: demande.email_contact,
         subscription_plan: 'essai_gratuit',
         subscription_status: 'actif',
+        subscription_start_date: new Date().toISOString(),
         subscription_end_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
       });
 
@@ -225,7 +230,7 @@ const TableauSuperAdmin = () => {
                 <table className="w-full text-left">
                   <thead className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider">
                     <tr>
-                      <th className="px-6 py-4 font-semibold">Établissement</th>
+                      <th className="px-6 py-4 font-semibold">Établissement & Adresse</th>
                       <th className="px-6 py-4 font-semibold">Contact</th>
                       <th className="px-6 py-4 font-semibold">Téléphone</th>
                       <th className="px-6 py-4 font-semibold">Statut</th>
@@ -239,7 +244,10 @@ const TableauSuperAdmin = () => {
                       <tr><td colSpan={6} className="p-10 text-center text-slate-500">Aucune demande trouvée</td></tr>
                     ) : demandesFiltrees.map((dem) => (
                       <tr key={dem.id} className="hover:bg-white/5 transition-colors">
-                        <td className="px-6 py-4 font-medium">{dem.nom_etablissement}</td>
+                        <td className="px-6 py-4">
+                          <div className="font-medium">{dem.nom_etablissement}</div>
+                          <div className="text-xs text-slate-500">{dem.adresse_etablissement || 'Pas d\'adresse'}</div>
+                        </td>
                         <td className="px-6 py-4">
                           <div className="text-sm font-medium">{dem.nom_contact}</div>
                           <div className="text-xs text-slate-500">{dem.email_contact}</div>
@@ -272,6 +280,77 @@ const TableauSuperAdmin = () => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </motion.div>
+          )}
+
+          {onglet === 'etablissements' && (
+            <motion.div
+              key="etablissements"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="bento-item overflow-hidden"
+            >
+              <div className="p-6 border-b border-white/5 flex justify-between items-center">
+                <h3 className="text-xl font-bold">Liste des Abonnés</h3>
+                <span className="text-sm text-slate-500">{demandes.filter(d => d.statut === 'essai_actif').length} établissement(s) actif(s)</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider">
+                    <tr>
+                      <th className="px-6 py-4 font-semibold">Établissement</th>
+                      <th className="px-6 py-4 font-semibold">Plan</th>
+                      <th className="px-6 py-4 font-semibold">Fin d'accès</th>
+                      <th className="px-6 py-4 font-semibold">Jours restants</th>
+                      <th className="px-6 py-4 font-semibold">Email</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {demandes.filter(d => d.statut === 'essai_actif').map((etab) => {
+                       const fin = new Date(etab.subscription_end_date || Date.now());
+                       const aujourdhui = new Date();
+                       const diff = Math.ceil((fin.getTime() - aujourdhui.getTime()) / (1000 * 60 * 60 * 24));
+                       return (
+                        <tr key={etab.id} className="hover:bg-white/5 transition-colors text-sm">
+                          <td className="px-6 py-4 font-medium">{etab.nom_etablissement}</td>
+                          <td className="px-6 py-4">
+                             <span className="bg-indigo-500/10 text-indigo-400 px-2 py-1 rounded text-xs font-bold">
+                               ESSAI GRATUIT
+                             </span>
+                          </td>
+                          <td className="px-6 py-4 text-slate-400">
+                             {fin.toLocaleDateString('fr-FR')}
+                          </td>
+                          <td className="px-6 py-4 font-bold">
+                             <span className={diff > 3 ? 'text-green-500' : 'text-orange-500'}>
+                               {diff} jour(s)
+                             </span>
+                          </td>
+                          <td className="px-6 py-4 text-slate-500">{etab.email_contact}</td>
+                        </tr>
+                       );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </motion.div>
+          )}
+
+          {onglet === 'paiements' && (
+            <motion.div
+              key="paiements"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="bento-item overflow-hidden"
+            >
+              <div className="p-6 border-b border-white/5">
+                <h3 className="text-xl font-bold">Paiements en attente</h3>
+              </div>
+              <div className="p-10 text-center text-slate-600">
+                 Aucun paiement à valider pour le moment.
               </div>
             </motion.div>
           )}

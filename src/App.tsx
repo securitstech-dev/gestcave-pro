@@ -9,6 +9,7 @@ import SelectionMode from './pages/roles/SelectionMode';
 import InterfaceServeur from './pages/roles/InterfaceServeur';
 import InterfaceCuisine from './pages/roles/InterfaceCuisine';
 import InterfaceCaissier from './pages/roles/InterfaceCaissier';
+import PageInscription from './pages/PageInscription';
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
           <Route path="/super-admin/*" element={<TableauSuperAdmin />} />
           <Route path="/tableau-de-bord/*" element={<TableauClient />} />
           <Route path="/abonnement" element={<PageAbonnement />} />
+          <Route path="/inscription" element={<PageInscription />} />
           
           {/* Redirection par défaut */}
           <Route path="*" element={<Navigate to="/" replace />} />
