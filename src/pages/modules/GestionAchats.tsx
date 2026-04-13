@@ -25,8 +25,9 @@ const GestionAchats = () => {
     
     // Formulaire
     const [produitId, setProduitId] = useState('');
+    const [modeAchat, setModeAchat] = useState<'casier' | 'bouteille'>('casier');
     const [quantite, setQuantite] = useState(1);
-    const [prixAchat, setPrixAchat] = useState(0);
+    const [prixAchat, setPrixAchat] = useState(0); // Prix du casier ou de la bouteille
     const [fournisseur, setFournisseur] = useState('');
 
     useEffect(() => {
@@ -52,12 +53,16 @@ const GestionAchats = () => {
 
         try {
             const total = quantite * prixAchat;
+            // Conversion en unités (bouteilles)
+            const quantiteUnites = modeAchat === 'casier' ? quantite * (produit.unitesParCasier || 1) : quantite;
             
             // 1. Créer l'entrée d'achat
             await addDoc(collection(db, 'achats'), {
                 produitId,
                 produitNom: produit.nom,
-                quantite,
+                modeAchat,
+                quantiteSaisie: quantite,
+                quantiteUnites,
                 prixUnitaire: prixAchat,
                 total,
                 fournisseur,
@@ -66,7 +71,7 @@ const GestionAchats = () => {
             });
 
             // 2. Mettre à jour le stock
-            const nouveauStock = (produit.stockTotal || 0) + quantite;
+            const nouveauStock = (produit.stockTotal || 0) + quantiteUnites;
             await updateDoc(doc(db, 'produits', produitId), {
                 stockTotal: nouveauStock
             });
@@ -134,37 +139,66 @@ const GestionAchats = () => {
                                     ))}
                                 </select>
                             </div>
-                            <div>
-                                <label className="label-style">Quantité (Unités)</label>
-                                <input 
-                                    type="number" 
-                                    className="glass-input w-full" 
-                                    value={quantite} 
-                                    onChange={(e) => setQuantite(Number(e.target.value))}
-                                    required
-                                    min="1"
-                                />
-                            </div>
-                            <div>
-                                <label className="label-style">Prix d'achat unitaire (F)</label>
-                                <input 
-                                    type="number" 
-                                    className="glass-input w-full" 
-                                    value={prixAchat} 
-                                    onChange={(e) => setPrixAchat(Number(e.target.value))}
-                                    required
-                                    min="0"
-                                />
-                            </div>
                             <div className="col-span-2">
-                                <label className="label-style">Fournisseur / Lieu d'achat</label>
-                                <input 
-                                    type="text" 
-                                    className="glass-input w-full" 
-                                    value={fournisseur} 
-                                    onChange={(e) => setFournisseur(e.target.value)}
-                                    placeholder="Ex: Marché central, Grossiste Boisson..."
-                                />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-2">Mode d'achat</label>
+                                        <div className="flex gap-2">
+                                            <button 
+                                                type="button"
+                                                onClick={() => setModeAchat('casier')}
+                                                className={`flex-1 py-2 px-4 rounded-lg border ${modeAchat === 'casier' ? 'bg-indigo-600 border-indigo-500 text-white' : 'border-slate-700 text-slate-400'}`}
+                                            >
+                                                Par Casier
+                                            </button>
+                                            <button 
+                                                type="button"
+                                                onClick={() => setModeAchat('bouteille')}
+                                                className={`flex-1 py-2 px-4 rounded-lg border ${modeAchat === 'bouteille' ? 'bg-indigo-600 border-indigo-500 text-white' : 'border-slate-700 text-slate-400'}`}
+                                            >
+                                                Par Bouteille
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-2">
+                                            Quantité ({modeAchat === 'casier' ? 'Casiers' : 'Bouteilles'})
+                                        </label>
+                                        <input 
+                                            type="number" 
+                                            value={quantite}
+                                            onChange={(e) => setQuantite(Number(e.target.value))}
+                                            className="w-full bg-slate-800 border-slate-700 rounded-lg text-white px-4 py-2"
+                                            min="1"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-2">
+                                            Prix {modeAchat === 'casier' ? 'du casier' : 'de la bouteille'} (FCFA)
+                                        </label>
+                                        <input 
+                                            type="number" 
+                                            value={prixAchat}
+                                            onChange={(e) => setPrixAchat(Number(e.target.value))}
+                                            className="w-full bg-slate-800 border-slate-700 rounded-lg text-white px-4 py-2"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-2">Fournisseur (Optionnel)</label>
+                                        <input 
+                                            type="text" 
+                                            value={fournisseur}
+                                            onChange={(e) => setFournisseur(e.target.value)}
+                                            className="w-full bg-slate-800 border-slate-700 rounded-lg text-white px-4 py-2"
+                                            placeholder="Nom du fournisseur"
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

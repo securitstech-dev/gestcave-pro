@@ -35,7 +35,7 @@ const GestionTables = () => {
       setLoading(false);
     });
     return () => unsub();
-  }, [profil?.id]);
+  }, [profil?.etablissement_id]);
 
   const ajouterTable = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,8 +53,9 @@ const GestionTables = () => {
       toast.success(`Table ${nom} créée`);
       setShowModal(false);
       setNom('');
-    } catch {
-      toast.error("Erreur de création");
+    } catch (error: any) {
+      console.error("Erreur création table:", error);
+      toast.error(`Erreur : ${error.message || "Impossible de créer"}`);
     }
   };
 

@@ -25,6 +25,10 @@ const GestionStocks = () => {
   const [showModal, setShowModal] = useState(false);
 
   // Formulaire Nouvel Article
+  const [modeAchat, setModeAchat] = useState<'casier' | 'bouteille'>('casier');
+  const [quantite, setQuantite] = useState(1);
+  const [prixUnitaire, setPrixUnitaire] = useState(0); // Prix du casier ou de la bouteille
+  const [fournisseur, setFournisseur] = useState('');
   const [nom, setNom] = useState('');
   const [prix, setPrix] = useState(0);
   const [categorie, setCategorie] = useState<'Boisson' | 'Ingrédient' | 'A-Côté'>('Boisson');
@@ -41,7 +45,7 @@ const GestionStocks = () => {
       setLoading(false);
     });
     return () => unsub();
-  }, [profil?.id]);
+  }, [profil?.etablissement_id]);
 
   const ajouterProduit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,8 +64,10 @@ const GestionStocks = () => {
       });
       toast.success(`${nom} ajouté au catalogue`);
       setShowModal(false);
-    } catch {
-      toast.error("Erreur lors de l'ajout");
+      setNom('');
+    } catch (error: any) {
+      console.error("Erreur ajout produit:", error);
+      toast.error(`Erreur : ${error.message || "Impossible d'ajouter"}`);
     }
   };
 

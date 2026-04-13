@@ -37,7 +37,7 @@ const GestionEmployes = () => {
     });
 
     return () => unsub();
-  }, [profil?.id]);
+  }, [profil?.etablissement_id]);
 
   const genererPIN = () => {
     return Math.floor(1000 + Math.random() * 9000).toString();
@@ -60,8 +60,9 @@ const GestionEmployes = () => {
       toast.success(`${nouveauNom} ajouté avec succès`);
       setNouveauNom('');
       setShowModal(false);
-    } catch (error) {
-      toast.error("Erreur lors de l'ajout");
+    } catch (error: any) {
+      console.error("Erreur ajout employé:", error);
+      toast.error(`Erreur : ${error.message || "Impossible d'ajouter"}`);
     }
   };
 
