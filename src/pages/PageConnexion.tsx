@@ -30,7 +30,7 @@ const PageConnexion = () => {
         { icon: '🔓', duration: 3000 }
       );
       
-      if (typeCompte === 'admin' && email === 'admin@gestcave.com') {
+      if (typeCompte === 'admin' && email === 'securitstech@gmail.com') {
         navigate('/super-admin');
       } else {
         navigate('/choisir-role');
@@ -124,7 +124,7 @@ const PageConnexion = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="glass-input w-full pl-11 h-12"
-                    placeholder={typeCompte === 'admin' ? "admin@gestcave.com" : "contact@monbar.com"}
+                    placeholder={typeCompte === 'admin' ? "securitstech@gmail.com" : "contact@monbar.com"}
                     required
                   />
                 </div>
