@@ -5,12 +5,7 @@ import { usePOSStore } from '../../store/posStore';
 import { useNavigate } from 'react-router-dom';
 
 const PlanDeSalles = () => {
-  const { tables, commandes, initialiserTempsReel } = usePOSStore();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    initialiserTempsReel();
-  }, []);
+  const { tables, commandes } = usePOSStore();
 
   const getMinutesEcoulees = (iso: string) => {
     if (!iso) return 0;

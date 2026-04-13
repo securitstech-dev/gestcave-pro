@@ -27,9 +27,9 @@ const GestionEmployes = () => {
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
-    if (!profil?.id) return;
+    if (!profil?.etablissement_id) return;
 
-    const q = query(collection(db, 'employes'), where('etablissementId', '==', profil.id));
+    const q = query(collection(db, 'employes'), where('etablissement_id', '==', profil.etablissement_id));
     const unsub = onSnapshot(q, (snapshot) => {
       const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Employe[];
       setEmployes(docs);
@@ -54,7 +54,7 @@ const GestionEmployes = () => {
         pin: genererPIN(),
         salaire: Number(nouveauSalaire),
         actif: true,
-        etablissementId: profil.id,
+        etablissement_id: profil.etablissement_id,
         dateCreation: new Date().toISOString()
       });
       toast.success(`${nouveauNom} ajouté avec succès`);

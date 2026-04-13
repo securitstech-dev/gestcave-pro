@@ -15,10 +15,20 @@ import GestionTables from './modules/GestionTables';
 import PlanDeSalles from './modules/PlanDeSalles';
 import GestionFinance from './modules/GestionFinance';
 import GestionAchats from './modules/GestionAchats';
+import { usePOSStore } from '../store/posStore';
+import { useEffect } from 'react';
 
 const TableauClient = () => {
   const { profil, deconnexion } = useAuthStore();
+  const { initialiserTempsReel, arreterTempsReel } = usePOSStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (profil?.etablissement_id) {
+      initialiserTempsReel(profil.etablissement_id);
+    }
+    return () => arreterTempsReel();
+  }, [profil?.etablissement_id, initialiserTempsReel, arreterTempsReel]);
 
   const gererDeconnexion = () => {
     deconnexion();

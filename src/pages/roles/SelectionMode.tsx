@@ -77,7 +77,7 @@ const SelectionMode = () => {
     try {
       const q = query(
         collection(db, 'employes'), 
-        where('etablissementId', '==', profil.id),
+        where('etablissement_id', '==', profil.etablissement_id),
         where('pin', '==', pin)
       );
       

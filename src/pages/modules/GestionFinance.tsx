@@ -26,18 +26,14 @@ const GestionFinance = () => {
   const [tauxTaxe, setTauxTaxe] = useState(5.5); // Exemple : 5.5%
 
   useEffect(() => {
-    if (!profil?.id) return;
-
-    // Récupérer toutes les transactions de l'établissement
-    // Note: Pour une vraie app, on filtrerait par mois/jour par défaut
     const q = query(
       collection(db, 'transactions_pos'), 
-      where('etablissementId', '==', profil.id),
+      where('etablissement_id', '==', profil.etablissement_id),
       orderBy('date', 'desc')
     );
     
     // Fallback if index is not yet created
-    const qBasic = query(collection(db, 'transactions_pos'), where('etablissementId', '==', profil.id));
+    const qBasic = query(collection(db, 'transactions_pos'), where('etablissement_id', '==', profil.etablissement_id));
 
     const unsub = onSnapshot(qBasic, (snap) => {
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Transaction[];
@@ -48,7 +44,7 @@ const GestionFinance = () => {
     });
 
     return () => unsub();
-  }, [profil?.id]);
+  }, [profil?.etablissement_id]);
 
   // Calculs
   const chiffreAffairesTotal = transactions.reduce((acc, t) => acc + (t.modePaiement === 'comptant' ? t.total : 0), 0);

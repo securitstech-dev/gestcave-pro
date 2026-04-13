@@ -67,7 +67,7 @@ interface PosState {
   loading: boolean;
   unsubscribers: (() => void)[];
   
-  initialiserTempsReel: () => void;
+  initialiserTempsReel: (etablissement_id: string) => void;
   arreterTempsReel: () => void;
   ajouterLigne: (commandeId: string, produit: Produit) => Promise<void>;
   modifierQuantite: (commandeId: string, ligneId: string, delta: number) => Promise<void>;
@@ -87,28 +87,36 @@ export const usePOSStore = create<PosState>((set, get) => ({
   loading: true,
   unsubscribers: [],
 
-  initialiserTempsReel: () => {
+  initialiserTempsReel: (etablissement_id) => {
     // Si on a déjà des abonnements, on évite les doublons
     get().arreterTempsReel();
+
+    if (!etablissement_id) return;
 
     const unsubscribers: (() => void)[] = [];
 
     // 1. Écouter les tables
-    const unsubTables = onSnapshot(collection(db, 'tables'), (snapshot) => {
+    const qTables = query(collection(db, 'tables'), where('etablissement_id', '==', etablissement_id));
+    const unsubTables = onSnapshot(qTables, (snapshot) => {
       const tables = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as TablePlan[];
       set({ tables });
     });
     unsubscribers.push(unsubTables);
 
     // 2. Écouter les produits
-    const unsubProduits = onSnapshot(collection(db, 'produits'), (snapshot) => {
+    const qProduits = query(collection(db, 'produits'), where('etablissement_id', '==', etablissement_id));
+    const unsubProduits = onSnapshot(qProduits, (snapshot) => {
       const produits = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Produit[];
       set({ produits });
     });
     unsubscribers.push(unsubProduits);
 
     // 3. Écouter les commandes non payées
-    const qCommandes = query(collection(db, 'commandes'), where('statut', '!=', 'payee'));
+    const qCommandes = query(
+      collection(db, 'commandes'), 
+      where('etablissement_id', '==', etablissement_id),
+      where('statut', '!=', 'payee')
+    );
     const unsubCommandes = onSnapshot(qCommandes, (snapshot) => {
       const commandes = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Commande[];
       set({ commandes, loading: false });
@@ -138,7 +146,8 @@ export const usePOSStore = create<PosState>((set, get) => ({
       lignes: [],
       total: 0,
       nombreCouverts: couverts,
-      type: 'sur_place'
+      type: 'sur_place',
+      etablissement_id: useAuthStore.getState().profil?.etablissement_id
     };
 
     const docRef = await addDoc(collection(db, 'commandes'), nouvelleCommande);
@@ -161,7 +170,8 @@ export const usePOSStore = create<PosState>((set, get) => ({
       lignes: [],
       total: 0,
       nombreCouverts: 1,
-      type: 'a_emporter'
+      type: 'a_emporter',
+      etablissement_id: useAuthStore.getState().profil?.etablissement_id
     };
 
     const docRef = await addDoc(collection(db, 'commandes'), nouvelleCommande);
@@ -267,7 +277,8 @@ export const usePOSStore = create<PosState>((set, get) => ({
       modePaiement,
       clientNom: clientNom || 'Client Anonyme',
       type: commande.type,
-      date: new Date().toISOString()
+      date: new Date().toISOString(),
+      etablissement_id: useAuthStore.getState().profil?.etablissement_id
     });
   },
 

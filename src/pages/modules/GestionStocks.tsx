@@ -34,8 +34,8 @@ const GestionStocks = () => {
   const [uniteMesure, setUniteMesure] = useState('bouteilles');
 
   useEffect(() => {
-    if (!profil?.id) return;
-    const q = query(collection(db, 'produits'), where('etablissementId', '==', profil.id));
+    if (!profil?.etablissement_id) return;
+    const q = query(collection(db, 'produits'), where('etablissement_id', '==', profil.etablissement_id));
     const unsub = onSnapshot(q, (snap) => {
       setProduits(snap.docs.map(d => ({ id: d.id, ...d.data() })) as Produit[]);
       setLoading(false);
@@ -55,7 +55,7 @@ const GestionStocks = () => {
         stockTotal: 0,
         stockAlerte: Number(stockAlerte),
         emoji,
-        etablissementId: profil.id,
+        etablissement_id: profil.etablissement_id,
         dateCreation: new Date().toISOString()
       });
       toast.success(`${nom} ajouté au catalogue`);

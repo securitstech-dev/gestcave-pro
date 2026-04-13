@@ -30,20 +30,20 @@ const GestionAchats = () => {
     const [fournisseur, setFournisseur] = useState('');
 
     useEffect(() => {
-        if (!profil?.id) return;
+        if (!profil?.etablissement_id) return;
 
-        const qA = query(collection(db, 'achats'), where('etablissementId', '==', profil.id));
+        const qA = query(collection(db, 'achats'), where('etablissement_id', '==', profil.etablissement_id));
         const unsubA = onSnapshot(qA, (snap) => {
             setAchats(snap.docs.map(d => ({ id: d.id, ...d.data() })) as Achat[]);
         });
 
-        const qP = query(collection(db, 'produits'), where('etablissementId', '==', profil.id));
+        const qP = query(collection(db, 'produits'), where('etablissement_id', '==', profil.etablissement_id));
         const unsubP = onSnapshot(qP, (snap) => {
             setProduits(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
         return () => { unsubA(); unsubP(); };
-    }, [profil?.id]);
+    }, [profil?.etablissement_id]);
 
     const enregistrerAchat = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -62,7 +62,7 @@ const GestionAchats = () => {
                 total,
                 fournisseur,
                 date: new Date().toISOString(),
-                etablissementId: profil.id
+                etablissement_id: profil.etablissement_id
             });
 
             // 2. Mettre à jour le stock
@@ -77,7 +77,7 @@ const GestionAchats = () => {
                 total: total,
                 date: new Date().toISOString(),
                 description: `Achat stock : ${produit.nom}`,
-                etablissementId: profil.id,
+                etablissement_id: profil.etablissement_id,
                 modePaiement: 'comptant'
             });
 

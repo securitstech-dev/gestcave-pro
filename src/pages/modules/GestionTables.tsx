@@ -28,8 +28,8 @@ const GestionTables = () => {
   const [zone, setZone] = useState<'salle' | 'terrasse' | 'vip'>('salle');
 
   useEffect(() => {
-    if (!profil?.id) return;
-    const q = query(collection(db, 'tables'), where('etablissementId', '==', profil.id));
+    if (!profil?.etablissement_id) return;
+    const q = query(collection(db, 'tables'), where('etablissement_id', '==', profil.etablissement_id));
     const unsub = onSnapshot(q, (snap) => {
       setTables(snap.docs.map(d => ({ id: d.id, ...d.data() })) as Table[]);
       setLoading(false);
@@ -47,7 +47,7 @@ const GestionTables = () => {
         statut: 'libre',
         x: 50, // Position par défaut
         y: 50,
-        etablissementId: profil.id,
+        etablissement_id: profil.etablissement_id,
         created_at: new Date().toISOString()
       });
       toast.success(`Table ${nom} créée`);
