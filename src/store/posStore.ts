@@ -1,12 +1,11 @@
 import { create } from 'zustand';
-import { auth, db } from '../lib/firebase';
+import { db } from '../lib/firebase';
 import { 
   collection, 
   doc, 
   onSnapshot, 
   addDoc, 
   updateDoc, 
-  deleteDoc, 
   query, 
   where 
 } from 'firebase/firestore';

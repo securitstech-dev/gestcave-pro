@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Banknote, CreditCard, Smartphone, Receipt, 
-  CheckCircle2, Users, Clock, ChevronDown
+  CheckCircle2, Users, Clock
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePOSStore } from '../../store/posStore';

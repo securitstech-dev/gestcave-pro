@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Users, FileText, CheckCircle, XCircle, LayoutDashboard, LogOut, 
-  Search, Building2, CreditCard, Eye, TrendingUp, Bell
+  Users, CheckCircle, XCircle, LayoutDashboard, LogOut, 
+  Search, Building2, CreditCard, TrendingUp
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { db } from '../lib/firebase';
-import { collection, getDocs, doc, updateDoc, addDoc, query, orderBy, setDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, addDoc } from 'firebase/firestore';
 
 type OngletActif = 'demandes' | 'paiements' | 'etablissements';
 

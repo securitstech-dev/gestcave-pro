@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, ChevronRight, Plus, Minus, Send, 
-  Coffee, Utensils, Droplets, X, Check, 
+  X, 
   ShoppingBag, Smartphone, Clock
 } from 'lucide-react';
 import toast from 'react-hot-toast';
