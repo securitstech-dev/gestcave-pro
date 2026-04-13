@@ -16,7 +16,8 @@ export interface Produit {
   categorie: string;
   sousCategorie?: string;
   prix: number;
-  stockActuel: number;
+  stockTotal: number; // Stock total en unités (ex: total de bouteilles)
+  unitesParCasier: number; // Ex: 12
   stockAlerte: number;
   emoji?: string;
 }
