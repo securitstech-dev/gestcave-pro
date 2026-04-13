@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, CheckCircle, XCircle, LayoutDashboard, LogOut, 
-  Search, Building2, CreditCard, TrendingUp, Shield
+  Search, Building2, CreditCard, TrendingUp, Shield, ArrowLeft
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -17,7 +17,7 @@ const TableauSuperAdmin = () => {
   const [etablissements, setEtablissements] = useState<any[]>([]);
   const [paiements, setPaiements] = useState<any[]>([]);
   const [chargement, setChargement] = useState(true);
-  const [onglet, setOnglet] = useState<'demandes' | 'comptabilite' | 'etablissements'>('demandes');
+  const [onglet, setOnglet] = useState<'demandes' | 'paiements' | 'etablissements' | 'comptabilite'>('demandes');
   const [recherche, setRecherche] = useState('');
   const navigate = useNavigate();
   const { deconnexion } = useAuthStore();
@@ -77,6 +77,33 @@ const TableauSuperAdmin = () => {
     }
   };
 
+  const validerPaiement = async (paiementId: string, etabId: string, montant: number) => {
+    const toastId = toast.loading('Validation du paiement...');
+    try {
+      // 1. Marquer le paiement comme validé
+      await updateDoc(doc(db, 'paiements', paiementId), {
+        statut: 'valide',
+        date_validation: new Date().toISOString()
+      });
+
+      // 2. Activer l'abonnement de l'établissement
+      // On ajoute par exemple 30 jours (ou selon le montant)
+      const jours = montant >= 150000 ? 365 : montant >= 40000 ? 90 : 30;
+      await updateDoc(doc(db, 'etablissements', etabId), {
+        subscription_status: 'actif',
+        subscription_end_date: new Date(Date.now() + jours * 24 * 60 * 60 * 1000).toISOString()
+      });
+
+      toast.dismiss(toastId);
+      toast.success('Abonnement activé avec succès !');
+      chargerDonnees();
+    } catch (erreur: any) {
+      toast.dismiss(toastId);
+      toast.error(`Erreur : ${erreur.message}`);
+    }
+  };
+
+
   const gererDeconnexion = () => {
     deconnexion();
     navigate('/connexion');
@@ -117,12 +144,20 @@ const TableauSuperAdmin = () => {
             onClick={() => setOnglet('etablissements')} 
           />
           <ElementNav 
+            icon={<CreditCard size={18} />} 
+            label="Paiements" 
+            actif={onglet === 'paiements'} 
+            badge={paiements.filter(p => p.statut === 'en_attente').length}
+            onClick={() => setOnglet('paiements')} 
+          />
+          <ElementNav 
             icon={<TrendingUp size={18} />} 
             label="Comptabilité" 
             actif={onglet === 'comptabilite'}
             onClick={() => setOnglet('comptabilite')} 
           />
         </nav>
+
         
         <div className="p-4 bg-white/5 rounded-2xl border border-white/10 mb-6">
            <p className="text-[10px] text-slate-500 uppercase font-bold text-center mb-1">Support technique</p>
@@ -143,12 +178,15 @@ const TableauSuperAdmin = () => {
           <div>
             <h1 className="text-3xl font-display font-bold">
               {onglet === 'demandes' && 'Demandes d\'accès'}
+              {onglet === 'paiements' && 'Validation des Paiements'}
               {onglet === 'comptabilite' && 'Gestion Comptable'}
               {onglet === 'etablissements' && 'Portefeuille Clients'}
             </h1>
             <p className="text-slate-400 mt-1">
-              {onglet === 'comptabilite' ? 'Suivi des revenus et abonnements validés' : 'Gérez les accès et les abonnements'}
+              {onglet === 'paiements' ? 'Vérifiez les captures d\'écran Mobile Money' :
+               onglet === 'comptabilite' ? 'Suivi des revenus et abonnements validés' : 'Gérez les accès et les abonnements'}
             </p>
+
           </div>
           <div className="flex items-center gap-4">
             <div className="relative">
@@ -248,6 +286,59 @@ const TableauSuperAdmin = () => {
                         </td>
                       </tr>
                     ))}
+                  </tbody>
+                </table>
+              </div>
+            </motion.div>
+          )}
+
+          {onglet === 'paiements' && (
+            <motion.div
+              key="paiements"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="bento-item overflow-hidden"
+            >
+              <div className="p-6 border-b border-white/5">
+                <h3 className="text-xl font-bold text-white">Paiements à vérifier</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider">
+                    <tr>
+                      <th className="px-6 py-4 font-semibold">Structure ID</th>
+                      <th className="px-6 py-4 font-semibold">Montant</th>
+                      <th className="px-6 py-4 font-semibold">Preuve</th>
+                      <th className="px-6 py-4 font-semibold text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {paiements.filter(p => p.statut === 'en_attente').map((paiement) => (
+                      <tr key={paiement.id} className="hover:bg-white/5 transition-colors">
+                        <td className="px-6 py-4">
+                           <div className="text-slate-300 font-mono text-xs">{paiement.etablissement_id}</div>
+                           <div className="text-[10px] text-slate-500">{new Date(paiement.date).toLocaleString()}</div>
+                        </td>
+                        <td className="px-6 py-4 font-bold text-emerald-400">{paiement.montant.toLocaleString()} F</td>
+                        <td className="px-6 py-4">
+                           <a href={paiement.preuve_url} target="_blank" rel="noreferrer" className="text-indigo-400 hover:underline text-xs flex items-center gap-1">
+                             Voir capture <ArrowLeft className="rotate-180" size={12} />
+                           </a>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button 
+                            onClick={() => validerPaiement(paiement.id, paiement.etablissement_id, paiement.montant)}
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all"
+                          >
+                            Valider & Activer
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {paiements.filter(p => p.statut === 'en_attente').length === 0 && (
+                      <tr><td colSpan={4} className="p-10 text-center text-slate-500 italic">Aucun paiement en attente.</td></tr>
+                    )}
                   </tbody>
                 </table>
               </div>

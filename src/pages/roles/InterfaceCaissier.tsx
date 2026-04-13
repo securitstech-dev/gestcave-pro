@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Banknote, CreditCard, Smartphone, Receipt, 
-  CheckCircle2, Users, Clock
+  CheckCircle2, Users, Clock, ShoppingBag, Wine
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePOSStore } from '../../store/posStore';
@@ -11,10 +11,11 @@ import { usePOSStore } from '../../store/posStore';
 // INTERFACE CAISSIER — Encaissement & Gestion des paiements
 // ============================================================
 const InterfaceCaissier = () => {
-  const { tables, commandes, encaisserCommande } = usePOSStore();
+  const { tables, commandes, encaisserCommande, ouvrirVenteEmporter } = usePOSStore();
   const [commandeSelectionnee, setCommandeSelectionnee] = useState<string | null>(null);
-  const [modePaiement, setModePaiement] = useState<'especes' | 'mobile' | 'carte' | null>(null);
+  const [modePaiement, setModePaiement] = useState<'especes' | 'mobile' | 'carte' | 'credit' | null>(null);
   const [montantDonne, setMontantDonne] = useState('');
+  const [nomClientCredit, setNomClientCredit] = useState('');
 
   // Tables qui attendent l'encaissement
   const tablesAEncaisser = tables.filter(t => t.statut === 'en_attente_paiement' || t.statut === 'occupee');
@@ -33,12 +34,28 @@ const InterfaceCaissier = () => {
       toast.error('Montant insuffisant !');
       return;
     }
-    encaisserCommande(commandeSelectionnee, modePaiement);
-    toast.success(`Paiement encaissé ! Table libérée 🎉`, { icon: '💰', duration: 4000 });
+    if (modePaiement === 'credit' && !nomClientCredit) {
+      toast.error('Veuillez saisir le nom du client pour le crédit');
+      return;
+    }
+
+    const methode = modePaiement === 'credit' ? 'credit' : 'comptant';
+    // On mappe les modes locaux vers les types du store
+    encaisserCommande(commandeSelectionnee, methode, modePaiement === 'credit' ? nomClientCredit : undefined);
+    
+    toast.success(`Paiement encaissé !🎉`, { icon: '💰', duration: 4000 });
     setCommandeSelectionnee(null);
     setModePaiement(null);
     setMontantDonne('');
+    setNomClientCredit('');
   };
+
+  const demarrerVenteEmporter = async () => {
+    const id = await ouvrirVenteEmporter('caissier1', 'Caisse Centrale');
+    setCommandeSelectionnee(id);
+    toast.success('Nouvelle vente à emporter');
+  };
+
 
   return (
     <div className="min-h-screen bg-slate-950 flex">
@@ -54,23 +71,30 @@ const InterfaceCaissier = () => {
           </div>
         </div>
 
-        <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 px-2">Tables actives</h2>
+        <button 
+          onClick={demarrerVenteEmporter}
+          className="w-full btn-primary flex items-center justify-center gap-2 py-3 mb-6"
+        >
+          <ShoppingBag size={18} /> Vente à Emporter
+        </button>
+
+        <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 px-2">Commandes en cours</h2>
         
         <div className="flex-1 overflow-y-auto space-y-2">
-          {tablesAEncaisser.map(table => {
-            const commande = commandes.find(c => c.id === table.commandeActiveId);
-            if (!commande) return null;
+          {commandes.filter(c => c.statut !== 'payee').map(commande => {
+            const table = tables.find(t => t.id === commande.tableId);
             const mins = minutesEcoulees(commande.dateOuverture);
             const estSelectionnee = commandeSelectionnee === commande.id;
 
             return (
               <motion.button
-                key={table.id}
+                key={commande.id}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => {
                   setCommandeSelectionnee(commande.id);
                   setModePaiement(null);
                   setMontantDonne('');
+                  setNomClientCredit('');
                 }}
                 className={`w-full p-4 rounded-2xl text-left transition-all border-2 ${
                   estSelectionnee 
@@ -79,13 +103,13 @@ const InterfaceCaissier = () => {
                 }`}
               >
                 <div className="flex justify-between items-start mb-2">
-                  <span className="font-bold text-lg">{table.nom}</span>
+                  <span className="font-bold text-lg">{table ? table.nom : '🎁 Emporter'}</span>
                   <span className={`text-xs px-2 py-1 rounded-lg font-bold ${
-                    table.statut === 'en_attente_paiement' 
+                    table?.statut === 'en_attente_paiement' 
                       ? 'bg-yellow-500/20 text-yellow-500' 
                       : 'bg-orange-500/20 text-orange-400'
                   }`}>
-                    {table.statut === 'en_attente_paiement' ? 'Prêt' : 'En cours'}
+                    {commande.type === 'a_emporter' ? 'Direct' : (table?.statut === 'en_attente_paiement' ? 'Prêt' : 'En cours')}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -94,12 +118,10 @@ const InterfaceCaissier = () => {
                   </span>
                   <span className="font-bold text-accent">{commande.total.toLocaleString()} F</span>
                 </div>
-                <div className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                  <Clock size={10} /> Ouvert depuis {mins} min • {commande.serveurNom}
-                </div>
               </motion.button>
             );
           })}
+
 
           {tablesAEncaisser.length === 0 && (
             <div className="text-center text-slate-500 py-12">
@@ -162,6 +184,7 @@ const InterfaceCaissier = () => {
                 {[
                   { val: 'especes', label: 'Espèces', icon: <Banknote size={24} /> },
                   { val: 'mobile', label: 'Mobile Money', icon: <Smartphone size={24} /> },
+                  { val: 'credit', label: 'A Crédit', icon: <Clock size={24} /> },
                   { val: 'carte', label: 'Carte', icon: <CreditCard size={24} /> },
                 ].map(opts => (
                   <button
@@ -223,7 +246,24 @@ const InterfaceCaissier = () => {
                 </motion.div>
               )}
 
-              {modePaiement && modePaiement !== 'especes' && (
+              {modePaiement === 'credit' && (
+                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                   <h3 className="text-sm font-bold text-slate-400 mb-3">Informations Client (Obligatoire)</h3>
+                   <div className="glass-card p-4">
+                      <input 
+                        type="text" 
+                        value={nomClientCredit}
+                        onChange={(e)=>setNomClientCredit(e.target.value)}
+                        placeholder="Nom du client au crédit..."
+                        className="w-full bg-transparent text-xl font-bold text-white outline-none"
+                        autoFocus
+                      />
+                   </div>
+                   <p className="text-[10px] text-red-400 mt-2 uppercase font-black tracking-widest">⚠️ Le montant sera ajouté à sa dette.</p>
+                </motion.div>
+              )}
+
+              {modePaiement && modePaiement !== 'especes' && modePaiement !== 'credit' && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -236,6 +276,7 @@ const InterfaceCaissier = () => {
                   </p>
                 </motion.div>
               )}
+
 
               <div className="flex-1" />
 

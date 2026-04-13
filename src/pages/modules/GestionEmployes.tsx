@@ -11,6 +11,7 @@ interface Employe {
   nom: string;
   role: 'serveur' | 'caissier' | 'cuisine' | 'admin';
   pin: string;
+  salaire: number;
   actif: boolean;
 }
 
@@ -22,6 +23,7 @@ const GestionEmployes = () => {
   // Formulaire
   const [nouveauNom, setNouveauNom] = useState('');
   const [nouveauRole, setNouveauRole] = useState<'serveur' | 'caissier' | 'cuisine' | 'admin'>('serveur');
+  const [nouveauSalaire, setNouveauSalaire] = useState(0);
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
@@ -50,6 +52,7 @@ const GestionEmployes = () => {
         nom: nouveauNom,
         role: nouveauRole,
         pin: genererPIN(),
+        salaire: Number(nouveauSalaire),
         actif: true,
         etablissementId: profil.id,
         dateCreation: new Date().toISOString()
@@ -123,6 +126,10 @@ const GestionEmployes = () => {
                 <span className="text-slate-500 flex items-center gap-2"><Key size={14} /> Code PIN</span>
                 <span className="text-white font-mono font-bold text-lg tracking-widest">{emp.pin}</span>
               </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500 flex items-center gap-2">💰 Salaire</span>
+                <span className="text-accent font-bold">{emp.salaire?.toLocaleString() || 0} F</span>
+              </div>
               <div className="flex justify-between items-center text-sm text-[10px] uppercase font-bold text-slate-600">
                 <span>Accès</span>
                 <span className="text-emerald-500">Autorisé</span>
@@ -187,6 +194,18 @@ const GestionEmployes = () => {
                   <option value="admin">🛡️ Responsable (Manager)</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">Salaire Mensuel (F CFA)</label>
+                <input 
+                  type="number" 
+                  value={nouveauSalaire}
+                  onChange={(e) => setNouveauSalaire(Number(e.target.value))}
+                  className="glass-input w-full"
+                  placeholder="0"
+                  required
+                />
+              </div>
+
               <div className="flex gap-4 pt-4">
                 <button 
                   type="button"

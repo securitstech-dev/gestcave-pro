@@ -27,10 +27,11 @@ const GestionStocks = () => {
   // Formulaire Nouvel Article
   const [nom, setNom] = useState('');
   const [prix, setPrix] = useState(0);
-  const [categorie, setCategorie] = useState('Boisson');
+  const [categorie, setCategorie] = useState<'Boisson' | 'Ingrédient' | 'A-Côté'>('Boisson');
   const [unitesParCasier, setUnitesParCasier] = useState(12);
   const [stockAlerte, setStockAlerte] = useState(10);
   const [emoji, setEmoji] = useState('🍷');
+  const [uniteMesure, setUniteMesure] = useState('bouteilles');
 
   useEffect(() => {
     if (!profil?.id) return;
@@ -50,6 +51,7 @@ const GestionStocks = () => {
         prix: Number(prix),
         categorie,
         unitesParCasier: Number(unitesParCasier),
+        uniteMesure: categorie === 'Ingrédient' ? uniteMesure : 'bouteilles',
         stockTotal: 0,
         stockAlerte: Number(stockAlerte),
         emoji,
@@ -133,25 +135,30 @@ const GestionStocks = () => {
                 <tr key={p.id} className="hover:bg-white/5 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
-                      <span className="text-2xl">{p.emoji || '📦'}</span>
+                      <span className="text-2xl">{p.emoji || (p.categorie === 'Ingrédient' ? '🍅' : '📦')}</span>
                       <div>
                         <div className="font-bold text-white text-base">{p.nom}</div>
-                        <div className="text-[10px] text-slate-500 uppercase tracking-tighter">{p.categorie}</div>
+                        <div className="text-[10px] text-slate-500 uppercase tracking-tighter">
+                           {p.categorie} {p.categorie === 'Boisson' && `(${p.unitesParCasier} u/casier)`}
+                        </div>
                       </div>
                     </div>
                   </td>
+
                   <td className="px-6 py-4 text-white font-mono">{p.prix.toLocaleString()} F</td>
                   <td className="px-6 py-4">
-                    {formatStock(p.stockTotal, p.unitesParCasier)}
+                    {p.categorie === 'Boisson' ? formatStock(p.stockTotal, p.unitesParCasier) : '-'}
                   </td>
+
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       <span className={`text-sm font-bold ${p.stockTotal <= p.stockAlerte ? 'text-red-400' : 'text-slate-300'}`}>
-                        {p.stockTotal} bouteilles
+                        {p.stockTotal} {(p as any).uniteMesure || 'unités'}
                       </span>
                       {p.stockTotal <= p.stockAlerte && <AlertCircle size={14} className="text-red-500 animate-pulse" />}
                     </div>
                   </td>
+
                   <td className="px-6 py-4">
                     <div className="flex justify-end gap-6 items-center">
                       {/* Section Casier */}
@@ -205,13 +212,13 @@ const GestionStocks = () => {
               </div>
               <div>
                 <label className="label-style">Catégorie</label>
-                <select value={categorie} onChange={(e)=>setCategorie(e.target.value)} className="glass-input w-full bg-slate-900">
-                  <option value="Boisson">🥤 Boisson</option>
-                  <option value="Alcool">🍷 Alcool / Vin</option>
-                  <option value="Plat">🍲 Restauration</option>
-                  <option value="Cigarette">🚬 Tabac</option>
+                <select value={categorie} onChange={(e)=>setCategorie(e.target.value as any)} className="glass-input w-full bg-slate-900">
+                  <option value="Boisson">🥤 Boissons</option>
+                  <option value="Ingrédient">🍅 Ingrédients Cuisine</option>
+                  <option value="A-Côté">🍿 A-Côté / Divers</option>
                 </select>
               </div>
+
               <div>
                 <label className="label-style">Icône</label>
                 <input type="text" value={emoji} onChange={(e)=>setEmoji(e.target.value)} className="glass-input w-full text-center text-2xl" placeholder="🍷" />
@@ -220,14 +227,22 @@ const GestionStocks = () => {
                 <label className="label-style">Prix de vente (F CFA)</label>
                 <input type="number" value={prix} onChange={(e)=>setPrix(Number(e.target.value))} className="glass-input w-full" required />
               </div>
-              <div>
-                <label className="label-style">Unités par Casier</label>
-                <input type="number" value={unitesParCasier} onChange={(e)=>setUnitesParCasier(Number(e.target.value))} className="glass-input w-full" />
-              </div>
+              {categorie === 'Boisson' ? (
+                <div>
+                  <label className="label-style">Unités par Casier</label>
+                  <input type="number" value={unitesParCasier} onChange={(e)=>setUnitesParCasier(Number(e.target.value))} className="glass-input w-full" />
+                </div>
+              ) : (
+                <div>
+                  <label className="label-style">Unité de mesure</label>
+                  <input type="text" value={uniteMesure} onChange={(e)=>setUniteMesure(e.target.value)} className="glass-input w-full" placeholder="ex: kg, litres, sacs" />
+                </div>
+              )}
               <div className="col-span-2">
                 <label className="label-style">Seuil d'alerte stock</label>
                 <input type="number" value={stockAlerte} onChange={(e)=>setStockAlerte(Number(e.target.value))} className="glass-input w-full" />
               </div>
+
               <div className="col-span-2 flex gap-4 mt-6">
                 <button type="button" onClick={()=>setShowModal(false)} className="flex-1 py-3 text-slate-400 hover:text-white transition-colors">Annuler</button>
                 <button type="submit" className="flex-1 btn-primary">Enregistrer</button>

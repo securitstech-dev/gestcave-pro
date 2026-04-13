@@ -29,6 +29,8 @@ export interface TablePlan {
   statut: 'libre' | 'occupee' | 'en_attente_paiement';
   zone: 'salle' | 'terrasse' | 'vip';
   commandeActiveId?: string;
+  x?: number; // Position X pour le plan de salle
+  y?: number; // Position Y pour le plan de salle
 }
 
 export interface LigneCommande {
@@ -44,8 +46,8 @@ export interface LigneCommande {
 
 export interface Commande {
   id: string;
-  tableId: string;
-  tableNom: string;
+  tableId?: string; // Optionnel pour la vente à emporter
+  tableNom?: string;
   serveurId: string;
   serveurNom: string;
   dateOuverture: string;
@@ -53,6 +55,9 @@ export interface Commande {
   lignes: LigneCommande[];
   total: number;
   nombreCouverts: number;
+  type: 'sur_place' | 'a_emporter';
+  methodePaiement?: 'comptant' | 'credit';
+  clientNom?: string; // Surtout pour les crédits
 }
 
 interface PosState {
@@ -69,9 +74,10 @@ interface PosState {
   supprimerLigne: (commandeId: string, ligneId: string) => Promise<void>;
   envoyerCuisine: (commandeId: string) => Promise<void>;
   ouvrirTable: (tableId: string, serveurId: string, serveurNom: string, couverts: number) => Promise<string>;
+  ouvrirVenteEmporter: (serveurId: string, serveurNom: string) => Promise<string>;
   marquerLignePrete: (commandeId: string, ligneId: string) => Promise<void>;
   marquerCommandeServie: (commandeId: string) => Promise<void>;
-  encaisserCommande: (commandeId: string, modePaiement: string) => Promise<void>;
+  encaisserCommande: (commandeId: string, modePaiement: 'comptant' | 'credit', clientNom?: string) => Promise<void>;
 }
 
 export const usePOSStore = create<PosState>((set, get) => ({
@@ -131,7 +137,8 @@ export const usePOSStore = create<PosState>((set, get) => ({
       statut: 'ouverte',
       lignes: [],
       total: 0,
-      nombreCouverts: couverts
+      nombreCouverts: couverts,
+      type: 'sur_place'
     };
 
     const docRef = await addDoc(collection(db, 'commandes'), nouvelleCommande);
@@ -142,6 +149,22 @@ export const usePOSStore = create<PosState>((set, get) => ({
       commandeActiveId: docRef.id
     });
 
+    return docRef.id;
+  },
+
+  ouvrirVenteEmporter: async (serveurId, serveurNom) => {
+    const nouvelleCommande = {
+      serveurId,
+      serveurNom,
+      dateOuverture: new Date().toISOString(),
+      statut: 'ouverte',
+      lignes: [],
+      total: 0,
+      nombreCouverts: 1,
+      type: 'a_emporter'
+    };
+
+    const docRef = await addDoc(collection(db, 'commandes'), nouvelleCommande);
     return docRef.id;
   },
 
@@ -218,24 +241,32 @@ export const usePOSStore = create<PosState>((set, get) => ({
     });
   },
 
-  encaisserCommande: async (commandeId, modePaiement) => {
+  encaisserCommande: async (commandeId, modePaiement, clientNom) => {
     const commande = get().commandes.find(c => c.id === commandeId);
     if (!commande) return;
 
     // Archiver la commande
-    await updateDoc(doc(db, 'commandes', commandeId), { statut: 'payee' });
-
-    // Libérer la table
-    await updateDoc(doc(db, 'tables', commande.tableId), {
-      statut: 'libre',
-      commandeActiveId: null
+    await updateDoc(doc(db, 'commandes', commandeId), { 
+      statut: 'payee',
+      methodePaiement: modePaiement,
+      clientNom: clientNom || null
     });
 
-    // Optionnel : Générer la transaction POS sur Firebase (collection "transactions_pos")
+    // Libérer la table si c'était sur place
+    if (commande.tableId) {
+      await updateDoc(doc(db, 'tables', commande.tableId), {
+        statut: 'libre',
+        commandeActiveId: null
+      });
+    }
+
+    // Optionnel : Générer la transaction POS sur Firebase
     await addDoc(collection(db, 'transactions_pos'), {
       commandeId,
       total: commande.total,
       modePaiement,
+      clientNom: clientNom || 'Client Anonyme',
+      type: commande.type,
       date: new Date().toISOString()
     });
   },

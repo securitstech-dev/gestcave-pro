@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { 
   Wine, ShoppingCart, TrendingUp, AlertTriangle, Users, 
-  Settings, LogOut, ChevronRight, Package, CreditCard
+  Settings, LogOut, ChevronRight, Package, CreditCard, Layout
 } from 'lucide-react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -11,6 +11,10 @@ import InterfaceCaissier from './roles/InterfaceCaissier';
 import InterfaceCuisine from './roles/InterfaceCuisine';
 import GestionEmployes from './modules/GestionEmployes';
 import GestionStocks from './modules/GestionStocks';
+import GestionTables from './modules/GestionTables';
+import PlanDeSalles from './modules/PlanDeSalles';
+import GestionFinance from './modules/GestionFinance';
+import GestionAchats from './modules/GestionAchats';
 
 const TableauClient = () => {
   const { profil, deconnexion } = useAuthStore();
@@ -36,11 +40,12 @@ const TableauClient = () => {
         </div>
         
         <nav className="space-y-1.5 flex-1">
-          <ElementNavClient icon={<TrendingUp size={18} />} label="Vue d'ensemble" actif={isActif('/tableau-de-bord')} onClick={() => navigate('/tableau-de-bord')} />
-          <ElementNavClient icon={<ShoppingCart size={18} />} label="Caisse (POS)" actif={isActif('/tableau-de-bord/caisse')} onClick={() => navigate('/tableau-de-bord/caisse')} />
-          <ElementNavClient icon={<Package size={18} />} label="Stocks" actif={isActif('/tableau-de-bord/stocks')} onClick={() => navigate('/tableau-de-bord/stocks')} />
-          <ElementNavClient icon={<Wine size={18} />} label="Cuisine & Bar" actif={isActif('/tableau-de-bord/cuisine')} onClick={() => navigate('/tableau-de-bord/cuisine')} />
+          <ElementNavClient icon={<TrendingUp size={18} />} label="Plan des Salles" actif={isActif('/tableau-de-bord')} onClick={() => navigate('/tableau-de-bord')} />
+          <ElementNavClient icon={<ShoppingCart size={18} />} label="Caisse & POS" actif={isActif('/tableau-de-bord/caisse')} onClick={() => navigate('/tableau-de-bord/caisse')} />
+          <ElementNavClient icon={<Package size={18} />} label="Achats & Appro" actif={isActif('/tableau-de-bord/achats')} onClick={() => navigate('/tableau-de-bord/achats')} />
+          <ElementNavClient icon={<Package size={18} />} label="Stock & Inventaire" actif={isActif('/tableau-de-bord/stocks')} onClick={() => navigate('/tableau-de-bord/stocks')} />
           <ElementNavClient icon={<Users size={18} />} label="Employés & RH" actif={isActif('/tableau-de-bord/rh')} onClick={() => navigate('/tableau-de-bord/rh')} />
+          <ElementNavClient icon={<Layout size={18} />} label="Config. Tables" actif={isActif('/tableau-de-bord/tables')} onClick={() => navigate('/tableau-de-bord/tables')} />
           <ElementNavClient icon={<Settings size={18} />} label="Taxes & Admin" actif={isActif('/tableau-de-bord/admin')} onClick={() => navigate('/tableau-de-bord/admin')} />
           <ElementNavClient icon={<CreditCard size={18} />} label="Abonnement" onClick={() => navigate('/abonnement')} />
         </nav>
@@ -56,13 +61,14 @@ const TableauClient = () => {
       {/* Zone de contenu dynamique */}
       <main className="flex-1 ml-[19rem] p-8 pt-10">
         <Routes>
-          <Route path="/" element={<DashboardAccueil profil={profil} navigate={navigate} />} />
+          <Route path="/" element={<PlanDeSalles />} />
           <Route path="/caisse" element={<InterfaceCaissier />} />
           <Route path="/cuisine" element={<InterfaceCuisine />} />
           <Route path="/rh" element={<GestionEmployes />} />
           <Route path="/stocks" element={<GestionStocks />} />
-          {/* Les autres modules (Admin) seront migrés dans la prochaine phase */}
-          <Route path="/admin" element={<div className="p-20 text-center text-slate-500">Module Admin en cours de migration...</div>} />
+          <Route path="/achats" element={<GestionAchats />} />
+          <Route path="/tables" element={<GestionTables />} />
+          <Route path="/admin" element={<GestionFinance />} />
         </Routes>
       </main>
     </div>
