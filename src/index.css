@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #818cf8;
+  --color-secondary: #020617;
+  --color-surface: rgba(255, 255, 255, 0.03);
+  
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "Outfit", "Inter", sans-serif;
+  
+  --radius-bento: 1.5rem;
+  --radius-bento-lg: 2rem;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-950 text-slate-300 font-sans antialiased overflow-x-hidden;
+  }
+  
+  /* Arrière-plan "Glow Orbs" Spatiale */
+  body::before, body::after {
+    content: "";
+    @apply fixed rounded-full blur-[120px] -z-10 opacity-[0.25] pointer-events-none;
+  }
+  
+  body::before {
+    @apply w-[40vw] h-[40vw] bg-indigo-600 top-[-10%] left-[-10%];
+    animation: float1 25s infinite alternate ease-in-out;
+  }
+
+  body::after {
+    @apply w-[35vw] h-[35vw] bg-emerald-600 bottom-[-10%] right-[-10%];
+    animation: float2 30s infinite alternate ease-in-out;
+  }
+
+  @keyframes float1 {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(15vw, 15vh) scale(1.3); }
+  }
+  
+  @keyframes float2 {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(-15vw, -15vh) scale(1.2); }
+  }
+}
+
+@layer components {
+  /* Conteneur principal Verre Dépoli */
+  .glass-panel {
+    @apply bg-slate-950/40 backdrop-blur-3xl border border-white/10 rounded-[var(--radius-bento-lg)] shadow-2xl;
+  }
+
+  /* Carte standard Bento */
+  .glass-card {
+    @apply bg-slate-900/40 backdrop-blur-2xl border border-white/5 rounded-[var(--radius-bento)] 
+           shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-all duration-300;
+  }
+
+  /* Élément interactif de la grille (Bento Item) */
+  .bento-item {
+    @apply bg-slate-900/40 backdrop-blur-xl border border-white/5 rounded-[var(--radius-bento)] relative overflow-hidden transition-all duration-500;
+  }
+
+  .bento-item::after {
+     content: "";
+     @apply absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 
+            transition-opacity duration-500 pointer-events-none;
+  }
+
+  .bento-item:hover {
+     @apply border-white/20 transform -translate-y-1 shadow-[0_15px_40px_rgba(0,0,0,0.5)];
+  }
+
+  .bento-item:hover::after {
+     @apply opacity-100;
+  }
+
+  /* Formulaires modernes */
+  .glass-input {
+    @apply bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white transition-all
+           focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50
+           focus:bg-white/10 backdrop-blur-md outline-none;
+  }
+  
+  /* Bouton appel à l'action Ultra-Premium */
+  .btn-primary {
+    @apply bg-white text-slate-950 font-bold py-3 px-8 rounded-xl transition-all duration-300 
+           hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_20px_rgba(255,255,255,0.2)] 
+           hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] flex items-center justify-center gap-2;
+  }
+
+  .btn-primary.accent {
+    @apply bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.3)]
+           hover:shadow-[0_0_30px_rgba(99,102,241,0.5)] border border-white/20;
+  }
+  
+  /* Bouton secondaire fantôme */
+  .btn-secondary {
+    @apply bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium py-3 px-6 rounded-xl 
+           transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] backdrop-blur-md
+           flex items-center justify-center gap-2;
+  }
+}
+
