@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, CheckCircle, XCircle, LayoutDashboard, LogOut, 
-  Search, Building2, CreditCard, TrendingUp
+  Search, Building2, CreditCard, TrendingUp, Shield
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -186,7 +186,9 @@ const TableauSuperAdmin = () => {
             valeur={`${totalRevenus.toLocaleString()} F`}
             icone={<TrendingUp className="text-purple-400" size={20} />}
           />
-           {/* Vues détaillées */}
+        </div>
+
+        {/* Vues détaillées */}
         <AnimatePresence mode="wait">
           {onglet === 'demandes' && (
             <motion.div

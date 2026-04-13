@@ -200,7 +200,7 @@ const InterfaceServeur = () => {
               <p className="font-medium text-sm leading-tight line-clamp-2 mb-3">{produit.nom}</p>
               <div className="flex justify-between items-center">
                 <span className="font-bold text-primary">{produit.prix.toLocaleString()} F</span>
-                {produit.stockActuel <= produit.stockAlerte && (
+                {produit.stockTotal <= produit.stockAlerte && (
                   <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded font-bold">LAST</span>
                 )}
               </div>
