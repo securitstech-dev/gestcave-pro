@@ -3,9 +3,11 @@ import { motion } from 'framer-motion';
 import { Users, Clock, Coffee, Wine, Utensils, ShoppingBag, Package, Eye } from 'lucide-react';
 import { usePOSStore } from '../../store/posStore';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
 
 const PlanDeSalles = () => {
   const { tables, commandes } = usePOSStore();
+  const navigate = useNavigate();
 
   const getMinutesEcoulees = (iso: string) => {
     if (!iso) return 0;

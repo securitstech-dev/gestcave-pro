@@ -9,6 +9,7 @@ import {
   query, 
   where 
 } from 'firebase/firestore';
+import { useAuthStore } from './authStore';
 
 export interface Produit {
   id: string;
