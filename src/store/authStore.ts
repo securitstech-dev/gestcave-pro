@@ -4,7 +4,7 @@ import {
   signInWithEmailAndPassword, 
   signOut, 
   onAuthStateChanged,
-  User as FirebaseUser
+  type User as FirebaseUser
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 

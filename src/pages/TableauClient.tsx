@@ -6,11 +6,9 @@ import {
 } from 'lucide-react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import PointDeVente from './erp/PointDeVente';
-import GestionStocks from './erp/GestionStocks';
-import CuisineBar from './erp/CuisineBar';
-import RessourcesHumaines from './erp/RessourcesHumaines';
-import AdministratifTaxes from './erp/AdministratifTaxes';
+// Les composants ERP legacy ont été remplacés par les nouvelles interfaces spécialisées
+import InterfaceCaissier from './roles/InterfaceCaissier';
+import InterfaceCuisine from './roles/InterfaceCuisine';
 
 const TableauClient = () => {
   const { profil, deconnexion } = useAuthStore();
@@ -57,11 +55,12 @@ const TableauClient = () => {
       <main className="flex-1 ml-[19rem] p-8 pt-10">
         <Routes>
           <Route path="/" element={<DashboardAccueil profil={profil} navigate={navigate} />} />
-          <Route path="/caisse" element={<PointDeVente />} />
-          <Route path="/stocks" element={<GestionStocks />} />
-          <Route path="/cuisine" element={<CuisineBar />} />
-          <Route path="/rh" element={<RessourcesHumaines />} />
-          <Route path="/admin" element={<AdministratifTaxes />} />
+          <Route path="/caisse" element={<InterfaceCaissier />} />
+          <Route path="/cuisine" element={<InterfaceCuisine />} />
+          {/* Les autres modules (Stocks, RH, Admin) seront migrés dans la prochaine phase */}
+          <Route path="/stocks" element={<div className="p-20 text-center text-slate-500">Module Stocks en cours de migration...</div>} />
+          <Route path="/rh" element={<div className="p-20 text-center text-slate-500">Module RH en cours de migration...</div>} />
+          <Route path="/admin" element={<div className="p-20 text-center text-slate-500">Module Admin en cours de migration...</div>} />
         </Routes>
       </main>
     </div>

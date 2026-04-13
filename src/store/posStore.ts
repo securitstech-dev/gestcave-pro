@@ -38,6 +38,7 @@ export interface LigneCommande {
   prixUnitaire: number;
   sousTotal: number;
   statut: 'en_attente' | 'en_preparation' | 'pret' | 'servi';
+  note?: string;
 }
 
 export interface Commande {
