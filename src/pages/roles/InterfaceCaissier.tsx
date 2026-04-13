@@ -33,7 +33,7 @@ const InterfaceCaissier = () => {
       toast.error('Montant insuffisant !');
       return;
     }
-    encaisserCommande(commandeSelectionnee);
+    encaisserCommande(commandeSelectionnee, modePaiement);
     toast.success(`Paiement encaissé ! Table libérée 🎉`, { icon: '💰', duration: 4000 });
     setCommandeSelectionnee(null);
     setModePaiement(null);

@@ -67,6 +67,8 @@ interface PosState {
   supprimerLigne: (commandeId: string, ligneId: string) => Promise<void>;
   envoyerCuisine: (commandeId: string) => Promise<void>;
   ouvrirTable: (tableId: string, serveurId: string, serveurNom: string, couverts: number) => Promise<string>;
+  marquerLignePrete: (commandeId: string, ligneId: string) => Promise<void>;
+  marquerCommandeServie: (commandeId: string) => Promise<void>;
   encaisserCommande: (commandeId: string, modePaiement: string) => Promise<void>;
 }
 
@@ -233,6 +235,38 @@ export const usePOSStore = create<PosState>((set, get) => ({
       total: commande.total,
       modePaiement,
       date: new Date().toISOString()
+    });
+  },
+
+  marquerLignePrete: async (commandeId, ligneId) => {
+    const commande = get().commandes.find(c => c.id === commandeId);
+    if (!commande) return;
+
+    const lignes = commande.lignes.map(l => 
+      l.id === ligneId ? { ...l, statut: 'pret' } : l
+    );
+
+    // Si tout est prêt, on peut passer la commande en statut "en_preparation" ou "servie" ? 
+    // On reste simple : on met juste à jour les lignes
+    await updateDoc(doc(db, 'commandes', commandeId), { lignes });
+  },
+
+  marquerCommandeServie: async (commandeId) => {
+    const commande = get().commandes.find(c => c.id === commandeId);
+    if (!commande) return;
+
+    const lignes = commande.lignes.map(l => ({ ...l, statut: 'servi' }));
+    
+    await updateDoc(doc(db, 'commandes', commandeId), { 
+      statut: 'servie',
+      lignes 
+    });
+
+    // Mettre à jour la table aussi si besoin
+    await updateDoc(doc(db, 'tables', commande.tableId), {
+      statut: 'libre', // On libère la table quand c'est servi ? Ou quand c'est payé ?
+      // Dans ce système, on libère à l'encaissement. 
+      // Ici on marque juste comme prête pour le serveur.
     });
   }
 }));
