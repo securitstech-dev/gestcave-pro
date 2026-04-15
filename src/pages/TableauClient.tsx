@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { 
   Wine, ShoppingCart, TrendingUp, AlertTriangle, Users, 
-  Settings, LogOut, ChevronRight, Package, CreditCard, Layout
+  Settings, LogOut, ChevronRight, Package, CreditCard, Layout, LayoutDashboard
 } from 'lucide-react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -49,13 +49,14 @@ const TableauClient = () => {
           <h2 className="font-display font-bold text-lg truncate">{profil?.nom || 'Mon Établissement'}</h2>
         </div>
         
-        <nav className="space-y-1.5 flex-1">
-          <ElementNavClient icon={<TrendingUp size={18} />} label="Plan des Salles" actif={isActif('/tableau-de-bord')} onClick={() => navigate('/tableau-de-bord')} />
+        <nav className="space-y-1.5 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+          <ElementNavClient icon={<LayoutDashboard size={18} />} label="Accueil" actif={isActif('/tableau-de-bord')} onClick={() => navigate('/tableau-de-bord')} />
+          <ElementNavClient icon={<Layout size={18} />} label="Plan des Salles" actif={isActif('/tableau-de-bord/plan-salles')} onClick={() => navigate('/tableau-de-bord/plan-salles')} />
           <ElementNavClient icon={<ShoppingCart size={18} />} label="Caisse & POS" actif={isActif('/tableau-de-bord/caisse')} onClick={() => navigate('/tableau-de-bord/caisse')} />
           <ElementNavClient icon={<Package size={18} />} label="Achats & Appro" actif={isActif('/tableau-de-bord/achats')} onClick={() => navigate('/tableau-de-bord/achats')} />
           <ElementNavClient icon={<Package size={18} />} label="Stock & Inventaire" actif={isActif('/tableau-de-bord/stocks')} onClick={() => navigate('/tableau-de-bord/stocks')} />
           <ElementNavClient icon={<Users size={18} />} label="Employés & RH" actif={isActif('/tableau-de-bord/rh')} onClick={() => navigate('/tableau-de-bord/rh')} />
-          <ElementNavClient icon={<Layout size={18} />} label="Config. Tables" actif={isActif('/tableau-de-bord/tables')} onClick={() => navigate('/tableau-de-bord/tables')} />
+          <ElementNavClient icon={<Settings size={18} />} label="Config. Tables" actif={isActif('/tableau-de-bord/tables')} onClick={() => navigate('/tableau-de-bord/tables')} />
           <ElementNavClient icon={<Settings size={18} />} label="Taxes & Admin" actif={isActif('/tableau-de-bord/admin')} onClick={() => navigate('/tableau-de-bord/admin')} />
           <ElementNavClient icon={<CreditCard size={18} />} label="Abonnement" onClick={() => navigate('/abonnement')} />
         </nav>
@@ -69,9 +70,10 @@ const TableauClient = () => {
       </aside>
 
       {/* Zone de contenu dynamique */}
-      <main className="flex-1 ml-[19rem] p-8 pt-10">
+      <main className="flex-1 ml-[19rem] p-8 pt-10 h-screen overflow-y-auto">
         <Routes>
-          <Route path="/" element={<PlanDeSalles />} />
+          <Route path="/" element={<DashboardAccueil profil={profil} navigate={navigate} />} />
+          <Route path="/plan-salles" element={<PlanDeSalles />} />
           <Route path="/caisse" element={<InterfaceCaissier />} />
           <Route path="/cuisine" element={<InterfaceCuisine />} />
           <Route path="/rh" element={<GestionEmployes />} />
@@ -86,8 +88,11 @@ const TableauClient = () => {
 };
 
 // Composant Accueil du Dashboard (ex-contenu principal)
-const DashboardAccueil = ({ profil, navigate }: any) => (
-  <>
+const DashboardAccueil = ({ profil, navigate }: any) => {
+  const { commandes, produits } = usePOSStore();
+  
+  return (
+  <motion.div initial={{opacity: 0, y: 10}} animate={{opacity: 1, y: 0}}>
         <header className="flex justify-between items-start mb-10">
           <div>
             <h1 className="text-4xl font-display font-bold">Bonjour, {profil?.prenom || 'Propriétaire'} 👋</h1>
@@ -113,25 +118,24 @@ const DashboardAccueil = ({ profil, navigate }: any) => (
           <WidgetTableau 
             icone={<TrendingUp className="text-primary" />} 
             label="Recettes du jour" 
-            valeur="84 500 F" 
+            valeur={`${commandes.filter(c => c.statut === 'payee').reduce((acc, c) => acc + c.total, 0).toLocaleString()} F`} 
             tendance="+12%" 
           />
           <WidgetTableau 
             icone={<ShoppingCart className="text-accent" />} 
-            label="Commandes" 
-            valeur="42" 
-            tendance="+5%" 
+            label="Commandes actives" 
+            valeur={commandes.length.toString()} 
           />
           <WidgetTableau 
             icone={<Users className="text-primary" />} 
-            label="Clients servis" 
-            valeur="128" 
+            label="Couverts en cours" 
+            valeur={commandes.reduce((acc, c) => acc + c.nombreCouverts, 0).toString()} 
           />
           <WidgetTableau 
-            icone={<AlertTriangle className="text-yellow-500" />} 
-            label="Alertes stock" 
-            valeur="3 articles" 
-            urgent 
+            icone={<AlertTriangle className={produits.filter(p => p.stockTotal <= p.stockAlerte).length > 0 ? "text-red-500" : "text-emerald-500"} />} 
+            label="Articles en alerte" 
+            valeur={`${produits.filter(p => p.stockTotal <= p.stockAlerte).length} en rupture`} 
+            urgent={produits.filter(p => p.stockTotal <= p.stockAlerte).length > 0} 
           />
         </div>
 
@@ -140,31 +144,41 @@ const DashboardAccueil = ({ profil, navigate }: any) => (
           {/* Ventes récentes */}
           <div className="lg:col-span-2 bento-item overflow-hidden">
             <div className="p-6 border-b border-white/5 flex justify-between items-center">
-              <h3 className="text-xl font-bold">Ventes récentes</h3>
-              <button className="text-primary text-sm font-medium flex items-center gap-1 hover:underline">
-                Voir tout <ChevronRight size={14} />
+              <h3 className="text-xl font-bold">Commandes Actives</h3>
+              <button onClick={() => navigate('/tableau-de-bord/caisse')} className="text-primary text-sm font-medium flex items-center gap-1 hover:underline">
+                Accéder à la caisse <ChevronRight size={14} />
               </button>
             </div>
             <div className="p-6">
                <div className="space-y-4">
-                  {ventesRecentes.map((vente, i) => (
+                  {commandes.length === 0 && (
+                    <div className="text-center py-10 text-slate-500 italic">Aucune commande en cours</div>
+                  )}
+                  {commandes.slice(0, 5).map((commande, i) => (
                     <motion.div 
-                      key={i} 
+                      key={commande.id || i} 
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.1 }}
-                      className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all"
+                      className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all border border-transparent hover:border-white/5"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-lg">
-                          {vente.emoji}
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center font-bold text-white border border-white/5 shadow-inner">
+                          {commande.tableNom || 'A Emp.'}
                         </div>
                         <div>
-                          <p className="font-medium">{vente.nom}</p>
-                          <p className="text-xs text-slate-500">Il y a {vente.minutes} min</p>
+                          <p className="font-bold flex items-center gap-2">
+                             Commande #{commande.id.slice(-4).toUpperCase()}
+                             <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-md uppercase tracking-wider">
+                               {commande.statut}
+                             </span>
+                          </p>
+                          <p className="text-xs text-slate-400">
+                             Servi par <span className="text-white">{commande.serveurNom}</span>
+                          </p>
                         </div>
                       </div>
-                      <span className="font-bold text-accent">{vente.prix}</span>
+                      <span className="font-black text-xl text-emerald-400">{commande.total.toLocaleString()} F</span>
                     </motion.div>
                   ))}
                </div>
@@ -173,37 +187,26 @@ const DashboardAccueil = ({ profil, navigate }: any) => (
 
           {/* Colonne droite : Alertes */}
           <div className="space-y-6">
-            <div className="bento-item p-6 border-l-4 border-l-indigo-500">
-               <h4 className="font-bold mb-4 flex items-center gap-2">
-                 <AlertTriangle size={18} className="text-primary" />
-                 Alerte de caisse
-               </h4>
-               <p className="text-sm text-slate-400 mb-4">
-                 Votre caisse n'a pas été clôturée hier soir. Veuillez régulariser pour accéder aux rapports complets.
-               </p>
-               <button className="btn-primary w-full text-sm py-2">Clôturer la caisse</button>
-            </div>
-            
             <div className="bento-item p-6">
-              <h4 className="font-bold mb-4">Stock en alerte 🔴</h4>
+              <h4 className="font-bold mb-4 flex items-center gap-2">
+                 Stock en alerte <AlertTriangle size={18} className="text-red-500" />
+              </h4>
               <div className="space-y-3">
-                <LigneStock label="Bière Blonde 33cl" quantite={12} />
-                <LigneStock label="Coca Cola 1.5L" quantite={5} />
-                <LigneStock label="Whisky Label 5" quantite={2} />
+                {produits.filter(p => p.stockTotal <= p.stockAlerte).length === 0 ? (
+                  <p className="text-sm text-slate-400 italic">Tous les stocks sont normaux.</p>
+                ) : (
+                  produits.filter(p => p.stockTotal <= p.stockAlerte).slice(0, 5).map(p => (
+                    <LigneStock key={p.id} label={p.nom} quantite={p.stockTotal} />
+                  ))
+                )}
               </div>
+              <button onClick={() => navigate('/tableau-de-bord/achats')} className="mt-6 w-full btn-secondary text-sm py-2">Faire un approvisionnement</button>
             </div>
           </div>
         </div>
-  </>
+  </motion.div>
 );
-
-// -- Données de démonstration --
-const ventesRecentes = [
-  { emoji: '🍺', nom: 'Bière Primus x3', minutes: 5, prix: '4 500 F' },
-  { emoji: '🍷', nom: 'Vin Rouge (bouteille)', minutes: 12, prix: '8 000 F' },
-  { emoji: '🥃', nom: 'Whisky Black Label', minutes: 18, prix: '15 000 F' },
-  { emoji: '🍺', nom: 'Bière Ngok x6', minutes: 25, prix: '6 000 F' },
-];
+};
 
 // -- Composants utilitaires --
 
