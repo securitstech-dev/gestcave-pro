@@ -68,34 +68,6 @@ const PageConnexion = () => {
           transition={{ duration: 0.5 }}
           className="w-full max-w-[450px]"
         >
-          {/* Toggle Type de Compte */}
-          <div className="flex bg-white/5 border border-white/10 rounded-2xl p-1 mb-6 backdrop-blur-xl">
-            <button
-              type="button"
-              onClick={() => setTypeCompte('client')}
-              className={`flex-1 py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all duration-300 ${
-                typeCompte === 'client' 
-                  ? 'bg-slate-800 text-white shadow-lg border border-white/10' 
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Store size={18} />
-              Établissement (Client)
-            </button>
-            <button
-              type="button"
-              onClick={() => setTypeCompte('admin')}
-              className={`flex-1 py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all duration-300 ${
-                typeCompte === 'admin' 
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.4)] border border-indigo-400/50' 
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <ShieldCheck size={18} />
-              Portail Super Admin
-            </button>
-          </div>
-
           {/* Le panneau Glassmorphism Bento */}
           <div className="glass-panel p-8 sm:p-10 text-center relative overflow-hidden">
             
@@ -175,7 +147,12 @@ const PageConnexion = () => {
       <footer className="w-full z-50 bg-slate-950/20 backdrop-blur-md border-t border-white/5 py-6">
         <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-slate-500 text-sm">© 2026 GESTCAVE PRO. Protégé par un chiffrement de bout en bout.</p>
-          <div className="flex items-center gap-2 text-indigo-400 text-sm font-medium opacity-70">
+          {/* Bouton indiscret pour basculer en mode Super Admin (Double-clic) */}
+          <div 
+            className="flex items-center gap-2 text-indigo-400/30 hover:text-indigo-400/60 transition-colors text-sm font-medium cursor-default select-none"
+            onDoubleClick={() => setTypeCompte(prev => prev === 'admin' ? 'client' : 'admin')}
+            title="S..."
+          >
             <Shield size={16} /> Serveur Sécurisé
           </div>
         </div>
