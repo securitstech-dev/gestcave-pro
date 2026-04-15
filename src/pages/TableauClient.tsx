@@ -17,6 +17,7 @@ import GestionFinance from './modules/GestionFinance';
 import GestionAchats from './modules/GestionAchats';
 import { usePOSStore } from '../store/posStore';
 import { useEffect } from 'react';
+import { toast } from 'react-hot-toast';
 
 const TableauClient = () => {
   const { profil, deconnexion } = useAuthStore();
@@ -90,7 +91,17 @@ const TableauClient = () => {
 // Composant Accueil du Dashboard (ex-contenu principal)
 const DashboardAccueil = ({ profil, navigate }: any) => {
   const { commandes, produits } = usePOSStore();
-  
+  const [lienCopie, setLienCopie] = React.useState(false);
+
+  const copierLienPoste = () => {
+    if (!profil?.etablissement_id) return;
+    const lien = `${window.location.origin}/poste/${profil.etablissement_id}`;
+    navigator.clipboard.writeText(lien);
+    setLienCopie(true);
+    toast.success('Lien copié ! Partagez-le avec votre personnel.', { icon: '🔗', duration: 4000 });
+    setTimeout(() => setLienCopie(false), 3000);
+  };
+
   return (
   <motion.div initial={{opacity: 0, y: 10}} animate={{opacity: 1, y: 0}}>
         <header className="flex justify-between items-start mb-10">
@@ -99,11 +110,19 @@ const DashboardAccueil = ({ profil, navigate }: any) => {
             <p className="text-slate-400 mt-1">Voici l'état de votre établissement aujourd'hui.</p>
           </div>
           
-          <div className="flex gap-4">
-             <div className="glass-card px-4 py-2 flex items-center gap-3 text-sm">
-                <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                <span>Essai Gratuit : 12 jours restants</span>
-             </div>
+          <div className="flex gap-3 items-center">
+             {/* Bouton Lien de Poste */}
+             <button
+               onClick={copierLienPoste}
+               title="Générer le lien d'accès pour les tablettes du personnel"
+               className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
+                 lienCopie 
+                   ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' 
+                   : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white'
+               }`}
+             >
+               {lienCopie ? '✓ Lien copié !' : '🔗 Lien Personnel'}
+             </button>
              <button 
                onClick={() => navigate('/abonnement')}
                className="btn-primary py-2 text-sm"

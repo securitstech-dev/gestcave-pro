@@ -10,6 +10,7 @@ import InterfaceServeur from './pages/roles/InterfaceServeur';
 import InterfaceCuisine from './pages/roles/InterfaceCuisine';
 import InterfaceCaissier from './pages/roles/InterfaceCaissier';
 import PageInscription from './pages/PageInscription';
+import PagePoste from './pages/PagePoste';
 
 function App() {
   return (
@@ -33,6 +34,8 @@ function App() {
           <Route path="/tableau-de-bord/*" element={<TableauClient />} />
           <Route path="/abonnement" element={<PageAbonnement />} />
           <Route path="/inscription" element={<PageInscription />} />
+          {/* Route poste : accès direct des appareils du personnel via lien unique */}
+          <Route path="/poste/:etablissementId" element={<PagePoste />} />
           
           {/* Redirection par défaut */}
           <Route path="*" element={<Navigate to="/" replace />} />
