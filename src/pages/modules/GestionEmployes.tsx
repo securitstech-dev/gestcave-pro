@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, UserPlus, Shield, Key, Trash2, RefreshCw } from 'lucide-react';
+import { Users, UserPlus, Key, Trash2, RefreshCw, Copy, Info } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { useAuthStore } from '../../store/authStore';
@@ -87,6 +87,16 @@ const GestionEmployes = () => {
     }
   };
 
+  const copierPIN = (pin: string, nom: string) => {
+    navigator.clipboard.writeText(pin);
+    toast.success(`PIN de ${nom} copié !`, { icon: '📋' });
+  };
+
+  const roleEmoji = (role: string) => {
+    const map: Record<string, string> = { caissier: '💰', cuisine: '👨‍🍳', admin: '👑', serveur: '🤵' };
+    return map[role] || '👤';
+  };
+
   return (
     <div className="space-y-8">
       <header className="flex justify-between items-center">
@@ -102,17 +112,37 @@ const GestionEmployes = () => {
         </button>
       </header>
 
+      {/* Bannière d'information */}
+      <div className="flex gap-4 p-5 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl">
+        <Info className="text-indigo-400 shrink-0 mt-0.5" size={20} />
+        <div className="text-sm">
+          <p className="font-bold text-indigo-300 mb-1">🔐 Comment fonctionne l'accès par PIN ?</p>
+          <p className="text-indigo-400/80">
+            Sur la tablette du bar, après connexion, chaque membre du personnel doit saisir son code PIN pour accéder à son interface. 
+            <strong className="text-indigo-300"> Le patron doit se créer son propre profil avec le rôle "Responsable (Admin)" </strong> 
+            et noter son PIN pour accéder au Tableau de Bord. Personne d'autre ne peut y entrer.
+          </p>
+        </div>
+      </div>
+
       {/* Grille des employés */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {employes.map((emp) => (
           <motion.div 
             layout
             key={emp.id}
-            className="glass-panel p-6 border-white/10 hover:border-primary/30 transition-all relative group"
+            className={`glass-panel p-6 hover:border-primary/30 transition-all relative group ${
+              emp.role === 'admin' ? 'border-yellow-500/30 bg-yellow-500/5' : 'border-white/10'
+            }`}
           >
+            {emp.role === 'admin' && (
+              <div className="absolute top-3 right-3 text-[10px] font-black uppercase tracking-widest bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded-full border border-yellow-500/30">
+                👑 Patron / Admin
+              </div>
+            )}
             <div className="flex items-center gap-4 mb-6">
               <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-xl shadow-inner">
-                {emp.role === 'caissier' ? '💰' : emp.role === 'cuisine' ? '👨‍🍳' : '🤵'}
+                {roleEmoji(emp.role)}
               </div>
               <div>
                 <h3 className="font-bold text-white text-lg">{emp.nom}</h3>
@@ -125,19 +155,24 @@ const GestionEmployes = () => {
             <div className="bg-slate-950/50 rounded-xl p-4 border border-white/5 space-y-4">
               <div className="flex justify-between items-center text-sm">
                 <span className="text-slate-500 flex items-center gap-2"><Key size={14} /> Code PIN</span>
-                <span className="text-white font-mono font-bold text-lg tracking-widest">{emp.pin}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-white font-mono font-bold text-xl tracking-widest">{emp.pin}</span>
+                  <button 
+                    onClick={() => copierPIN(emp.pin, emp.nom)}
+                    className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-slate-400 hover:text-white"
+                    title="Copier le PIN"
+                  >
+                    <Copy size={13} />
+                  </button>
+                </div>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500 flex items-center gap-2">💰 Salaire</span>
-                <span className="text-accent font-bold">{emp.salaire?.toLocaleString() || 0} F</span>
-              </div>
-              <div className="flex justify-between items-center text-sm text-[10px] uppercase font-bold text-slate-600">
-                <span>Accès</span>
-                <span className="text-emerald-500">Autorisé</span>
+                <span className="text-slate-500">💰 Salaire mensuel</span>
+                <span className="text-emerald-400 font-bold">{emp.salaire?.toLocaleString() || 0} F CFA</span>
               </div>
             </div>
 
-            <div className="mt-6 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="mt-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <button 
                 onClick={() => changerPIN(emp.id)}
                 className="flex-1 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-xs text-slate-300 flex items-center justify-center gap-2 border border-white/5"

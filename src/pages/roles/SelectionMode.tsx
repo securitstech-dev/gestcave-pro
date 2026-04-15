@@ -59,12 +59,7 @@ const SelectionMode = () => {
   ];
 
   const gererSelection = (mode: any) => {
-    // Si c'est le patron ("admin") et qu'on est déjà connecté avec le compte propriétaire, on passe
-    if (mode.id === 'admin') {
-      navigate(mode.route);
-      return;
-    }
-
+    // Tous les accès (y compris le patron) nécessitent un PIN
     setSelectedMode(mode);
     setShowPinModal(true);
     setPin('');
@@ -85,18 +80,29 @@ const SelectionMode = () => {
       
       if (!snap.empty) {
         const employe = snap.docs[0].data();
-        // Vérifier si le rôle correspond (ou si l'employé est admin)
-        if (employe.role === selectedMode.role || employe.role === 'admin') {
-          toast.success(`Bonjour ${employe.nom} !`);
-          navigate(selectedMode.route);
+        const estAdmin = employe.role === 'admin';
+
+        // L'admin peut accéder à tout. Les autres ont accès uniquement à leur poste.
+        if (estAdmin || employe.role === selectedMode.role) {
+          toast.success(`Bienvenue, ${employe.nom} !`, { icon: '👋' });
+          setShowPinModal(false);
+          // Si c'est un admin qui accède au Tableau de Bord Patron
+          if (estAdmin && selectedMode.id === 'admin') {
+            navigate('/tableau-de-bord');
+          } else {
+            navigate(selectedMode.route);
+          }
         } else {
-          toast.error("Vous n'avez pas les droits pour ce poste.");
+          toast.error(`Accès refusé. Votre poste est "${employe.role}", pas "${selectedMode.role}".`);
+          setPin('');
         }
       } else {
-        toast.error("Code PIN incorrect.");
+        toast.error('Code PIN incorrect. Réessayez.');
+        setPin('');
       }
     } catch (error) {
-      toast.error("Erreur de connexion");
+      toast.error('Erreur de vérification.');
+      setPin('');
     } finally {
       setLoading(false);
     }
@@ -158,7 +164,7 @@ const SelectionMode = () => {
         <LogOut size={18} /> Changer de compte
       </button>
 
-      {/* Modal PIN */}
+      {/* Modal PIN — Clavier Numérique Tactile */}
       <AnimatePresence>
         {showPinModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-950/90 backdrop-blur-md">
@@ -166,39 +172,78 @@ const SelectionMode = () => {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="w-full max-w-sm glass-panel p-10 text-center"
+              className="w-full max-w-xs glass-panel p-8 text-center"
             >
-              <div className="mx-auto w-16 h-16 rounded-2xl bg-indigo-500/20 flex items-center justify-center mb-6 text-indigo-400">
-                <Key size={32} />
+              <div className="mx-auto w-16 h-16 rounded-2xl bg-indigo-500/20 flex items-center justify-center mb-4 text-indigo-400">
+                <Key size={30} />
               </div>
-              <h3 className="text-2xl font-bold text-white mb-2">Code PIN Requis</h3>
-              <p className="text-slate-400 text-sm mb-8">Entrez votre code personnel pour accéder à l'interface {selectedMode?.id}.</p>
+              <h3 className="text-xl font-bold text-white mb-1">{selectedMode?.emoji} {selectedMode?.titre}</h3>
+              <p className="text-slate-500 text-xs mb-6">Entrez votre code PIN à 4 chiffres</p>
               
-              <input 
-                type="password"
-                maxLength={4}
-                value={pin}
-                autoFocus
-                onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, '');
-                  setPin(val);
-                  if (val.length === 4) {
-                    // Petite pause pour l'expérience utilisateur
-                    setTimeout(() => validerPIN(), 500);
-                  }
-                }}
-                className="w-full bg-slate-900/50 border-2 border-white/10 rounded-2xl h-16 text-center text-4xl font-mono tracking-[1em] text-white focus:border-indigo-500 outline-none transition-all mb-8"
-                placeholder="****"
-              />
-
-              <div className="flex gap-4">
-                <button 
+              {/* Indicateurs de points */}
+              <div className="flex justify-center gap-4 mb-8">
+                {[0, 1, 2, 3].map(i => (
+                  <div key={i} className={`w-5 h-5 rounded-full border-2 transition-all duration-200 ${
+                    pin.length > i 
+                      ? 'bg-indigo-500 border-indigo-400 scale-110' 
+                      : 'border-white/20 bg-transparent'
+                  }`} />
+                ))}
+              </div>
+              
+              {/* Clavier numérique */}
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                {[1,2,3,4,5,6,7,8,9].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => {
+                      if (pin.length < 4) {
+                        const newPin = pin + n.toString();
+                        setPin(newPin);
+                        if (newPin.length === 4) {
+                          setTimeout(() => validerPIN(), 300);
+                        }
+                      }
+                    }}
+                    className="h-16 rounded-2xl bg-white/5 hover:bg-white/15 active:scale-95 border border-white/10 text-white text-2xl font-bold transition-all"
+                  >
+                    {n}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setPin(p => p.slice(0, -1))}
+                  className="h-16 rounded-2xl bg-white/5 hover:bg-red-500/20 active:scale-95 border border-white/10 text-red-400 text-sm font-bold transition-all flex items-center justify-center"
+                >
+                  ⌫
+                </button>
+                <button
+                  onClick={() => {
+                    if (pin.length < 4) {
+                      const newPin = pin + '0';
+                      setPin(newPin);
+                      if (newPin.length === 4) {
+                        setTimeout(() => validerPIN(), 300);
+                      }
+                    }
+                  }}
+                  className="h-16 rounded-2xl bg-white/5 hover:bg-white/15 active:scale-95 border border-white/10 text-white text-2xl font-bold transition-all"
+                >
+                  0
+                </button>
+                <button
                   onClick={() => setShowPinModal(false)}
-                  className="flex-1 py-3 text-slate-500 hover:text-white transition-colors"
+                  className="h-16 rounded-2xl bg-red-500/10 hover:bg-red-500/20 active:scale-95 border border-red-500/20 text-red-400 text-sm font-bold transition-all"
                 >
                   Annuler
                 </button>
               </div>
+
+              {loading && (
+                <div className="flex items-center justify-center gap-2 text-indigo-400 text-sm">
+                  <div className="w-4 h-4 border-2 border-indigo-400/30 border-t-indigo-400 rounded-full animate-spin" />
+                  Vérification...
+                </div>
+              )}
             </motion.div>
           </div>
         )}
