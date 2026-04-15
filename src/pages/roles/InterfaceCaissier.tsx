@@ -6,12 +6,17 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePOSStore } from '../../store/posStore';
+import { usePosteSession } from '../../hooks/usePosteSession';
+import { useNavigate } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
 
 // ============================================================
 // INTERFACE CAISSIER — Encaissement & Gestion des paiements
 // ============================================================
 const InterfaceCaissier = () => {
   const { tables, commandes, encaisserCommande, ouvrirVenteEmporter } = usePOSStore();
+  const { nomEmploye, etablissementId } = usePosteSession();
+  const navigate = useNavigate();
   const [commandeSelectionnee, setCommandeSelectionnee] = useState<string | null>(null);
   const [modePaiement, setModePaiement] = useState<'especes' | 'mobile' | 'carte' | 'credit' | null>(null);
   const [montantDonne, setMontantDonne] = useState('');
@@ -51,7 +56,7 @@ const InterfaceCaissier = () => {
   };
 
   const demarrerVenteEmporter = async () => {
-    const id = await ouvrirVenteEmporter('caissier1', 'Caisse Centrale');
+    const id = await ouvrirVenteEmporter(etablissementId || 'caissier', 'Caisse Centrale');
     setCommandeSelectionnee(id);
     toast.success('Nouvelle vente à emporter');
   };
@@ -61,14 +66,23 @@ const InterfaceCaissier = () => {
     <div className="min-h-screen bg-slate-950 flex">
       {/* Panneau gauche : liste des tables */}
       <div className="w-80 bg-slate-900 border-r border-white/5 p-4 flex flex-col">
-        <div className="flex items-center gap-3 mb-6 px-2">
-          <div className="bg-green-600 p-2.5 rounded-xl">
-            <Receipt size={22} className="text-white" />
-          </div>
-          <div>
-            <h1 className="font-display font-bold text-lg">Caisse</h1>
-            <p className="text-xs text-slate-400">Alice K. • Service</p>
-          </div>
+        <div className="flex items-center justify-between mb-6 px-2">
+            <div className="flex items-center gap-3">
+            <div className="bg-green-600 p-2.5 rounded-xl">
+                <Receipt size={22} className="text-white" />
+            </div>
+            <div>
+                <h1 className="font-display font-bold text-lg">Caisse</h1>
+                <p className="text-xs text-slate-400">{nomEmploye}</p>
+            </div>
+            </div>
+             <button
+              onClick={() => navigate(-1)}
+              className="text-slate-500 hover:text-white p-2 rounded-xl hover:bg-white/5 transition-colors"
+              title="Quitter la session"
+            >
+              <LogOut size={18} />
+            </button>
         </div>
 
         <button 

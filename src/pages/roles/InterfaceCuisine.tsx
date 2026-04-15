@@ -3,6 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Clock, Bell, ChefHat, CheckCircle2, Wine } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePOSStore } from '../../store/posStore';
+import { usePosteSession } from '../../hooks/usePosteSession';
+import { useNavigate } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
 import type { Commande } from '../../store/posStore';
 
 // ============================================================
@@ -10,6 +13,8 @@ import type { Commande } from '../../store/posStore';
 // ============================================================
 const InterfaceCuisine = () => {
   const { commandes, marquerLignePrete, marquerCommandeServie } = usePOSStore();
+  const { nomEmploye } = usePosteSession();
+  const navigate = useNavigate();
   const [derniereNotif, setDerniereNotif] = useState<number>(0);
   const [filtreActif, setFiltreActif] = useState<'tous' | 'cuisine' | 'bar'>('tous');
 
@@ -40,24 +45,34 @@ const InterfaceCuisine = () => {
     <div className="min-h-screen bg-slate-950 p-6">
       {/* En-tête cuisine */}
       <header className="flex justify-between items-center mb-8">
-        <div className="flex items-center gap-4">
-          <div className="bg-orange-500 p-3 rounded-2xl">
-            <ChefHat size={28} className="text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-display font-bold">Cuisine & Bar</h1>
-            <p className="text-slate-400">Bons de commande en cours — Mis à jour en direct</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="glass-card px-5 py-3 flex items-center gap-3">
-            <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
-            <span className="font-medium">{commandesActives.length} bon(s) actif(s)</span>
-          </div>
-          <div className="text-slate-400 text-sm bg-slate-800 px-4 py-3 rounded-xl">
-            <Clock size={14} className="inline mr-1" />
-            {new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-          </div>
+        <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-4">
+              <div className="bg-orange-500 p-3 rounded-2xl">
+                <ChefHat size={28} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-display font-bold">Cuisine & Bar</h1>
+                <p className="text-slate-400">En service : <span className="text-white font-bold">{nomEmploye}</span></p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="glass-card px-5 py-3 flex items-center gap-3">
+                <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+                <span className="font-medium">{commandesActives.length} bon(s) actif(s)</span>
+              </div>
+              <div className="text-slate-400 text-sm bg-slate-800 px-4 py-3 rounded-xl hidden md:block">
+                <Clock size={14} className="inline mr-1" />
+                {new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+              <button
+                onClick={() => navigate(-1)}
+                className="text-slate-500 hover:text-white p-3 rounded-xl hover:bg-white/5 transition-colors border border-white/5 ml-2"
+                title="Quitter la session"
+              >
+                <LogOut size={20} />
+              </button>
+            </div>
         </div>
       </header>
 

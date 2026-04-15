@@ -3,10 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, ChevronRight, Plus, Minus, Send, 
   X, 
-  ShoppingBag, Smartphone, Clock
+  ShoppingBag, Smartphone, Clock, LogOut
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePOSStore } from '../../store/posStore';
+import { usePosteSession } from '../../hooks/usePosteSession';
+import { useNavigate } from 'react-router-dom';
 import type { Produit, TablePlan } from '../../store/posStore';
 
 // ============================================================
@@ -14,6 +16,8 @@ import type { Produit, TablePlan } from '../../store/posStore';
 // ============================================================
 const InterfaceServeur = () => {
   const { tables, produits, commandes, ouvrirTable, ajouterLigne, modifierQuantite, supprimerLigne, envoyerCuisine } = usePOSStore();
+  const { nomEmploye, etablissementId } = usePosteSession();
+  const navigate = useNavigate();
   
   const [etape, setEtape] = useState<'tables' | 'couverts' | 'commande'>('tables');
   const [tableSelectionnee, setTableSelectionnee] = useState<TablePlan | null>(null);
@@ -35,14 +39,23 @@ const InterfaceServeur = () => {
     return (
       <div className="min-h-screen bg-slate-950 p-4 pb-24">
         <header className="mb-6">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary p-2 rounded-xl">
-              <Smartphone size={20} className="text-white" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary p-2 rounded-xl">
+                <Smartphone size={20} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-display font-bold">Interface Serveur</h1>
+                <p className="text-slate-400 text-sm">{nomEmploye} 👋</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-display font-bold">Interface Serveur</h1>
-              <p className="text-slate-400 text-sm">Jean M. • Bonsoir 👋</p>
-            </div>
+            {/* Bouton retour au sélecteur */}
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-2 text-slate-500 hover:text-white text-sm transition-colors px-3 py-2 rounded-xl hover:bg-white/5"
+            >
+              <LogOut size={16} /> Quitter
+            </button>
           </div>
         </header>
 
@@ -135,10 +148,10 @@ const InterfaceServeur = () => {
             onClick={async () => {
               if (!tableSelectionnee) return;
               try {
-                const id = await ouvrirTable(tableSelectionnee.id, 'srv1', 'Jean M.', nombreCouverts);
+                const id = await ouvrirTable(tableSelectionnee.id, etablissementId || 'srv', nomEmploye, nombreCouverts);
                 setCommandeId(id);
                 setEtape('commande');
-                toast.success(`Table ${tableSelectionnee.nom} ouverte !`);
+                toast.success(`${tableSelectionnee.nom} ouverte !`);
               } catch (err) {
                 toast.error("Erreur d'ouverture");
               }
