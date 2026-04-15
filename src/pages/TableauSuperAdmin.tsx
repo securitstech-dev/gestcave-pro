@@ -3,13 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, CheckCircle, XCircle, LogOut, 
   Search, Building2, CreditCard, TrendingUp, Shield,
-  ArrowUpRight, AlertTriangle, Loader2, ExternalLink, X
+  ArrowUpRight, AlertTriangle, Loader2, ExternalLink, X, Ban, Activity
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, doc, updateDoc, addDoc, query, orderBy } from 'firebase/firestore';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 type Onglet = 'demandes' | 'paiements' | 'etablissements' | 'comptabilite';
 
@@ -152,6 +153,25 @@ const TableauSuperAdmin = () => {
       toast.dismiss(toastId);
       toast.success('Paiement rejeté. Le client devra renvoyer sa preuve.');
       setModalPaiement(null);
+    } catch (err: any) {
+      toast.dismiss(toastId);
+      toast.error(`Erreur : ${err.message}`);
+    }
+  };
+
+  // ✅ PRIORITÉ 2 : Suspendre un établissement
+  const suspendreEtablissement = async (etab: any) => {
+    const confirm = window.confirm(`Voulez-vous vraiment suspendre l'accès de ${etab.nom} ? Ils perdront l'accès à la plateforme immédiatement.`);
+    if (!confirm) return;
+
+    const toastId = toast.loading('Suspension en cours...');
+    try {
+      await updateDoc(doc(db, 'etablissements', etab.id), {
+        subscription_status: 'suspendu',
+        subscription_end_date: new Date().toISOString() // Expire immédiatement
+      });
+      toast.dismiss(toastId);
+      toast.success(`L'établissement ${etab.nom} a été suspendu.`);
     } catch (err: any) {
       toast.dismiss(toastId);
       toast.error(`Erreur : ${err.message}`);
@@ -453,16 +473,25 @@ const TableauSuperAdmin = () => {
                             {expirationImminente && <div className="text-[10px] text-yellow-500 flex items-center gap-1"><AlertTriangle size={10} /> {joursRestants}j restants</div>}
                             {expire && <div className="text-[10px] text-red-500 flex items-center gap-1"><AlertTriangle size={10} /> Expiré</div>}
                           </td>
-                          <td className="px-6 py-4 text-right">
-                            <a
+                          <td className="px-6 py-4 text-right flex justify-end gap-2">
+                             <a
                               href={`/poste/${etab.id}`}
                               target="_blank"
                               rel="noreferrer"
                               title="Voir le lien de poste"
-                              className="p-1.5 inline-flex hover:bg-white/10 rounded-lg text-slate-500 hover:text-slate-300 transition-colors"
+                              className="p-1.5 inline-flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors border border-white/5"
                             >
                               <ExternalLink size={14} />
                             </a>
+                            {etab.subscription_status !== 'suspendu' && (
+                              <button
+                                onClick={() => suspendreEtablissement(etab)}
+                                title="Suspendre l'établissement"
+                                className="p-1.5 inline-flex items-center justify-center bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg border border-red-500/20 transition-colors"
+                              >
+                                <Ban size={14} />
+                              </button>
+                            )}
                           </td>
                         </tr>
                       );
@@ -501,7 +530,7 @@ const TableauSuperAdmin = () => {
 
                 <div className="bento-item p-8">
                   <h3 className="text-sm font-bold text-white uppercase mb-6 tracking-widest">Derniers paiements validés</h3>
-                  <div className="space-y-3">
+                  <div className="space-y-3 max-h-[250px] overflow-y-auto pr-2">
                     {paiements.filter(p => p.statut === 'valide').slice(0, 5).length === 0 && (
                       <p className="text-slate-500 italic text-sm">Aucun paiement validé pour l'instant.</p>
                     )}
@@ -515,6 +544,79 @@ const TableauSuperAdmin = () => {
                       </div>
                     ))}
                   </div>
+                </div>
+              </div>
+
+              {/* ✅ PRIORITÉ 3 : Graphique des revenus (MRR) */}
+              <div className="bento-item p-8">
+                <div className="flex items-center justify-between mb-8">
+                    <div>
+                        <h3 className="text-xl font-bold flex items-center gap-2">
+                            <Activity className="text-primary" /> Évolution du Volume Mensuel
+                        </h3>
+                        <p className="text-slate-400 text-sm mt-1">
+                            Calculé sur les paiements validés (CFA)
+                        </p>
+                    </div>
+                </div>
+                
+                <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={(() => {
+                            // Agrégation des paiements validés par mois
+                            const statsMap: Record<string, number> = {};
+                            const validePaiements = paiements.filter(p => p.statut === 'valide');
+                            
+                            validePaiements.forEach(p => {
+                                const d = new Date(p.date_validation || p.date);
+                                const mois = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                                statsMap[mois] = (statsMap[mois] || 0) + (p.montant || 0);
+                            });
+
+                            // Générer les 6 derniers mois pour avoir un graphe lisible
+                            const result = [];
+                            for(let i=5; i>=0; i--) {
+                                const d = new Date();
+                                d.setMonth(d.getMonth() - i);
+                                const moisNum = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                                const moisLabel = d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+                                result.push({
+                                    name: moisLabel,
+                                    Revenus: statsMap[moisNum] || 0
+                                });
+                            }
+                            return result;
+                        })()}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                            <XAxis 
+                                dataKey="name" 
+                                stroke="#94a3b8" 
+                                fontSize={12} 
+                                tickLine={false} 
+                                axisLine={false}
+                            />
+                            <YAxis 
+                                stroke="#94a3b8" 
+                                fontSize={12} 
+                                tickLine={false} 
+                                axisLine={false}
+                                tickFormatter={(value) => `${value / 1000}k`}
+                            />
+                            <Tooltip 
+                                contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px' }}
+                                itemStyle={{ color: '#10b981', fontWeight: 'bold' }}
+                                formatter={(value: number) => [`${value.toLocaleString()} F`, 'Revenus']}
+                            />
+                            <Line 
+                                type="monotone" 
+                                dataKey="Revenus" 
+                                stroke="#10b981" 
+                                strokeWidth={3} 
+                                dot={{ fill: '#0f172a', stroke: '#10b981', strokeWidth: 2, r: 4 }} 
+                                activeDot={{ r: 6, fill: '#10b981' }}
+                            />
+                        </LineChart>
+                    </ResponsiveContainer>
                 </div>
               </div>
             </motion.div>
