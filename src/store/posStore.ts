@@ -107,29 +107,57 @@ export const usePOSStore = create<PosState>((set, get) => ({
     set({ loading: true });
     
     const unsubs = [];
+
+    // TABLES
     unsubs.push(onSnapshot(query(collection(db, 'tables'), where('etablissement_id', '==', etablissementId)), (snap) => {
       set({ tables: snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as TablePlan)) });
     }));
+
+    // PRODUITS
     unsubs.push(onSnapshot(query(collection(db, 'produits'), where('etablissement_id', '==', etablissementId)), (snap) => {
       set({ produits: snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Produit)) });
     }));
-    unsubs.push(onSnapshot(query(collection(db, 'commandes'), where('etablissement_id', '==', etablissementId), where('statut', '!=', 'payee')), (snap) => {
-      set({ commandes: snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Commande)) });
-    }));
+
+    // COMMANDES (DOUBLE ÉCOUTE POUR RÉTROCOMPATIBILITÉ etablissementId / etablissement_id)
+    const handleCommandes = (snap: any) => {
+      const newItems = snap.docs.map((d:any) => ({ id: d.id, ...d.data() } as Commande));
+      set(state => {
+          const current = [...state.commandes];
+          newItems.forEach((item: Commande) => {
+              const idx = current.findIndex(c => c.id === item.id);
+              if (idx > -1) current[idx] = item;
+              else current.push(item);
+          });
+          return { commandes: current.filter(c => c.statut !== 'payee') };
+      });
+    };
+
+    unsubs.push(onSnapshot(query(collection(db, 'commandes'), where('etablissement_id', '==', etablissementId), where('statut', '!=', 'payee')), handleCommandes));
+    unsubs.push(onSnapshot(query(collection(db, 'commandes'), where('etablissementId', '==', etablissementId), where('statut', '!=', 'payee')), handleCommandes));
+
     set({ loading: false, unsubs });
   },
 
   initialiserTempsReel: (etablissementId) => get().initPOS(etablissementId),
+  
   arreterTempsReel: () => {
     get().unsubs.forEach(u => u());
     set({ unsubs: [] });
   },
 
   refreshCommande: async (id) => {
+      console.log("Refreshing command:", id);
       const snap = await getDoc(doc(db, 'commandes', id));
       if (snap.exists()) {
           const cmd = { id: snap.id, ...snap.data() } as Commande;
-          set(s => ({ commandes: s.commandes.map(c => c.id === id ? cmd : c) }));
+          set(s => {
+              const exists = s.commandes.some(c => c.id === id);
+              if (exists) {
+                  return { commandes: s.commandes.map(c => c.id === id ? cmd : c) };
+              } else {
+                  return { commandes: [...s.commandes, cmd] };
+              }
+          });
       }
   },
 
@@ -140,6 +168,7 @@ export const usePOSStore = create<PosState>((set, get) => ({
 
     const nouvCmd = {
       etablissement_id: profile?.etablissement_id || '',
+      etablissementId: profile?.etablissement_id || '', // Double champ pour sécurité
       tableId, tableNom: table.nom, serveurId, serveurNom,
       dateOuverture: new Date().toISOString(), statut: 'ouverte',
       lignes: [], total: 0, nombreCouverts: Number(nombreCouverts), type: 'sur_place'
@@ -154,6 +183,7 @@ export const usePOSStore = create<PosState>((set, get) => ({
     const profile = useAuthStore.getState().profil;
     const nouvCmd = {
       etablissement_id: profile?.etablissement_id || '',
+      etablissementId: profile?.etablissement_id || '',
       tableId: null, tableNom: 'A EMPORTER', serveurId, serveurNom,
       dateOuverture: new Date().toISOString(), statut: 'ouverte',
       lignes: [], total: 0, nombreCouverts: 1, type: 'a_emporter'
@@ -169,10 +199,11 @@ export const usePOSStore = create<PosState>((set, get) => ({
     try {
       const commandeRef = doc(db, 'commandes', commandeId);
       const snap = await getDoc(commandeRef);
-      if (!snap.exists()) throw new Error("Document introuvable");
+      if (!snap.exists()) throw new Error("Commande introuvable en base");
 
       const data = snap.data();
       const lignesActuelles = (data.lignes || []) as LigneCommande[];
+      
       const idx = lignesActuelles.findIndex(l => l.produitId === produit.id && l.statut === 'en_attente');
       let nvellesLignes = [...lignesActuelles];
 
@@ -191,10 +222,13 @@ export const usePOSStore = create<PosState>((set, get) => ({
 
       const nouveauTotal = nvellesLignes.reduce((sum, l) => sum + (Number(l.sousTotal) || 0), 0);
       await updateDoc(commandeRef, { lignes: nvellesLignes, total: nouveauTotal });
+      
+      // FORCE REFRESH AVEC AJOUT SI MANQUANT
       await get().refreshCommande(commandeId);
 
       toast.success(`${produit.nom} ajouté !`, { id: toastId });
     } catch (err: any) {
+      console.error("ERREUR POS:", err);
       toast.error("Erreur: " + err.message, { id: toastId });
     }
   },
@@ -204,15 +238,15 @@ export const usePOSStore = create<PosState>((set, get) => ({
     const commandeRef = doc(db, 'commandes', commandeId);
     const snap = await getDoc(commandeRef);
     if (!snap.exists()) return;
-    const lignes = (snap.data().lignes || []) as LigneCommande[];
-    const nvele = lignes.map(l => {
+    const data = snap.data();
+    const nvele = (data.lignes || []).map((l:any) => {
         if (l.id === ligneId) {
             const q = Math.max(1, l.quantite + delta);
             return { ...l, quantite: q, sousTotal: q * l.prixUnitaire };
         }
         return l;
     });
-    const total = nvele.reduce((s, i) => s + i.sousTotal, 0);
+    const total = nvele.reduce((s:any, i:any) => s + i.sousTotal, 0);
     await updateDoc(commandeRef, { lignes: nvele, total });
     await get().refreshCommande(commandeId);
   },
@@ -244,7 +278,7 @@ export const usePOSStore = create<PosState>((set, get) => ({
         }
     });
 
-    const nvele = lignes.map(l => l.statut === 'en_attente' ? { ...l, statut: 'servi', heureEnvoi: mtn } : l);
+    const nvele = lignes.map(l => l.statut === 'en_attente' ? { ...l, statut: 'pret', heureEnvoi: mtn } : l);
     batch.update(commandeRef, { statut: 'envoyee', lignes: nvele });
     await batch.commit();
     await get().refreshCommande(commandeId);
@@ -295,5 +329,6 @@ export const usePOSStore = create<PosState>((set, get) => ({
     });
 
     await batch.commit();
+    await get().refreshCommande(commandeId);
   }
 }));
