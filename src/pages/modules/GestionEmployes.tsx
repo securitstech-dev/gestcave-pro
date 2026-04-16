@@ -277,8 +277,15 @@ const GestionEmployes = () => {
 
                 <div className="mb-8">
                     <h3 className="font-bold text-white text-xl mb-1">{emp.nom}</h3>
-                    <div className="flex items-center gap-2 text-slate-500 text-xs uppercase font-bold tracking-widest">
-                        <Activity size={12} className="text-emerald-500" /> Compte Opérationnel
+                    <div className="flex items-center gap-2 text-slate-500 text-[10px] uppercase font-bold tracking-widest">
+                        <Key size={10} className="text-indigo-500" /> 
+                        PIN : <span className="text-white font-mono tracking-widest">{emp.pin}</span>
+                        <button 
+                            onClick={() => copierPIN(emp.pin, emp.nom)}
+                            className="ml-2 p-1 hover:bg-white/10 rounded-md text-slate-600 hover:text-indigo-400 transition-colors"
+                        >
+                            <Copy size={10} />
+                        </button>
                     </div>
                 </div>
 
