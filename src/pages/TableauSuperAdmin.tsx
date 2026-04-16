@@ -112,17 +112,30 @@ const TableauSuperAdmin = () => {
   const validerPaiementAction = async () => {
     if (!modalPaiement) return;
     const toastId = toast.loading('Validation...');
-    let jours = 30;
+    
+    // On récupère la période enregistrée dans le paiement (mensuel ou annuel)
+    const estAnnuel = modalPaiement.periode === 'annuel';
+    const jours = estAnnuel ? 365 : 30;
     
     try {
-      await updateDoc(doc(db, 'paiements', modalPaiement.id), { statut: 'valide', date_validation: new Date().toISOString() });
+      await updateDoc(doc(db, 'paiements', modalPaiement.id), { 
+        statut: 'valide', 
+        date_validation: new Date().toISOString() 
+      });
+      
       await updateDoc(doc(db, 'etablissements', modalPaiement.etablissement_id), { 
           subscription_status: 'actif', 
           subscription_plan: planPaiement,
           subscription_end_date: new Date(Date.now() + jours * 24 * 60 * 60 * 1000).toISOString() 
       });
-      toast.dismiss(toastId); toast.success('Abonnement activé !'); setModalPaiement(null);
-    } catch (err: any) { toast.dismiss(toastId); toast.error(`Erreur : ${err.message}`); }
+      
+      toast.dismiss(toastId); 
+      toast.success(`Abonnement ${estAnnuel ? 'ANNUEL' : 'MENSUEL'} activé avec succès !`); 
+      setModalPaiement(null);
+    } catch (err: any) { 
+      toast.dismiss(toastId); 
+      toast.error(`Erreur : ${err.message}`); 
+    }
   };
 
   const rejeterPaiement = async (paiementId: string) => {
@@ -723,13 +736,17 @@ const TableauSuperAdmin = () => {
               </div>
               <div className="mb-6 p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3 text-sm">
                 <div className="flex justify-between"><span className="text-slate-500">Montant</span><span className="text-emerald-600 font-black text-xl">{(modalPaiement.montant || 0).toLocaleString()} F CFA</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Période</span><span className="font-bold text-slate-900 uppercase tracking-widest text-[10px] bg-slate-200 px-2 py-1 rounded-md">{modalPaiement.periode || 'mensuel'}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Méthode</span><span className="font-bold text-indigo-600 uppercase tracking-widest text-[10px] border border-indigo-200 px-2 py-1 rounded-md">{modalPaiement.methode || 'N/A'}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Date</span><span className="font-bold text-slate-900">{new Date(modalPaiement.date).toLocaleString('fr-FR')}</span></div>
               </div>
+              
               {modalPaiement.preuve_url && (
                 <div className="mb-6">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Preuve de paiement</p>
-                  <a href={modalPaiement.preuve_url} target="_blank" rel="noreferrer">
-                    <img src={modalPaiement.preuve_url} alt="Preuve" className="w-full rounded-2xl border border-slate-200 max-h-56 object-cover hover:opacity-90 transition-opacity cursor-pointer" onError={(e: any) => { e.target.style.display = 'none'; }} />
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Preuve de paiement (cliquez pour agrandir)</p>
+                  <a href={modalPaiement.preuve_url} target="_blank" rel="noreferrer" className="block relative group overflow-hidden rounded-2xl border border-slate-200">
+                    <img src={modalPaiement.preuve_url} alt="Preuve" className="w-full h-40 object-cover group-hover:scale-110 transition-transform duration-500" onError={(e: any) => { e.target.style.display = 'none'; }} />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white font-bold text-xs">VOIR EN PLEIN ÉCRAN</div>
                   </a>
                 </div>
               )}
