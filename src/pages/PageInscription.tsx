@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Building2, MapPin, Phone, User, Mail, Send, CheckCircle2 } from 'lucide-react';
+import { Building2, MapPin, Phone, User, Mail, Send, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
@@ -43,22 +43,23 @@ const PageInscription = () => {
 
   if (envoye) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="glass-panel p-10 max-w-lg text-center"
+          className="bg-white p-12 max-w-lg text-center rounded-[3rem] shadow-2xl shadow-emerald-500/10 border border-emerald-100"
         >
-          <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 text-green-500">
-            <CheckCircle2 size={48} />
+          <div className="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-8 text-emerald-600 shadow-inner">
+            <CheckCircle2 size={56} />
           </div>
-          <h1 className="text-3xl font-display font-bold text-white mb-4">Demande Reçue !</h1>
-          <p className="text-slate-400 mb-8">
-            Merci {formData.nom_contact}. Votre demande pour <span className="text-white font-bold">{formData.nom_etablissement}</span> a bien été transmise. 
-            Notre équipe (Super Admin) va valider vos informations et vous contactera par email très prochainement pour activer votre essai gratuit de 14 jours.
+          <h1 className="text-4xl font-black text-slate-900 mb-4 tracking-tight uppercase">Demande Reçue !</h1>
+          <p className="text-slate-500 font-medium mb-10 leading-relaxed">
+            Merci <span className="text-slate-900 font-bold">{formData.nom_contact}</span>. Votre demande d'accès pour <span className="text-indigo-600 font-bold">{formData.nom_etablissement}</span> a été transmise avec succès à notre équipe.
+            <br/><br/>
+            Un conseiller <span className="text-slate-900 font-bold">Securits Technologies</span> analysera votre dossier et vous contactera par email sous 24h.
           </p>
-          <button onClick={() => navigate('/')} className="btn-primary w-full py-4">
-            Retour à l'accueil
+          <button onClick={() => navigate('/')} className="w-full py-5 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-[11px] hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 active:scale-95">
+            Retour au site
           </button>
         </motion.div>
       </div>
@@ -66,94 +67,109 @@ const PageInscription = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 py-20 px-6">
-      <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
+    <div className="min-h-screen bg-slate-50 relative overflow-hidden">
+      {/* Decorative Orbs */}
+      <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-emerald-500/5 blur-[120px] rounded-full pointer-events-none" />
+
+      <header className="max-w-7xl mx-auto px-6 h-24 flex items-center">
+          <button onClick={() => navigate('/')} className="flex items-center gap-3 text-slate-400 hover:text-slate-900 font-bold text-sm transition-all group">
+              <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center group-hover:bg-slate-50 transition-all">
+                  <ArrowLeft size={18} />
+              </div>
+              <span className="uppercase tracking-widest text-[10px] font-black">Retour Accueil</span>
+          </button>
+      </header>
+      
+      <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-20 items-center py-10 pb-32">
         
-        {/* TEXTE EXPLICATIF */}
-        <div className="space-y-8">
+        <div className="space-y-12">
           <motion.div 
-            initial={{ opacity: 0, x: -20 }}
+            initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
           >
-            <span className="px-4 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-sm font-medium">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-500 text-[10px] font-black uppercase tracking-widest mb-8 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
               Essai Gratuit • 14 Jours
-            </span>
-            <h1 className="text-5xl md:text-6xl font-display font-extrabold text-white mt-6 leading-tight">
-              Propulsez votre <br/>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">établissement.</span>
+            </div>
+            <h1 className="text-6xl md:text-[5.5rem] font-display font-black text-slate-900 leading-[0.95] tracking-tighter mb-8">
+              Digitalisez votre <br/>
+              <span className="text-indigo-600">établissement.</span>
             </h1>
-            <p className="text-slate-400 text-lg max-w-md mt-6">
-              Rejoignez les dizaines de bars et restaurants qui utilisent GESTCAVE PRO pour synchroniser leur salle et leur cuisine en temps réel.
+            <p className="text-slate-500 text-lg font-medium leading-relaxed max-w-md">
+                Rejoignez les dizaines d'établissements qui font confiance à <span className="text-slate-900 font-bold">GESTCAVE PRO</span> pour une synchronisation totale.
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <FeatureSmall title="Zéro Frais" desc="Installation gratuite" />
-            <FeatureSmall title="Cloud Sync" desc="Données sécurisées" />
-            <FeatureSmall title="Temps Réel" desc="Cuisine synchronisée" />
-            <FeatureSmall title="Support 24/7" desc="Équipe à votre écoute" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-10">
+            <FeatureItem title="Zéro Frais" desc="Installation gratuite" color="indigo" />
+            <FeatureItem title="Cloud Sync" desc="Données sécurisées" color="emerald" />
+            <FeatureItem title="Temps Réel" desc="Cuisine synchronisée" color="rose" />
+            <FeatureItem title="Support 24/7" desc="Équipe à l'écoute" color="slate" />
           </div>
         </div>
 
-        {/* FORMULAIRE */}
+        {/* FORMULAIRE CLAIR & PREMIUM */}
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass-panel p-8 sm:p-10"
+          className="bg-white p-12 sm:p-14 rounded-[4rem] shadow-2xl shadow-indigo-900/5 border border-slate-100 relative"
         >
-          <h2 className="text-2xl font-bold text-white mb-2">Demander mon accès</h2>
-          <p className="text-slate-400 text-sm mb-8">Remplissez ce formulaire et notre administrateur validera votre compte rapidement.</p>
+          <div className="mb-12">
+            <h2 className="text-4xl font-black text-slate-900 tracking-tight leading-none mb-4 uppercase">Demander mon accès</h2>
+            <p className="text-slate-400 font-medium">Validation immédiate par nos administrateurs.</p>
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <InputGroup 
-              icon={<Building2 size={18} />} 
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <ModernInput 
+              icon={<Building2 size={20} />} 
               label="Nom de l'établissement" 
               placeholder="ex: Le Grand Bar de Brazza"
               value={formData.nom_etablissement}
-              onChange={(e) => setFormData({...formData, nom_etablissement: e.target.value})}
+              onChange={(e: any) => setFormData({...formData, nom_etablissement: e.target.value})}
             />
 
-            <InputGroup 
-              icon={<MapPin size={18} />} 
+            <ModernInput 
+              icon={<MapPin size={20} />} 
               label="Adresse Complète" 
               placeholder="ex: Rue Case Barnier, Brazzaville"
               value={formData.adresse_etablissement}
-              onChange={(e) => setFormData({...formData, adresse_etablissement: e.target.value})}
+              onChange={(e: any) => setFormData({...formData, adresse_etablissement: e.target.value})}
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <InputGroup 
-                icon={<User size={18} />} 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+              <ModernInput 
+                icon={<User size={20} />} 
                 label="Responsable" 
                 placeholder="Votre nom"
                 value={formData.nom_contact}
-                onChange={(e) => setFormData({...formData, nom_contact: e.target.value})}
+                onChange={(e: any) => setFormData({...formData, nom_contact: e.target.value})}
               />
-              <InputGroup 
-                icon={<Phone size={18} />} 
+              <ModernInput 
+                icon={<Phone size={20} />} 
                 label="Téléphone" 
-                placeholder="+242..."
+                placeholder="+242 0x xxx xxxx"
                 value={formData.telephone_contact}
-                onChange={(e) => setFormData({...formData, telephone_contact: e.target.value})}
+                onChange={(e: any) => setFormData({...formData, telephone_contact: e.target.value})}
               />
             </div>
 
-            <InputGroup 
-              icon={<Mail size={18} />} 
+            <ModernInput 
+              icon={<Mail size={20} />} 
               label="Email de contact" 
-              placeholder="email@exemple.com"
+              placeholder="contact@exemple.com"
               type="email"
               value={formData.email_contact}
-              onChange={(e) => setFormData({...formData, email_contact: e.target.value})}
+              onChange={(e: any) => setFormData({...formData, email_contact: e.target.value})}
             />
 
             <button 
               type="submit" 
               disabled={loading}
-              className="btn-primary accent w-full py-4 mt-4 flex items-center justify-center gap-2"
+              className="w-full h-20 bg-slate-900 text-white rounded-[1.8rem] font-bold uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-slate-950/20 active:scale-95 transition-all mt-6 flex items-center justify-center gap-4 hover:bg-slate-800"
             >
-              {loading ? 'Traitement en cours...' : (
-                <>Envoyer la demande <Send size={18} /></>
+              {loading ? 'Envoi en cours...' : (
+                <>Envoyer la demande <Send size={20} /></>
               )}
             </button>
           </form>
@@ -163,11 +179,11 @@ const PageInscription = () => {
   );
 };
 
-const InputGroup = ({ icon, label, placeholder, value, onChange, type = "text" }: any) => (
-  <div className="space-y-2">
-    <label className="block text-sm font-medium text-slate-400">{label}</label>
-    <div className="relative">
-      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
+const ModernInput = ({ icon, label, placeholder, value, onChange, type = "text" }: any) => (
+  <div className="space-y-3">
+    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{label}</label>
+    <div className="relative group">
+      <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-slate-300 group-focus-within:text-slate-900 transition-colors">
         {icon}
       </div>
       <input
@@ -175,19 +191,21 @@ const InputGroup = ({ icon, label, placeholder, value, onChange, type = "text" }
         required
         value={value}
         onChange={onChange}
-        className="glass-input w-full pl-11 h-12"
+        className="w-full pl-14 h-16 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:bg-white focus:border-indigo-600 focus:shadow-xl focus:shadow-indigo-500/5 transition-all font-bold text-slate-900"
         placeholder={placeholder}
       />
     </div>
   </div>
 );
 
-const FeatureSmall = ({ title, desc }: any) => (
-  <div className="flex gap-3 items-center">
-    <div className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_10px_#6366f1]" />
+const FeatureItem = ({ title, desc, color }: any) => (
+  <div className="flex gap-5 items-center group">
+    <div className={`w-14 h-14 rounded-2xl bg-${color}-500/5 border border-${color}-100 flex items-center justify-center text-${color}-600 group-hover:scale-110 transition-transform`}>
+        <CheckCircle2 size={24} />
+    </div>
     <div>
-      <h4 className="text-white text-sm font-bold">{title}</h4>
-      <p className="text-slate-500 text-xs">{desc}</p>
+      <h4 className="text-slate-900 text-base font-black uppercase tracking-tight">{title}</h4>
+      <p className="text-slate-400 text-sm font-medium">{desc}</p>
     </div>
   </div>
 );
