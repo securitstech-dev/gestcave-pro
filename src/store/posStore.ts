@@ -10,7 +10,8 @@ import {
   increment,
   writeBatch,
   Timestamp,
-  getDocs
+  getDocs,
+  getDoc
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuthStore } from './authStore';
@@ -80,7 +81,7 @@ interface PosState {
   unsubs: (() => void)[];
   
   initPOS: (etablissementId: string) => void;
-  initialiserTempsReel: (etablissementId: string) => void; // Alias
+  initialiserTempsReel: (etablissementId: string) => void;
   arreterTempsReel: () => void;
   
   ouvrirTable: (tableId: string, serveurId: string, serveurNom: string, nombreCouverts: number) => Promise<string>;
@@ -107,22 +108,16 @@ export const usePOSStore = create<PosState>((set, get) => ({
     
     const unsubs = [];
 
-    const qTables = query(collection(db, 'tables'), where('etablissement_id', '==', etablissementId));
-    unsubs.push(onSnapshot(qTables, (snap) => {
-      const tables = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as TablePlan));
-      set({ tables });
+    unsubs.push(onSnapshot(query(collection(db, 'tables'), where('etablissement_id', '==', etablissementId)), (snap) => {
+      set({ tables: snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as TablePlan)) });
     }));
 
-    const qProduits = query(collection(db, 'produits'), where('etablissement_id', '==', etablissementId));
-    unsubs.push(onSnapshot(qProduits, (snap) => {
-      const produits = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Produit));
-      set({ produits });
+    unsubs.push(onSnapshot(query(collection(db, 'produits'), where('etablissement_id', '==', etablissementId)), (snap) => {
+      set({ produits: snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Produit)) });
     }));
 
-    const qCommandes = query(collection(db, 'commandes'), where('etablissementId', '==', etablissementId), where('statut', '!=', 'payee'));
-    unsubs.push(onSnapshot(qCommandes, (snap) => {
-      const commandes = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Commande));
-      set({ commandes });
+    unsubs.push(onSnapshot(query(collection(db, 'commandes'), where('etablissementId', '==', etablissementId), where('statut', '!=', 'payee')), (snap) => {
+      set({ commandes: snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Commande)) });
     }));
 
     set({ loading: false, unsubs });
@@ -166,51 +161,43 @@ export const usePOSStore = create<PosState>((set, get) => ({
 
   ouvrirVenteEmporter: async (serveurId, serveurNom) => {
     const profile = useAuthStore.getState().profil;
-
     const nouvelleCommande: Omit<Commande, 'id'> = {
       etablissementId: profile?.etablissement_id || '',
-      tableId: null,
-      tableNom: 'A EMPORTER',
-      serveurId,
-      serveurNom,
-      dateOuverture: new Date().toISOString(),
-      statut: 'ouverte',
-      lignes: [],
-      total: 0,
-      nombreCouverts: 1,
-      type: 'a_emporter'
+      tableId: null, tableNom: 'A EMPORTER', serveurId, serveurNom,
+      dateOuverture: new Date().toISOString(), statut: 'ouverte',
+      lignes: [], total: 0, nombreCouverts: 1, type: 'a_emporter'
     };
-
     const docRef = await addDoc(collection(db, 'commandes'), nouvelleCommande);
     return docRef.id;
   },
 
   ajouterLigne: async (commandeId, produit) => {
+    if (!commandeId) return;
     try {
-      let commande = get().commandes.find(c => c.id === commandeId);
-      
-      // Si non trouvé en local (latence snapshot), on tente un fetch direct
-      if (!commande) {
-        const snap = await getDocs(query(collection(db, 'commandes'), where('__name__', '==', commandeId)));
-        if (!snap.empty) {
-          commande = { id: snap.docs[0].id, ...snap.docs[0].data() } as Commande;
-        }
-      }
-
-      if (!commande) {
-        console.error("Commande introuvable:", commandeId);
+      // 1. On récupère la commande (plus fiable via getDoc direct en cas de latence)
+      const commandeRef = doc(db, 'commandes', commandeId);
+      const snap = await getDoc(commandeRef);
+      if (!snap.exists()) {
+        toast.error("Commande non trouvée");
         return;
       }
+      const data = snap.data();
+      const lignes = (data.lignes || []) as LigneCommande[];
 
-      const existant = commande.lignes.find(l => l.produitId === produit.id && l.statut === 'en_attente');
-      let nouvellesLignes;
+      // 2. Logique d'ajout ou mise à jour
+      const existantIdx = lignes.findIndex(l => l.produitId === produit.id && l.statut === 'en_attente');
+      let nouvellesLignes = [...lignes];
 
-      if (existant) {
-        nouvellesLignes = commande.lignes.map(l => 
-          l.id === existant.id ? { ...l, quantite: l.quantite + 1, sousTotal: (l.quantite + 1) * l.prixUnitaire } : l
-        );
+      if (existantIdx > -1) {
+        const item = nouvellesLignes[existantIdx];
+        const nveleQte = item.quantite + 1;
+        nouvellesLignes[existantIdx] = {
+            ...item,
+            quantite: nveleQte,
+            sousTotal: nveleQte * produit.prix
+        };
       } else {
-        const nouvelleLigne: LigneCommande = {
+        nouvellesLignes.push({
           id: Math.random().toString(36).substr(2, 9),
           produitId: produit.id,
           produitNom: produit.nom,
@@ -218,33 +205,35 @@ export const usePOSStore = create<PosState>((set, get) => ({
           prixUnitaire: produit.prix,
           sousTotal: produit.prix,
           statut: 'en_attente'
-        };
-        nouvellesLignes = [...commande.lignes, nouvelleLigne];
+        });
       }
 
-      const total = nouvellesLignes.reduce((acc, l) => acc + l.sousTotal, 0);
-      await updateDoc(doc(db, 'commandes', commandeId), { 
+      // 3. Calcul du nouveau total (on recalcule tout pour éviter NaN)
+      const total = nouvellesLignes.reduce((sum, item) => sum + (Number(item.sousTotal) || 0), 0);
+
+      // 4. Update Firestore
+      await updateDoc(commandeRef, { 
         lignes: nouvellesLignes, 
-        total 
+        total: total 
       });
+      
     } catch (error) {
-      console.error("Erreur ajouterLigne:", error);
+      console.error("Erreur ajout:", error);
       toast.error("Erreur lors de l'ajout");
     }
   },
 
   modifierQuantite: async (commandeId, ligneId, delta) => {
+    if (!commandeId) return;
     try {
-      let commande = get().commandes.find(c => c.id === commandeId);
-      if (!commande) {
-        const snap = await getDocs(query(collection(db, 'commandes'), where('__name__', '==', commandeId)));
-        if (!snap.empty) {
-          commande = { id: snap.docs[0].id, ...snap.docs[0].data() } as Commande;
-        }
-      }
-      if (!commande) return;
-
-      const lignes = commande.lignes.map(l => {
+      const commandeRef = doc(db, 'commandes', commandeId);
+      const snap = await getDoc(commandeRef);
+      if (!snap.exists()) return;
+      
+      const data = snap.data();
+      const lignes = (data.lignes || []) as LigneCommande[];
+      
+      const nouvellesLignes = lignes.map(l => {
         if (l.id === ligneId) {
           const nveleQte = Math.max(1, l.quantite + delta);
           return { ...l, quantite: nveleQte, sousTotal: nveleQte * l.prixUnitaire };
@@ -252,148 +241,116 @@ export const usePOSStore = create<PosState>((set, get) => ({
         return l;
       });
 
-      const total = lignes.reduce((acc, l) => acc + l.sousTotal, 0);
-      await updateDoc(doc(db, 'commandes', commandeId), { lignes, total });
+      const total = nouvellesLignes.reduce((sum, item) => sum + (Number(item.sousTotal) || 0), 0);
+      await updateDoc(commandeRef, { lignes: nouvellesLignes, total });
     } catch (error) {
-      console.error("Erreur modifierQuantite:", error);
+      console.error("Erreur modif qté:", error);
     }
   },
 
   supprimerLigne: async (commandeId, ligneId) => {
+    if (!commandeId) return;
     try {
-      let commande = get().commandes.find(c => c.id === commandeId);
-      if (!commande) {
-        const snap = await getDocs(query(collection(db, 'commandes'), where('__name__', '==', commandeId)));
-        if (!snap.empty) {
-          commande = { id: snap.docs[0].id, ...snap.docs[0].data() } as Commande;
-        }
-      }
-      if (!commande) return;
-
-      const lignes = commande.lignes.filter(l => l.id !== ligneId);
-      const total = lignes.reduce((acc, l) => acc + l.sousTotal, 0);
-
-      await updateDoc(doc(db, 'commandes', commandeId), { lignes, total });
+      const commandeRef = doc(db, 'commandes', commandeId);
+      const snap = await getDoc(commandeRef);
+      if (!snap.exists()) return;
+      
+      const data = snap.data();
+      const lignes = (data.lignes || []) as LigneCommande[];
+      const nouvellesLignes = lignes.filter(l => l.id !== ligneId);
+      const total = nouvellesLignes.reduce((sum, item) => sum + (Number(item.sousTotal) || 0), 0);
+      await updateDoc(commandeRef, { lignes: nouvellesLignes, total });
     } catch (error) {
-      console.error("Erreur supprimerLigne:", error);
+      console.error("Erreur suppression:", error);
     }
   },
 
   envoyerCuisine: async (commandeId) => {
+    if (!commandeId) return;
     try {
-      let commande = get().commandes.find(c => c.id === commandeId);
-      if (!commande) {
-        const snap = await getDocs(query(collection(db, 'commandes'), where('__name__', '==', commandeId)));
-        if (!snap.empty) {
-          commande = { id: snap.docs[0].id, ...snap.docs[0].data() } as Commande;
-        }
-      }
-      if (!commande) return;
+      const commandeRef = doc(db, 'commandes', commandeId);
+      const snap = await getDoc(commandeRef);
+      if (!snap.exists()) return;
 
+      const data = snap.data();
+      const lignes = (data.lignes || []) as LigneCommande[];
       const maintenant = new Date().toISOString();
       const batch = writeBatch(db);
       
-      commande.lignes.forEach(ligne => {
+      lignes.forEach(ligne => {
         if (ligne.statut === 'en_attente') {
-          const produitRef = doc(db, 'produits', ligne.produitId);
-          batch.update(produitRef, {
+          batch.update(doc(db, 'produits', ligne.produitId), {
             stockTotal: increment(-ligne.quantite)
           });
         }
       });
 
-      const lignes = commande.lignes.map(l => 
+      const deplacementLignes = lignes.map(l => 
         l.statut === 'en_attente' ? { ...l, statut: 'en_preparation', heureEnvoi: maintenant } as LigneCommande : l
       );
 
-      const commandeRef = doc(db, 'commandes', commandeId);
-      batch.update(commandeRef, { 
-        statut: 'envoyee',
-        lignes 
-      });
-
+      batch.update(commandeRef, { statut: 'envoyee', lignes: deplacementLignes });
       await batch.commit();
     } catch (error) {
-      console.error("Erreur envoyerCuisine:", error);
+      console.error("Erreur envoyer:", error);
+      toast.error("Échec de l'envoi");
     }
   },
 
   encaisserCommande: async (commandeId, modePaiement, clientNom, montantRemise = 0, montantPaye = 0, clientContact = '') => {
-    const commande = get().commandes.find(c => c.id === commandeId);
-    if (!commande) return;
-
-    const totalFinal = Math.max(0, commande.total - montantRemise);
-    const resteAPayer = Math.max(0, totalFinal - (montantPaye || 0));
-
+    if (!commandeId) return;
     try {
       const batch = writeBatch(db);
-      
       const commandeRef = doc(db, 'commandes', commandeId);
+      const snap = await getDoc(commandeRef);
+      if (!snap.exists()) return;
+      
+      const commande = { id: snap.id, ...snap.data() } as Commande;
+      const totalFinal = Math.max(0, commande.total - montantRemise);
+      const resteAPayer = Math.max(0, totalFinal - (montantPaye || 0));
+
       batch.update(commandeRef, { 
-        statut: 'payee',
-        methodePaiement: modePaiement,
-        clientNom: clientNom || null,
-        clientContact: clientContact || null,
-        montantPaye: montantPaye || totalFinal,
-        montantRestant: resteAPayer,
-        remise: montantRemise,
-        totalFinal: totalFinal
+        statut: 'payee', methodePaiement: modePaiement,
+        clientNom: clientNom || null, clientContact: clientContact || null,
+        montantPaye: montantPaye || totalFinal, montantRestant: resteAPayer,
+        remise: montantRemise, totalFinal: totalFinal
       });
 
       if (commande.tableId) {
-        const tableRef = doc(db, 'tables', commande.tableId);
-        batch.update(tableRef, {
-          statut: 'libre',
-          commandeActiveId: null
-        });
+        batch.update(doc(db, 'tables', commande.tableId), { statut: 'libre', commandeActiveId: null });
       }
 
-      const transactionRef = doc(collection(db, 'transactions_pos'));
-      batch.set(transactionRef, {
-        commandeId,
-        total: totalFinal,
-        totalInitial: commande.total,
-        montantRecu: montantPaye || totalFinal,
-        montantRestant: resteAPayer,
-        montantRemise,
-        modePaiement,
-        clientNom: clientNom || 'Client Anonyme',
-        clientContact: clientContact || '',
-        serveurNom: commande.serveurNom,
-        tableNom: commande.tableNom,
-        type: commande.type,
-        date: new Date().toISOString(),
+      batch.set(doc(collection(db, 'transactions_pos')), {
+        commandeId, total: totalFinal, totalInitial: commande.total,
+        montantRecu: montantPaye || totalFinal, montantRestant: resteAPayer,
+        montantRemise, modePaiement, clientNom: clientNom || 'Client Anonyme',
+        clientContact: clientContact || '', serveurNom: commande.serveurNom,
+        tableNom: commande.tableNom, type: commande.type, date: new Date().toISOString(),
         etablissement_id: useAuthStore.getState().profil?.etablissement_id
       });
 
       await batch.commit();
-      
     } catch (error) {
-      console.error("Erreur lors de l'encaissement :", error);
+      console.error("Erreur encaissement:", error);
       throw error;
     }
   },
 
   marquerLignePrete: async (commandeId, ligneId) => {
-    const commande = get().commandes.find(c => c.id === commandeId);
-    if (!commande) return;
-
-    const lignes = commande.lignes.map(l => 
-      l.id === ligneId ? { ...l, statut: 'pret' } : l
-    );
-
-    await updateDoc(doc(db, 'commandes', commandeId), { lignes });
+    const commandeRef = doc(db, 'commandes', commandeId);
+    const snap = await getDoc(commandeRef);
+    if (!snap.exists()) return;
+    const lignes = (snap.data().lignes || []) as LigneCommande[];
+    const nvelles = lignes.map(l => l.id === ligneId ? { ...l, statut: 'pret' } : l);
+    await updateDoc(commandeRef, { lignes: nvelles });
   },
 
   marquerCommandeServie: async (commandeId) => {
-    const commande = get().commandes.find(c => c.id === commandeId);
-    if (!commande) return;
-
-    const lignes = commande.lignes.map(l => ({ ...l, statut: 'servi' }));
-    
-    await updateDoc(doc(db, 'commandes', commandeId), { 
-      statut: 'servie',
-      lignes 
-    });
+    const commandeRef = doc(db, 'commandes', commandeId);
+    const snap = await getDoc(commandeRef);
+    if (!snap.exists()) return;
+    const lignes = (snap.data().lignes || []) as LigneCommande[];
+    const nvelles = lignes.map(l => ({ ...l, statut: 'servi' }));
+    await updateDoc(commandeRef, { statut: 'servie', lignes: nvelles });
   }
 }));

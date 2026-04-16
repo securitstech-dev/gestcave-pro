@@ -260,7 +260,13 @@ const InterfaceServeur = () => {
                         key={produit.id}
                         whileTap={{ scale: 0.96 }}
                         disabled={produit.stockTotal <= 0}
-                        onClick={() => commandeId && ajouterLigne(commandeId, produit)}
+                        onClick={() => {
+                            if (commandeId) {
+                                ajouterLigne(commandeId, produit);
+                            } else {
+                                toast.error("Veuillez d'abord ouvrir une table");
+                            }
+                        }}
                         className={`group relative bg-white border rounded-[2rem] p-5 text-left transition-all hover:border-slate-900 ${
                             produit.stockTotal <= 0 ? 'opacity-40 grayscale pointer-events-none' : 'border-slate-100'
                         }`}
