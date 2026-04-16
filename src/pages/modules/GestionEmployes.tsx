@@ -14,7 +14,7 @@ import StatCard from '../../components/ui/StatCard';
 interface Employe {
   id: string;
   nom: string;
-  role: 'serveur' | 'caissier' | 'cuisine' | 'admin' | 'support';
+  role: 'serveur' | 'caissier' | 'cuisine' | 'gerant' | 'livreur' | 'securite' | 'admin';
   pin: string;
   salaire: number;
   actif: boolean;
@@ -35,7 +35,7 @@ const GestionEmployes = () => {
   const [loading, setLoading] = useState(true);
   
   const [nouveauNom, setNouveauNom] = useState('');
-  const [nouveauRole, setNouveauRole] = useState<'serveur' | 'caissier' | 'cuisine' | 'admin' | 'support'>('serveur');
+  const [nouveauRole, setNouveauRole] = useState<'serveur' | 'caissier' | 'cuisine' | 'gerant' | 'livreur' | 'securite' | 'admin'>('serveur');
   const [nouveauSalaire, setNouveauSalaire] = useState(0);
   const [showModal, setShowModal] = useState(false);
 
@@ -156,7 +156,12 @@ const GestionEmployes = () => {
               >
                 <div className="flex justify-between items-start mb-6">
                   <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-xl border border-slate-100 shadow-inner">
-                    {emp.role === 'caissier' ? '💰' : emp.role === 'cuisine' ? '👨‍🍳' : emp.role === 'admin' ? '🛡️' : '🤵'}
+                    {emp.role === 'caissier' ? '💰' : 
+                     emp.role === 'cuisine' ? '👨‍🍳' : 
+                     emp.role === 'gerant' ? '💼' :
+                     emp.role === 'livreur' ? '🛵' :
+                     emp.role === 'securite' ? '👮' :
+                     emp.role === 'admin' ? '🛡️' : '🤵'}
                   </div>
                   <span className="text-[10px] font-black px-2.5 py-1 rounded-lg tracking-widest uppercase bg-slate-900 text-white">
                     {emp.role}
@@ -222,9 +227,12 @@ const GestionEmployes = () => {
                   <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Rôle affecté</label>
                     <select value={nouveauRole} onChange={(e) => setNouveauRole(e.target.value as any)} className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-4 outline-none font-bold text-slate-900">
-                        <option value="serveur">🤵 Serveur</option>
-                        <option value="caissier">💰 Caissier</option>
+                        <option value="serveur">🤵 Serveur / Barmaid</option>
+                        <option value="caissier">💰 Caissier (Caisse Centrale)</option>
                         <option value="cuisine">👨‍🍳 Cuisine / Barman</option>
+                        <option value="gerant">💼 Gérant / Manager</option>
+                        <option value="livreur">🛵 Livreur</option>
+                        <option value="securite">👮 Sécurité / Gardien</option>
                         <option value="admin">🛡️ Responsable / Admin</option>
                     </select>
                   </div>

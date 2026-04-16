@@ -1,17 +1,12 @@
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { usePOSStore } from '../store/posStore';
 import { useAuthStore } from '../store/authStore';
 
-/**
- * Hook utilisé par les interfaces de rôle (Serveur, Caissier, Cuisine).
- * Lit les infos de session depuis :
- *   1. sessionStorage (accès via Lien de Poste /poste/:id)
- *   2. authStore.profil (accès via Dashboard patron connecté)
- * Et réinitialise le posStore si nécessaire (ex: après refresh de page).
- */
 export const usePosteSession = () => {
-  const { initialiserTempsReel, tables } = usePOSStore();
+  const { initialiserTempsReel, tables, etablissement_id: posEtabId } = usePOSStore();
   const { profil } = useAuthStore();
+  const navigate = useNavigate();
 
   // Infos employé depuis sessionStorage (mode poste)
   const nomEmploye = sessionStorage.getItem('poste_employe_nom')
@@ -28,10 +23,21 @@ export const usePosteSession = () => {
 
   // Si le store n'a pas de données (ex: refresh de page) — on réinitialise
   useEffect(() => {
-    if (etablissementId && tables.length === 0) {
+    if (etablissementId && !posEtabId) {
       initialiserTempsReel(etablissementId);
     }
-  }, [etablissementId, tables.length, initialiserTempsReel]);
+  }, [etablissementId, posEtabId, initialiserTempsReel]);
 
-  return { nomEmploye, roleEmploye, etablissementId };
+  const quitterPoste = () => {
+    sessionStorage.removeItem('poste_employe_nom');
+    sessionStorage.removeItem('poste_employe_role');
+    const etabId = sessionStorage.getItem('poste_etablissement_id');
+    if (etabId) {
+      navigate(`/poste/${etabId}`);
+    } else {
+      navigate('/choisir-role');
+    }
+  };
+
+  return { nomEmploye, roleEmploye, etablissementId, quitterPoste };
 };

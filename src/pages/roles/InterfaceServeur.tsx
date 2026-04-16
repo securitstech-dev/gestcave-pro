@@ -16,7 +16,7 @@ import type { Produit, TablePlan, Commande, LigneCommande } from '../../store/po
 
 const InterfaceServeur = () => {
   const { tables, produits, commandes, ouvrirTable, ajouterLigne, modifierQuantite, supprimerLigne, envoyerCuisine } = usePOSStore();
-  const { nomEmploye, etablissementId } = usePosteSession();
+  const { nomEmploye, etablissementId, quitterPoste } = usePosteSession();
   const navigate = useNavigate();
   
   const [etape, setEtape] = useState<'tables' | 'couverts' | 'commande'>('tables');
@@ -77,7 +77,7 @@ const InterfaceServeur = () => {
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{nomEmploye} • {tables.length} TABLES</p>
               </div>
             </div>
-            <button onClick={() => navigate(-1)} className="px-5 py-2.5 rounded-xl bg-slate-50 border border-slate-100 text-slate-500 font-bold text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center gap-2">
+            <button onClick={quitterPoste} className="px-5 py-2.5 rounded-xl bg-slate-50 border border-slate-100 text-slate-500 font-bold text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center gap-2">
               <LogOut size={14} /> Quitter
             </button>
           </div>

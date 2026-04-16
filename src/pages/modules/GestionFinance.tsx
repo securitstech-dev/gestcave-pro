@@ -5,10 +5,10 @@ import {
   FileText, Calendar, Filter, ArrowUpRight, 
   ArrowDownRight, PieChart as PieChartIcon, 
   ShieldCheck, Calculator, Activity, ArrowRight, X, Download,
-  Wallet, ShoppingCart, Users, AlertCircle, History, Receipt
+  Wallet, ShoppingCart, Users, AlertCircle, History, Receipt, Trash2
 } from 'lucide-react';
 import { db } from '../../lib/firebase';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
 import { 
@@ -38,25 +38,82 @@ const GestionFinance = () => {
   const { profil } = useAuthStore();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tauxTaxe, setTauxTaxe] = useState(0); // On peut ajuster
+  const [activeTab, setActiveTab] = useState<'journal' | 'dettes' | 'charges'>('journal');
+  const [charges, setCharges] = useState<{id: string, montant: number, motif: string, date: string}[]>([]);
+  const [showChargeModal, setShowChargeModal] = useState(false);
+  const [nouveauMontantCharge, setNouveauMontantCharge] = useState('');
+  const [nouveauMotifCharge, setNouveauMotifCharge] = useState('');
+  const [clientRecherche, setClientRecherche] = useState('');
 
   useEffect(() => {
-    if (!profil?.etablissement_id) return;
     const q = query(collection(db, 'transactions_pos'), where('etablissement_id', '==', profil.etablissement_id));
     const unsub = onSnapshot(q, (snap) => {
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Transaction[];
       setTransactions(data.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
       setLoading(false);
     });
-    return () => unsub();
+
+    const qCharges = query(collection(db, 'charges_fixes'), where('etablissement_id', '==', profil.etablissement_id));
+    const unsubCharges = onSnapshot(qCharges, (snap) => {
+      setCharges(snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[]);
+    });
+
+    return () => { unsub(); unsubCharges(); };
   }, [profil?.etablissement_id]);
+
+  const ajouterCharge = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nouveauMontantCharge || !nouveauMotifCharge) return;
+    try {
+      await addDoc(collection(db, 'charges_fixes'), {
+        montant: Number(nouveauMontantCharge),
+        motif: nouveauMotifCharge,
+        date: new Date().toISOString(),
+        etablissement_id: profil.etablissement_id
+      });
+      toast.success("Charge enregistrée !");
+      setNouveauMontantCharge(''); setNouveauMotifCharge(''); setShowChargeModal(false);
+    } catch { toast.error("Erreur charge"); }
+  };
+
+  const supprimerCharge = async (id: string) => {
+    if (!window.confirm("Supprimer cette charge ?")) return;
+    try {
+      await deleteDoc(doc(db, 'charges_fixes', id));
+      toast.success("Charge supprimée !");
+    } catch { toast.error("Échec de la suppression"); }
+  };
+
+  const encaisserDette = async (transactionId: string, montant: number) => {
+    try {
+      const trans = transactions.find(t => t.id === transactionId);
+      if (!trans) return;
+
+      const nouveauRecu = (trans.montantRecu || 0) + montant;
+      const nouveauRestant = trans.total - nouveauRecu;
+
+      const docRef = doc(db, 'transactions_pos', transactionId);
+      await updateDoc(docRef, {
+        montantRecu: nouveauRecu,
+        montantRestant: nouveauRestant,
+        modePaiement: nouveauRestant <= 0 ? 'comptant' : 'credit'
+      });
+
+      toast.success(`Encaissement de ${montant.toLocaleString()} F réussi !`);
+    } catch (error) {
+      toast.error("Erreur lors de l'encaissement");
+      console.error(error);
+    }
+  };
 
   // Calculs Financiers
   const totalEncaisse = transactions.filter(t => t.type !== 'depense').reduce((acc, t) => acc + (t.montantRecu || t.total), 0);
   const dettesClients = transactions.filter(t => t.type !== 'depense').reduce((acc, t) => acc + (t.montantRestant || 0), 0);
   const depensesAchats = transactions.filter(t => t.type === 'depense').reduce((acc, t) => acc + t.total, 0);
-  
-  const resultatNet = totalEncaisse - depensesAchats;
+  const totalCharges = charges.reduce((acc, c) => acc + c.montant, 0);
+  const resultatNet = totalEncaisse - depensesAchats - totalCharges;
+
+  const transactionsDettes = transactions.filter(t => (t.montantRestant || 0) > 0);
 
   const chartData = (() => {
     const dataMap: Record<string, number> = {};
@@ -75,50 +132,70 @@ const GestionFinance = () => {
   })();
 
   const genererRapportPDF = () => {
-    const doc = new jsPDF();
+    const docPdf = new jsPDF();
     const date = new Date().toLocaleDateString('fr-FR');
-    doc.setFontSize(22); doc.setTextColor(15, 23, 42); doc.text("GESTCAVE PRO", 14, 20);
-    doc.setFontSize(10); doc.setTextColor(100, 116, 139); doc.text(`Livre de Caisse - Rapport du Patron (${profil?.nom || 'Propriétaire'})`, 14, 28);
+    docPdf.setFontSize(22); docPdf.setTextColor(15, 23, 42); docPdf.text("GESTCAVE PRO", 14, 20);
+    docPdf.setFontSize(10); docPdf.setTextColor(100, 116, 139); docPdf.text(`Livre de Caisse - Rapport du Patron (${profil?.nom || 'Propriétaire'})`, 14, 28);
     
-    autoTable(doc, {
+    autoTable(docPdf, {
       startY: 40,
-      head: [['Date', 'Opération', 'Client/Détail', 'Contact', 'Mode', 'Débit', 'Crédit']],
+      head: [['Date', 'Opération', 'Détail / Client', 'Mode', 'Entrée', 'Sortie']],
       body: transactions.map(t => [
-        new Date(t.date).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
+        new Date(t.date).toLocaleDateString(),
         t.type === 'depense' ? 'ACHAT STOCK' : 'VENTE POS',
-        t.clientNom || t.tableNom || t.description || 'Direct',
-        t.clientContact || '-',
+        t.clientNom || t.tableNom || t.description || 'DIRECT',
         t.modePaiement?.toUpperCase() || 'CASH',
-        t.type === 'depense' ? `${t.total.toLocaleString()}` : '-',
-        t.type !== 'depense' ? `${(t.montantRecu || t.total).toLocaleString()}` : '-'
+        t.type !== 'depense' ? `${(t.montantRecu || t.total).toLocaleString()} F` : '-',
+        t.type === 'depense' ? `${t.total.toLocaleString()} F` : '-'
       ]),
       headStyles: { fillColor: [15, 23, 42], fontSize: 8 }, 
       alternateRowStyles: { fillColor: [248, 250, 252] },
       styles: { fontSize: 7 }
     });
 
-    const finalY = (doc as any).lastAutoTable.finalY + 10;
-    doc.setFontSize(10); doc.setTextColor(15, 23, 42);
-    doc.text(`TOTAL ENCAISSÉ (CASH M-MONEY): ${totalEncaisse.toLocaleString()} F`, 14, finalY);
-    doc.text(`TOTAL DETTES CLIENTS: ${dettesClients.toLocaleString()} F`, 14, finalY + 7);
-    doc.text(`TOTAL SORTIES (ACHATS): ${depensesAchats.toLocaleString()} F`, 14, finalY + 14);
-    doc.setFontSize(12);
-    doc.text(`RÉSULTAT NET EN CAISSE: ${resultatNet.toLocaleString()} F`, 14, finalY + 25);
+    let currentY = (docPdf as any).lastAutoTable.finalY + 15;
+    
+    if (charges.length > 0) {
+        docPdf.setFontSize(10); docPdf.setTextColor(225, 29, 72); docPdf.text("CHARGES & FRAIS FIXES", 14, currentY);
+        autoTable(docPdf, {
+            startY: currentY + 5,
+            head: [['Date', 'Motif / Désignation', 'Montant']],
+            body: charges.map(c => [new Date(c.date).toLocaleDateString(), c.motif, `${c.montant.toLocaleString()} F`]),
+            headStyles: { fillColor: [225, 29, 72] },
+            styles: { fontSize: 7 }
+        });
+        currentY = (docPdf as any).lastAutoTable.finalY + 15;
+    }
 
-    doc.save(`Comptabilite_${date}.pdf`);
-    toast.success("Livre de caisse exporté !");
+    docPdf.setFontSize(10); docPdf.setTextColor(15, 23, 42);
+    docPdf.text(`CAISSE BRUTE (Ventes): ${totalEncaisse.toLocaleString()} F`, 14, currentY);
+    docPdf.text(`TOTAL ACHATS STOCK: -${depensesAchats.toLocaleString()} F`, 14, currentY + 7);
+    docPdf.text(`TOTAL CHARGES FIXES: -${totalCharges.toLocaleString()} F`, 14, currentY + 14);
+    
+    docPdf.setFontSize(14); docPdf.setTextColor(5, 150, 105);
+    docPdf.text(`RÉSULTAT NET RÉEL: ${resultatNet.toLocaleString()} F`, 14, currentY + 28);
+
+    docPdf.save(`Rapport_Finance_${date}.pdf`);
+    toast.success("Rapport financier complet généré !");
   };
 
+  if (loading) return <div className="p-20 text-center font-black animate-pulse text-slate-400 uppercase tracking-widest">Calcul des finances...</div>;
+
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 pb-20">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
           <h2 className="text-4xl font-display font-black text-slate-900 tracking-tight uppercase">Comptabilité Patron</h2>
           <p className="text-slate-500 font-medium mt-1">Surveillez l'argent encaissé, les dettes et les sorties de stock.</p>
         </div>
-        <button onClick={genererRapportPDF} className="px-8 py-5 rounded-2xl bg-slate-900 text-white font-bold text-[11px] uppercase tracking-[0.2em] flex items-center gap-4 shadow-2xl shadow-slate-900/20 active:scale-95 transition-all">
-          <Download size={20} /> Exporter le Grand Livre (PDF)
-        </button>
+        <div className="flex gap-4">
+            <button onClick={() => setShowChargeModal(true)} className="px-6 py-5 rounded-2xl bg-white border border-slate-200 text-slate-900 font-bold text-[11px] uppercase tracking-[0.2em] flex items-center gap-4 hover:bg-slate-50 transition-all">
+              <Calculator size={20} /> Nouvelle Charge
+            </button>
+            <button onClick={genererRapportPDF} className="px-8 py-5 rounded-2xl bg-slate-900 text-white font-bold text-[11px] uppercase tracking-[0.2em] flex items-center gap-4 shadow-2xl shadow-slate-900/20 active:scale-95 transition-all">
+              <Download size={20} /> Exporter (PDF)
+            </button>
+        </div>
       </header>
 
       {/* Résumé des flux */}
@@ -129,118 +206,292 @@ const GestionFinance = () => {
           <StatCard label="Caisse Nette" valeur={`${resultatNet.toLocaleString()}`} suffix="F" color="slate" subtext="Revenu réel encaissé" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Graphique de Performance */}
-          <div className="lg:col-span-2 bg-white p-8 lg:p-10 rounded-[2.5rem] border border-slate-100 shadow-sm">
-            <div className="flex justify-between items-center mb-10">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Évolution des encaissements (7j)</h3>
-                <TrendingUp size={20} className="text-emerald-500" />
-            </div>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0f172a" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#0f172a" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 700}} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 700}} dx={-10} />
-                  <Tooltip 
-                    contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px'}}
-                    itemStyle={{fontWeight: 800, color: '#0f172a', fontSize: '14px'}}
-                  />
-                  <Area type="monotone" dataKey="revenue" stroke="#0f172a" strokeWidth={4} fillOpacity={1} fill="url(#colorRevenue)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Alertes et Info */}
-          <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white shadow-2xl overflow-hidden relative">
-              <div className="absolute top-0 right-0 p-8 opacity-10">
-                  <Calculator size={120} />
-              </div>
-              <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-10">Conseil de gestion</h3>
-              <div className="space-y-6 relative z-10">
-                  <div className="flex gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                          <TrendingUp size={20} />
-                      </div>
-                      <p className="text-sm text-slate-300 leading-relaxed"><span className="text-white font-bold">Encaissements :</span> Représentent les règlements réels (Cash, Mobile). C'est l'argent disponible sur votre compte.</p>
-                  </div>
-                  <div className="flex gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center shrink-0">
-                          <History size={20} />
-                      </div>
-                      <p className="text-sm text-slate-300 leading-relaxed"><span className="text-white font-bold">Dettes :</span> N'oubliez pas de relancer les clients qui ont une ardoise. Vos coordonnées sont notées dans le rapport.</p>
-                  </div>
-              </div>
-              <div className="mt-14 pt-8 border-t border-white/10">
-                  <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">
-                      <span>Rentabilité brute</span>
-                      <span className="text-emerald-400">{totalEncaisse > 0 ? Math.round((resultatNet / totalEncaisse) * 100) : 0}%</span>
-                  </div>
-                  <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                      <motion.div initial={{ width: 0 }} animate={{ width: `${totalEncaisse > 0 ? (resultatNet / totalEncaisse) * 100 : 0}%` }} className="h-full bg-emerald-500" />
-                  </div>
-              </div>
-          </div>
+      {/* Onglets */}
+      <div className="flex bg-slate-100 p-1.5 rounded-2xl w-fit">
+          <button 
+            onClick={() => setActiveTab('journal')}
+            className={`px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'journal' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Journal de Caisse
+          </button>
+          <button 
+            onClick={() => setActiveTab('dettes')}
+            className={`px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'dettes' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Suivi des Dettes ({transactionsDettes.length})
+          </button>
+          <button 
+            onClick={() => setActiveTab('charges')}
+            className={`px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'charges' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Charges & Frais ({charges.length})
+          </button>
       </div>
 
-      {/* Livre de Caisse */}
-      <div className="bg-white border border-slate-100 rounded-[2.5rem] overflow-hidden shadow-sm">
-          <div className="p-8 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Journal des opérations financières</h3>
-              <span className="bg-slate-100 px-3 py-1 rounded-lg text-[9px] font-black text-slate-600 uppercase italic">Filtré par établissement</span>
+      <AnimatePresence mode="wait">
+        {activeTab === 'journal' ? (
+          <motion.div key="journal" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Graphique de Performance */}
+                <div className="lg:col-span-2 bg-white p-8 lg:p-10 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                  <div className="flex justify-between items-center mb-10">
+                      <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Évolution des encaissements (7j)</h3>
+                      <TrendingUp size={20} className="text-emerald-500" />
+                  </div>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={chartData}>
+                        <defs>
+                          <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#0f172a" stopOpacity={0.1}/>
+                            <stop offset="95%" stopColor="#0f172a" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 700}} dy={10} />
+                        <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 700}} dx={-10} />
+                        <Tooltip 
+                          contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px'}}
+                          itemStyle={{fontWeight: 800, color: '#0f172a', fontSize: '14px'}}
+                        />
+                        <Area type="monotone" dataKey="revenue" stroke="#0f172a" strokeWidth={4} fillOpacity={1} fill="url(#colorRevenue)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Alertes et Info */}
+                <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white shadow-2xl overflow-hidden relative">
+                    <div className="absolute top-0 right-0 p-8 opacity-10">
+                        <Calculator size={120} />
+                    </div>
+                    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-10">Conseil de gestion</h3>
+                    <div className="space-y-6 relative z-10">
+                        <div className="flex gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                                <TrendingUp size={20} />
+                            </div>
+                            <p className="text-sm text-slate-300 leading-relaxed"><span className="text-white font-bold">Encaissements :</span> Représentent les règlements réels (Cash, Mobile). C'est l'argent disponible.</p>
+                        </div>
+                        <div className="flex gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center shrink-0">
+                                <History size={20} />
+                            </div>
+                            <p className="text-sm text-slate-300 leading-relaxed"><span className="text-white font-bold">Dettes :</span> N'oubliez pas de relancer les clients qui ont une ardoise. Tout est dans l'onglet Dettes.</p>
+                        </div>
+                    </div>
+                    <div className="mt-14 pt-8 border-t border-white/10">
+                        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">
+                            <span>Rentabilité brute</span>
+                            <span className="text-emerald-400">{totalEncaisse > 0 ? Math.round((resultatNet / totalEncaisse) * 100) : 0}%</span>
+                        </div>
+                        <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${totalEncaisse > 0 ? (resultatNet / totalEncaisse) * 100 : 0}%` }} className="h-full bg-emerald-500" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Livre de Caisse */}
+            <div className="bg-white border border-slate-100 rounded-[2.5rem] overflow-hidden shadow-sm">
+                <div className="p-8 border-b border-slate-100 flex items-center justify-between">
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Journal des opérations financières</h3>
+                    <div className="flex items-center gap-3">
+                        <Search size={14} className="text-slate-400" />
+                        <input 
+                          type="text" 
+                          placeholder="RECHERCHER UN CLIENT..." 
+                          className="bg-transparent border-none outline-none text-[10px] font-black uppercase tracking-widest w-40"
+                          value={clientRecherche}
+                          onChange={(e) => setClientRecherche(e.target.value)}
+                        />
+                    </div>
+                </div>
+                <div className="overflow-x-auto no-scrollbar">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="bg-slate-50/50">
+                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Opération</th>
+                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Détail / Client</th>
+                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Flux</th>
+                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Montant</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                            {transactions
+                              .filter(t => !clientRecherche || (t.clientNom?.toLowerCase().includes(clientRecherche.toLowerCase())))
+                              .map(t => (
+                                <tr key={t.id} className="hover:bg-slate-50/30 transition-all group">
+                                    <td className="px-8 py-6">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${t.type === 'depense' ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-500'}`}>
+                                                {t.type === 'depense' ? <ShoppingCart size={16} /> : <Receipt size={16} />}
+                                            </div>
+                                            <div>
+                                                <p className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{t.type === 'depense' ? 'ACHAT STOCK' : 'VENTE TICKET'}</p>
+                                                <p className="text-[9px] text-slate-400 font-bold uppercase">{new Date(t.date).toLocaleDateString()}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-8 py-6">
+                                        <p className="font-bold text-slate-600 text-[11px] uppercase">{t.clientNom || t.tableNom || t.description || 'DIRECT'}</p>
+                                        <p className="text-[9px] text-slate-400 font-bold">{t.clientContact || '-'}</p>
+                                    </td>
+                                    <td className="px-8 py-6">
+                                        <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${t.type === 'depense' ? 'text-rose-600 bg-rose-50' : 'text-emerald-600 bg-emerald-50'}`}>
+                                            {t.type === 'depense' ? 'SORTIE' : 'ENTRÉE'}
+                                        </span>
+                                    </td>
+                                    <td className="px-8 py-6 text-right">
+                                        <p className="font-display font-black text-slate-900">{t.type === 'depense' ? '-' : '+'}{(t.montantRecu || t.total).toLocaleString()} F</p>
+                                        {t.montantRestant! > 0 && <p className="text-[9px] font-black text-rose-500 uppercase">Reste: {t.montantRestant?.toLocaleString()} F</p>}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+          </motion.div>
+        ) : activeTab === 'dettes' ? (
+          <motion.div key="dettes" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {transactionsDettes.length === 0 ? (
+                  <div className="col-span-full py-32 text-center bg-white border border-dashed border-slate-200 rounded-[2.5rem]">
+                      <ShieldCheck size={64} className="mx-auto text-emerald-500 mb-6" />
+                      <h3 className="text-xl font-display font-black text-slate-900 uppercase">AUCUNE DETTE EN COURS</h3>
+                      <p className="text-slate-400 font-medium">Félicitations, tous vos clients sont à jour !</p>
+                  </div>
+                ) : (
+                  transactionsDettes.map(t => (
+                    <div key={t.id} className="bg-white border border-slate-100 rounded-3xl p-8 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all border-b-4 border-b-rose-500">
+                        <div className="flex justify-between items-start mb-6">
+                            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                                <Users size={24} />
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dette Totale</p>
+                                <p className="text-2xl font-display font-black text-rose-600 leading-tight">{t.montantRestant?.toLocaleString()} F</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 mb-8">
+                            <div>
+                                <h4 className="font-black text-slate-900 uppercase text-xs tracking-tight">{t.clientNom || 'Client Inconnu'}</h4>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-2">
+                                    <Calendar size={12} /> Pris le {new Date(t.date).toLocaleDateString()}
+                                </p>
+                            </div>
+                            {t.clientContact && (
+                                <div className="flex items-center gap-2 text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg w-fit">
+                                    <CreditCard size={12} /> {t.clientContact}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="pt-6 border-t border-slate-50 space-y-3">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Encaisser un remboursement</p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button 
+                                  onClick={() => encaisserDette(t.id, t.montantRestant!)}
+                                  className="py-3 rounded-xl bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all"
+                                >
+                                  Totalité
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    const m = prompt("Montant du remboursement partiel (F) ?");
+                                    if (m) encaisserDette(t.id, parseInt(m));
+                                  }}
+                                  className="py-3 rounded-xl bg-slate-100 text-slate-600 text-[9px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
+                                >
+                                  Partiel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                  ))
+                )}
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div key="charges" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
+            <div className="bg-white border border-slate-100 rounded-[2.5rem] overflow-hidden shadow-sm">
+                <div className="p-8 border-b border-slate-100">
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Liste des charges & frais d'exploitation</h3>
+                </div>
+                <div className="overflow-x-auto no-scrollbar">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="bg-slate-50/50">
+                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
+                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Désignation</th>
+                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Montant</th>
+                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                            {charges.map(c => (
+                                <tr key={c.id} className="hover:bg-slate-50/30 transition-all">
+                                    <td className="px-8 py-6 text-[11px] font-bold text-slate-400">
+                                        {new Date(c.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
+                                    </td>
+                                    <td className="px-8 py-6">
+                                        <p className="font-black text-slate-900 text-xs uppercase tracking-tight">{c.motif}</p>
+                                    </td>
+                                    <td className="px-8 py-6 font-display font-black text-rose-600">
+                                        -{c.montant.toLocaleString()} F
+                                    </td>
+                                    <td className="px-8 py-6 text-right">
+                                        <button onClick={() => supprimerCharge(c.id)} className="p-2 text-slate-300 hover:text-rose-500 transition-colors">
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                            {charges.length === 0 && (
+                                <tr>
+                                    <td colSpan={3} className="px-8 py-20 text-center text-slate-300 font-bold uppercase text-[10px] tracking-widest">Aucune charge enregistrée</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showChargeModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-white rounded-[2.5rem] p-10 shadow-2xl relative"
+            >
+              <button onClick={() => setShowChargeModal(false)} className="absolute top-8 right-8 p-3 text-slate-400 hover:text-slate-900"><X size={24} /></button>
+              <div className="mb-10 text-center">
+                  <h3 className="text-3xl font-bold text-slate-900 tracking-tight underline decoration-rose-500 decoration-4 underline-offset-8">Décaissement</h3>
+                  <p className="text-slate-500 font-medium mt-4">Enregistrez une charge ou un frais fixe.</p>
+              </div>
+              <form onSubmit={ajouterCharge} className="space-y-6">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Motif du décaissement</label>
+                  <input type="text" value={nouveauMotifCharge} onChange={(e) => setNouveauMotifCharge(e.target.value)} required placeholder="Ex: Loyer, Électricité, Impôts..."
+                    className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none focus:border-slate-900 transition-all font-bold text-slate-900" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Montant décaissé (F CFA)</label>
+                  <input type="number" value={nouveauMontantCharge} onChange={(e) => setNouveauMontantCharge(e.target.value)} required placeholder="0"
+                    className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-black text-rose-600 text-xl" />
+                </div>
+                <button type="submit" className="w-full py-5 bg-rose-600 text-white rounded-2xl font-bold uppercase tracking-widest text-[11px] shadow-xl shadow-rose-600/20 active:scale-95 transition-all mt-4">
+                  Confirmer le décaissement
+                </button>
+              </form>
+            </motion.div>
           </div>
-          <div className="overflow-x-auto no-scrollbar">
-              <table className="w-full text-left">
-                  <thead>
-                      <tr className="bg-slate-50/50">
-                          <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Opération</th>
-                          <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Détail / Client</th>
-                          <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Contact</th>
-                          <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Flux</th>
-                          <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Montant</th>
-                      </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                      {transactions.map(t => (
-                          <tr key={t.id} className="hover:bg-slate-50/30 transition-all group">
-                              <td className="px-8 py-6">
-                                  <div className="flex items-center gap-4">
-                                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${t.type === 'depense' ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-500'}`}>
-                                          {t.type === 'depense' ? <ShoppingCart size={16} /> : <Receipt size={16} />}
-                                      </div>
-                                      <div>
-                                          <p className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{t.type === 'depense' ? 'ACHAT STOCK' : 'VENTE TICKET'}</p>
-                                          <p className="text-[9px] text-slate-400 font-bold uppercase">{new Date(t.date).toLocaleDateString()}</p>
-                                      </div>
-                                  </div>
-                              </td>
-                              <td className="px-8 py-6">
-                                  <p className="font-bold text-slate-600 text-[11px] uppercase truncate max-w-[150px]">{t.clientNom || t.tableNom || t.description || 'DIRECT'}</p>
-                              </td>
-                              <td className="px-8 py-6">
-                                  <p className="text-[10px] font-bold text-slate-400">{t.clientContact || '-'}</p>
-                              </td>
-                              <td className="px-8 py-6">
-                                  <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${t.type === 'depense' ? 'text-rose-600 bg-rose-50' : 'text-emerald-600 bg-emerald-50'}`}>
-                                      {t.type === 'depense' ? 'SORTIE' : 'ENTRÉE'}
-                                  </span>
-                              </td>
-                              <td className="px-8 py-6 text-right font-display font-black text-slate-900">
-                                  {t.type === 'depense' ? '-' : '+'}{(t.montantRecu || t.total).toLocaleString()} F
-                              </td>
-                          </tr>
-                      ))}
-                  </tbody>
-              </table>
-          </div>
-      </div>
+        )}
+      </AnimatePresence>
 
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }

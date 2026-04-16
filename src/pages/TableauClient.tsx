@@ -4,7 +4,7 @@ import {
   Wine, ShoppingCart, TrendingUp, AlertTriangle, Users, 
   Settings, LogOut, ChevronRight, Package, CreditCard, 
   Layout, LayoutDashboard, Zap, Activity, ShieldCheck,
-  Calendar, ArrowUpRight, ArrowDownRight, MoreVertical,
+  Calendar, ArrowUpRight, ArrowDownRight, MoreVertical, DollarSign,
   Bell, Search, Menu, X, PlusCircle, Globe, History, ArrowRight, Receipt
 } from 'lucide-react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
@@ -22,6 +22,7 @@ import GestionTables from './modules/GestionTables';
 import PlanDeSalles from './modules/PlanDeSalles';
 import GestionFinance from './modules/GestionFinance';
 import GestionAchats from './modules/GestionAchats';
+import GestionEtablissement from './modules/GestionEtablissement';
 
 const TableauClient = () => {
   const { profil, deconnexion } = useAuthStore();
@@ -95,11 +96,13 @@ const TableauClient = () => {
         </div>
 
         <div>
-          <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Management</p>
+          <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Management & Finance</p>
           <div className="space-y-1">
             <SidebarLink icon={<Package size={18} />} label="Stock & Inventaire" path="/tableau-de-bord/stocks" />
             <SidebarLink icon={<TrendingUp size={18} />} label="Flux des Achats" path="/tableau-de-bord/achats" />
+            <SidebarLink icon={<DollarSign size={18} />} label="Comptabilité & Finance" path="/tableau-de-bord/admin" />
             <SidebarLink icon={<Users size={18} />} label="Employés & RH" path="/tableau-de-bord/rh" />
+            <SidebarLink icon={<Settings size={18} />} label="Configuration" path="/tableau-de-bord/settings" />
           </div>
         </div>
       </div>
@@ -188,6 +191,7 @@ const TableauClient = () => {
               <Route path="/achats" element={<GestionAchats />} />
               <Route path="/tables" element={<GestionTables />} />
               <Route path="/admin" element={<GestionFinance />} />
+              <Route path="/settings" element={<GestionEtablissement />} />
             </Routes>
           </div>
         </div>
@@ -244,7 +248,7 @@ const DashboardAccueil = ({ profil, navigate }: any) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard label="Recettes (F)" valeur={`${ventesDuJour.toLocaleString()}`} icon={<TrendingUp size={22} />} color="emerald" tendance="+8.4%" />
         <StatCard label="Commandes Actives" valeur={commandes.filter(c => c.statut !== 'payee').length} icon={<Zap size={22} />} color="blue" subtext="En salle" />
-        <StatCard label="Clients Servis" valeur={commandes.reduce((acc, c) => acc + c.nombreCouverts, 0)} icon={<Users size={22} />} color="indigo" suffix=" Pers." />
+        <StatCard label="Dettes Clients" valeur={`${commandes.filter(c => c.statut === 'credit').reduce((acc, c) => acc + (c.total - (c.montantRecu || 0)), 0).toLocaleString()}`} suffix="F" icon={<Users size={22} />} color="blue" subtext="À recouvrir" />
         <StatCard label="Items Critiques" valeur={produits.filter(p => p.stockTotal <= p.stockAlerte).length} icon={<AlertTriangle size={22} />} color="red" important={produits.filter(p => p.stockTotal <= p.stockAlerte).length > 0} />
       </div>
 

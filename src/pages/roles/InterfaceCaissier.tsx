@@ -15,7 +15,7 @@ import type { LigneCommande } from '../../store/posStore';
 
 const InterfaceCaissier = () => {
   const { tables, commandes, encaisserCommande, ouvrirVenteEmporter } = usePOSStore();
-  const { nomEmploye, etablissementId } = usePosteSession();
+  const { nomEmploye, etablissementId, quitterPoste } = usePosteSession();
   const navigate = useNavigate();
   
   const [commandeSelectionnee, setCommandeSelectionnee] = useState<string | null>(null);
@@ -119,6 +119,13 @@ const InterfaceCaissier = () => {
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> {nomEmploye}
                     </p>
                 </div>
+                <button 
+                  onClick={quitterPoste}
+                  className="ml-auto w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all shadow-sm"
+                  title="Changer d'utilisateur"
+                >
+                  <LogOut size={18} />
+                </button>
             </div>
 
             <button 

@@ -31,6 +31,9 @@ const GestionStocks = () => {
   const [recherche, setRecherche] = useState('');
   const [filtreCategorie, setFiltreCategorie] = useState<string>('Tous');
   const [showModal, setShowModal] = useState(false);
+  const [showComptage, setShowComptage] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Produit | null>(null);
+  const [stockReel, setStockReel] = useState<number>(0);
 
   // Formulaire Nouvel Article
   const [nom, setNom] = useState('');
@@ -89,6 +92,36 @@ const GestionStocks = () => {
     }
   };
 
+  const validerComptage = async () => {
+    if (!selectedProduct) return;
+    const ecart = stockReel - selectedProduct.stockTotal;
+    
+    try {
+        const batch = writeBatch(db);
+        // 1. Update stock
+        batch.update(doc(db, 'produits', selectedProduct.id), { stockTotal: stockReel });
+        
+        // 2. Log movement (Historique)
+        const logRef = doc(collection(db, 'historique_stocks'));
+        batch.set(logRef, {
+            produitId: selectedProduct.id,
+            produitNom: selectedProduct.nom,
+            type: 'ajustement_inventaire',
+            ancienStock: selectedProduct.stockTotal,
+            nouveauStock: stockReel,
+            ecart,
+            date: new Date().toISOString(),
+            etablissement_id: profil.etablissement_id
+        });
+
+        await batch.commit();
+        toast.success(`Inventaire régularisé (${ecart >= 0 ? '+' : ''}${ecart} u)`);
+        setShowComptage(false);
+    } catch (e) {
+        toast.error("Erreur de régularisation");
+    }
+  };
+
   const formatStock = (total: number, parCasier: number) => {
     if (parCasier <= 1) return <span className="text-slate-400">-</span>;
     const casiers = Math.floor(total / parCasier);
@@ -118,9 +151,14 @@ const GestionStocks = () => {
           <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Inventaire Appliqué</h2>
           <p className="text-slate-500 font-medium mt-1">Gérez vos références et supervisez vos niveaux critiques.</p>
         </div>
-        <button onClick={() => setShowModal(true)} className="px-6 py-4 rounded-2xl bg-slate-900 text-white font-bold text-[11px] uppercase tracking-widest flex items-center gap-3 shadow-xl shadow-slate-900/20 active:scale-95 transition-all">
-          <Plus size={18} /> Ajouter une référence
-        </button>
+        <div className="flex gap-4">
+            <button onClick={() => setShowModal(true)} className="px-6 py-4 rounded-2xl bg-white border border-slate-200 text-slate-900 font-bold text-[11px] uppercase tracking-widest flex items-center gap-3 shadow-sm hover:bg-slate-50 active:scale-95 transition-all">
+                <Plus size={18} /> Nouvelle Référence
+            </button>
+            <button className="px-6 py-4 rounded-2xl bg-slate-900 text-white font-bold text-[11px] uppercase tracking-widest flex items-center gap-3 shadow-xl shadow-slate-900/20 active:scale-95 transition-all">
+                <BarChart3 size={18} /> Rapport Mensuel
+            </button>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -157,7 +195,7 @@ const GestionStocks = () => {
                     <th className="px-8 py-5">Prix Unitaire</th>
                     <th className="px-8 py-5">Situation Casiers</th>
                     <th className="px-8 py-5">Stock Unitaire</th>
-                    <th className="px-8 py-5 text-right">Ajustement</th>
+                    <th className="px-8 py-5 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -190,6 +228,16 @@ const GestionStocks = () => {
                         </td>
                         <td className="px-8 py-6">
                           <div className="flex justify-end gap-3">
+                             <button 
+                               onClick={() => {
+                                   setSelectedProduct(p);
+                                   setStockReel(p.stockTotal);
+                                   setShowComptage(true);
+                               }}
+                               className="px-4 py-2 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all flex items-center gap-2"
+                             >
+                               <Archive size={14} /> Inventaire
+                             </button>
                              <div className="flex bg-slate-100 rounded-xl p-1 border border-slate-200">
                                 <button onClick={() => ajusterStock(p, -1, 'unite')} className="p-2 text-slate-400 hover:text-slate-900"><Minus size={14} /></button>
                                 <button onClick={() => ajusterStock(p, 1, 'unite')} className="p-2 text-slate-900"><Plus size={14} /></button>
@@ -211,6 +259,7 @@ const GestionStocks = () => {
       </div>
 
       <AnimatePresence>
+        {/* Modal Création */}
         {showModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
@@ -239,12 +288,66 @@ const GestionStocks = () => {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Prix Vente</label>
                   <input type="number" value={prix} onChange={(e)=>setPrix(Number(e.target.value))} required className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-bold text-slate-900" />
                 </div>
+                {categorie === 'Boisson' && (
+                  <div className="col-span-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Contenance (Unités par Casier)</label>
+                    <input type="number" value={unitesParCasier} onChange={(e)=>setUnitesParCasier(Number(e.target.value))} className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-bold text-slate-900" />
+                  </div>
+                )}
                 <div className="col-span-2 flex gap-4 mt-6">
                   <button type="button" onClick={()=>setShowModal(false)} className="flex-1 py-5 text-slate-400 font-bold uppercase text-[11px] tracking-widest">Abandonner</button>
                   <button type="submit" className="flex-1 py-5 rounded-2xl bg-slate-900 text-white font-bold uppercase text-[11px] tracking-[0.2em] shadow-xl shadow-slate-900/20 active:scale-95 transition-all">Enregistrer</button>
                 </div>
               </form>
             </motion.div>
+          </div>
+        )}
+
+        {/* Modal Comptage Physique */}
+        {showComptage && selectedProduct && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                className="w-full max-w-lg bg-white rounded-[2.5rem] p-10 shadow-2xl relative"
+             >
+                <div className="mb-8">
+                    <div className="flex items-center gap-4 mb-4">
+                        <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-2xl">{selectedProduct.emoji}</div>
+                        <div>
+                            <h3 className="text-2xl font-bold text-slate-900">{selectedProduct.nom}</h3>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Comptage de régularisation</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="space-y-6">
+                    <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex justify-between items-center">
+                        <div className="text-center flex-1">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Stock Théorique</p>
+                            <p className="text-2xl font-bold text-slate-900">{selectedProduct.stockTotal}</p>
+                        </div>
+                        <div className="w-px h-10 bg-slate-200" />
+                        <div className="text-center flex-1">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Écart Calculé</p>
+                            <p className={`text-2xl font-bold ${stockReel - selectedProduct.stockTotal < 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                {stockReel - selectedProduct.stockTotal > 0 ? '+' : ''}{stockReel - selectedProduct.stockTotal}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 px-1">Quantité Réelle Comptée (Unités)</label>
+                        <input type="number" autoFocus value={stockReel} onChange={(e) => setStockReel(Number(e.target.value))}
+                            className="w-full h-20 bg-slate-100 border-2 border-slate-200 rounded-3xl text-center text-4xl font-black text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                    </div>
+
+                    <div className="flex gap-4 pt-4">
+                        <button onClick={() => setShowComptage(false)} className="flex-1 py-5 text-slate-400 font-bold uppercase text-[11px] tracking-widest">Annuler</button>
+                        <button onClick={validerComptage} className="flex-1 py-5 rounded-2xl bg-emerald-600 text-white font-bold uppercase text-[11px] tracking-widest shadow-xl shadow-emerald-600/20 active:scale-95 transition-all">
+                            Régulariser
+                        </button>
+                    </div>
+                </div>
+             </motion.div>
           </div>
         )}
       </AnimatePresence>

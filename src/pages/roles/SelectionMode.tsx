@@ -50,15 +50,28 @@ const SelectionMode = () => {
       couleur: 'emerald',
       badge: 'FLUX FINANCE',
     },
-    {
-      id: 'admin',
-      titre: 'CENTRE DE GESTION',
-      description: 'Analyses financières, stocks, RH et configuration.',
-      icon: <LayoutDashboard size={32} />,
-      role: 'admin',
-      route: '/tableau-de-bord',
       couleur: 'amber',
       badge: 'FLUX MANAGER',
+    },
+    {
+      id: 'livraison',
+      titre: 'FLUX LIVRAISON',
+      description: 'Gestion des courses, livraisons et suivi des colis.',
+      icon: <Smartphone size={32} />,
+      role: 'livreur',
+      route: '/serveur', // Pour l'instant on utilise l'interface serveur ou on créera une dédiée
+      couleur: 'blue',
+      badge: 'LOGISTIQUE',
+    },
+    {
+      id: 'securite',
+      titre: 'POSTE SÉCURITÉ',
+      description: 'Contrôle des flux entrées/sorties et surveillance.',
+      icon: <ShieldCheck size={32} />,
+      role: 'securite',
+      route: '/tableau-de-bord',
+      couleur: 'slate',
+      badge: 'VIGILANCE',
     },
     // Ajout dynamique pour le Super Admin
     ...(profil?.role === 'super_admin' ? [{
@@ -92,7 +105,7 @@ const SelectionMode = () => {
       
       if (!snap.empty) {
         const employe = snap.docs[0].data();
-        const estAdmin = employe.role === 'admin';
+        const estAdmin = employe.role === 'admin' || employe.role === 'gerant';
 
         if (estAdmin || employe.role === selectedMode.role) {
           toast.success(`Session ouverte : ${employe.nom}`, { position: 'top-center' });
@@ -166,7 +179,7 @@ const SelectionMode = () => {
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl w-full relative z-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 max-w-[1600px] w-full relative z-10">
         <AnimatePresence>
           {modes.map((mode, i) => (
             <motion.button
@@ -176,7 +189,7 @@ const SelectionMode = () => {
               transition={{ delay: i * 0.1, type: 'spring', stiffness: 100 }}
               whileHover={{ y: -10, scale: 1.02 }}
               onClick={() => gererSelection(mode)}
-              className="group relative h-[420px] rounded-[3.5rem] p-10 bg-white/[0.02] border border-white/5 hover:border-white/20 transition-all duration-500 flex flex-col items-start text-left overflow-hidden shadow-2xl"
+              className="group relative h-[380px] rounded-[3rem] p-8 bg-white/[0.02] border border-white/5 hover:border-white/20 transition-all duration-500 flex flex-col items-start text-left overflow-hidden shadow-2xl"
             >
               <div className={`absolute inset-0 bg-gradient-to-br from-${mode.couleur}-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700`} />
               
