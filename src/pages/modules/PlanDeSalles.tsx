@@ -113,7 +113,7 @@ const PlanDeSalles = () => {
                     initial={{ scale: 0.9, opacity: 0, y: 20 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                    className="relative w-full max-w-lg bg-white rounded-[3rem] overflow-hidden shadow-2xl"
+                    className="relative w-full max-w-lg bg-white rounded-3xl overflow-hidden shadow-2xl"
                   >
                       {/* Header Modale */}
                       <div className="bg-slate-950 p-8 md:p-10 text-white flex justify-between items-center">
