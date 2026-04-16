@@ -198,28 +198,46 @@ const InterfaceCaissier = () => {
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto space-y-4 md:space-y-6 px-2 custom-scrollbar-light max-h-[200px] md:max-h-none">
+                    <div className="flex-1 overflow-y-auto space-y-4 md:space-y-6 px-2 custom-scrollbar-light max-h-[300px] md:max-h-none">
+                        <div className="bg-slate-50 p-4 rounded-2xl mb-4">
+                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Statistiques de consommation</p>
+                             <div className="flex justify-between text-xs font-bold text-slate-600">
+                                 <span>Total Articles</span>
+                                 <span>{commandeActive.lignes.reduce((acc, l) => acc + l.quantite, 0)} unités</span>
+                             </div>
+                        </div>
                         {commandeActive.lignes.map(ligne => (
-                            <div key={ligne.id} className="flex justify-between items-center group">
+                            <div key={ligne.id} className="flex justify-between items-center group bg-slate-50/50 p-3 rounded-2xl border border-transparent hover:border-slate-100">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center font-black text-[10px] md:text-sm text-slate-500">
+                                    <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-black text-sm text-slate-900 shadow-sm">
                                         {ligne.quantite}
                                     </div>
                                     <div>
-                                        <p className="font-bold text-[11px] md:text-sm uppercase tracking-tight">{ligne.produitNom}</p>
+                                        <p className="font-bold text-[11px] md:text-sm uppercase tracking-tight text-slate-900">{ligne.produitNom}</p>
+                                        <p className="text-[9px] text-slate-400 font-bold uppercase">{ligne.prixUnitaire.toLocaleString()} F / u</p>
                                     </div>
                                 </div>
-                                <span className="font-display font-black text-base md:text-lg">{ligne.sousTotal.toLocaleString()} F</span>
+                                <span className="font-display font-black text-base md:text-lg text-slate-900">{ligne.sousTotal.toLocaleString()} F</span>
                             </div>
                         ))}
                     </div>
 
                     <div className="mt-8 pt-6 border-t-2 border-dashed border-slate-100">
+                        {remise > 0 && (
+                            <div className="flex justify-between items-center mb-4 text-rose-500 font-bold bg-rose-50 px-4 py-2 rounded-xl border border-rose-100">
+                                <span className="text-[10px] uppercase tracking-widest">Remise Commerciale</span>
+                                <span className="text-sm">-{remise.toLocaleString()} F</span>
+                            </div>
+                        )}
                         <div className="flex justify-between items-end mb-2">
-                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Net</span>
+                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Net à Encaisser</span>
+                             <div className="flex gap-2">
+                                 {modePaiement === 'credit' && <span className="bg-indigo-600 text-white text-[8px] px-2 py-0.5 rounded font-black uppercase">CRÉDIT</span>}
+                                 {modePaiement === 'especes' && <span className="bg-emerald-600 text-white text-[8px] px-2 py-0.5 rounded font-black uppercase">CASH</span>}
+                             </div>
                         </div>
                         <div className="text-4xl md:text-6xl font-display font-black text-slate-900 tracking-tighter">
-                            {totalFinal.toLocaleString()} <span className="text-xl text-slate-400">F</span>
+                            {totalFinal.toLocaleString()} <span className="text-xl text-slate-400 font-black">F</span>
                         </div>
                     </div>
                 </motion.div>
