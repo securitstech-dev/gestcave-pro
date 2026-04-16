@@ -12,6 +12,8 @@ import { useAuthStore } from '../store/authStore';
 import { usePOSStore } from '../store/posStore';
 import { toast } from 'react-hot-toast';
 import StatCard from '../components/ui/StatCard';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 // Modules
 import InterfaceCaissier from './roles/InterfaceCaissier';
@@ -203,10 +205,25 @@ const TableauClient = () => {
 const DashboardAccueil = ({ profil, navigate }: any) => {
   const { commandes, produits } = usePOSStore();
   const [lienCopie, setLienCopie] = React.useState(false);
+  const [transactions, setTransactions] = React.useState<any[]>([]);
 
-  const ventesDuJour = commandes
-    .filter(c => c.statut === 'payee')
-    .reduce((acc, c) => acc + c.total, 0);
+  React.useEffect(() => {
+    if (!profil?.etablissement_id) return;
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const q = query(
+      collection(db, 'transactions_pos'),
+      where('etablissement_id', '==', profil.etablissement_id),
+      where('date', '>=', today.toISOString())
+    );
+    const unsub = onSnapshot(q, snap => {
+      setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => unsub();
+  }, [profil?.etablissement_id]);
+
+  const ventesDuJour = transactions.reduce((acc, t) => acc + (t.total || 0), 0);
+  const dettes = transactions.filter(t => t.modePaiement === 'credit').reduce((acc, t) => acc + (t.montantRestant || 0), 0);
 
   const copierLienPoste = () => {
     if (!profil?.etablissement_id) return;
@@ -248,8 +265,8 @@ const DashboardAccueil = ({ profil, navigate }: any) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard label="Recettes (F)" valeur={`${ventesDuJour.toLocaleString()}`} icon={<TrendingUp size={22} />} color="emerald" tendance="+8.4%" />
         <StatCard label="Commandes Actives" valeur={commandes.filter(c => c.statut !== 'payee').length} icon={<Zap size={22} />} color="blue" subtext="En salle" />
-        <StatCard label="Dettes Clients" valeur={`${commandes.filter(c => c.statut === 'payee' && c.methodePaiement === 'credit').reduce((acc, c) => acc + (c.total - (c.montantPaye || 0)), 0).toLocaleString()}`} suffix="F" icon={<Users size={22} />} color="blue" subtext="À recouvrir" />
-        <StatCard label="Items Critiques" valeur={produits.filter(p => p.stockTotal <= p.stockAlerte).length} icon={<AlertTriangle size={22} />} color="red" important={produits.filter(p => p.stockTotal <= p.stockAlerte).length > 0} />
+        <StatCard label="Dettes Clients" valeur={`${dettes.toLocaleString()}`} suffix="F" icon={<Users size={22} />} color="blue" subtext="À recouvrir" />
+        <StatCard label="Items Critiques" valeur={produits.filter(p => (p.stockTotal || 0) <= (p.stockAlerte || 0)).length} icon={<AlertTriangle size={22} />} color="red" important={produits.filter(p => (p.stockTotal || 0) <= (p.stockAlerte || 0)).length > 0} />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
@@ -266,30 +283,30 @@ const DashboardAccueil = ({ profil, navigate }: any) => {
           </div>
 
           <div className="divide-y divide-slate-100">
-            {commandes.length === 0 ? (
+            {transactions.length === 0 ? (
                 <div className="py-24 text-center">
                     <History size={48} className="mx-auto mb-6 text-slate-200" />
                     <p className="text-slate-400 font-bold text-sm uppercase tracking-widest">Aucun mouvement aujourd'hui</p>
                 </div>
             ) : (
-                commandes.slice(0, 8).map((commande, i) => (
-                    <div key={commande.id || i} className="flex items-center justify-between p-6 hover:bg-slate-50 transition-colors">
+                transactions.slice(0, 8).map((transaction, i) => (
+                    <div key={transaction.id || i} className="flex items-center justify-between p-6 hover:bg-slate-50 transition-colors">
                         <div className="flex items-center gap-5">
                             <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-900 text-xs">
-                                {commande.tableNom?.toUpperCase().slice(0, 3)}
+                                ENC
                             </div>
                             <div>
-                                <h4 className="font-bold text-slate-900 text-sm">Tournée #{commande.id.slice(-6).toUpperCase()}</h4>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Client {commande.serveurNom}</p>
+                                <h4 className="font-bold text-slate-900 text-sm">Ticket #{transaction.commandeId?.slice(-6).toUpperCase() || 'NR'}</h4>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Par {transaction.serveurNom || 'Caisse'}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-6">
                             <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest border ${
-                                commande.statut === 'payee' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-blue-50 text-blue-700 border-blue-100'
+                                transaction.modePaiement === 'credit' ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'
                             }`}>
-                                {commande.statut}
+                                {transaction.modePaiement === 'credit' ? 'Dette' : 'Payé'}
                             </span>
-                            <p className="text-lg font-bold text-slate-900 w-24 text-right uppercase tracking-tighter">{commande.total.toLocaleString()} F</p>
+                            <p className="text-lg font-bold text-slate-900 w-24 text-right uppercase tracking-tighter">{transaction.total?.toLocaleString() || 0} F</p>
                         </div>
                     </div>
                 ))
