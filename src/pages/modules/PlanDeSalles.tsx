@@ -151,12 +151,17 @@ const TableCard = ({ table, commande, onClick }: TableCardProps) => {
             
             {estOccupee && commande && (
                 <div className="flex flex-col items-center">
-                <div className="flex items-center gap-1 text-[10px] text-slate-500 font-bold mb-1">
-                    <Clock size={10} /> {getMinutes(commande.dateOuverture)} min
-                </div>
-                <div className="text-rose-400 font-black text-xs">
-                    {commande.total.toLocaleString()} F
-                </div>
+                    <div className="flex items-center gap-1 text-[10px] text-slate-500 font-bold mb-1">
+                        <Clock size={10} /> {getMinutes(commande.dateOuverture)} min
+                    </div>
+                    <div className="flex items-center gap-2 mb-1">
+                         <span className="bg-rose-500/20 text-rose-500 text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-widest">
+                            {commande.lignes.reduce((acc, l) => acc + l.quantite, 0)} items
+                         </span>
+                    </div>
+                    <div className="text-rose-400 font-black text-xs md:text-sm">
+                        {commande.total.toLocaleString()} F
+                    </div>
                 </div>
             )}
 
