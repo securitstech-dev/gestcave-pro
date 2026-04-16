@@ -11,7 +11,7 @@ import { useAuthStore } from '../store/authStore';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, doc, updateDoc, addDoc, query, orderBy, getDocs, deleteDoc } from 'firebase/firestore';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Trash2, Database, AlertCircle } from 'lucide-react';
+import { Trash2, Database, AlertCircle, Info, Copy } from 'lucide-react';
 
 type Onglet = 'demandes' | 'paiements' | 'etablissements' | 'comptabilite' | 'maintenance';
 
