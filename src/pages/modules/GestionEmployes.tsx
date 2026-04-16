@@ -38,23 +38,36 @@ const GestionEmployes = () => {
   const [nouveauRole, setNouveauRole] = useState<'serveur' | 'caissier' | 'cuisine' | 'gerant' | 'livreur' | 'securite' | 'admin'>('serveur');
   const [nouveauSalaire, setNouveauSalaire] = useState(0);
   const [showModal, setShowModal] = useState(false);
-
   const [selectedEmploye, setSelectedEmploye] = useState<Employe | null>(null);
   const [montantAvance, setMontantAvance] = useState(0);
   const [motifAvance, setMotivAvance] = useState('');
   const [showAvanceModal, setShowAvanceModal] = useState(false);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [showPayerModal, setShowPayerModal] = useState(false);
+  const [montantPaiement, setMontantPaiement] = useState(0);
 
   useEffect(() => {
     if (!profil?.etablissement_id) return;
+
+    // Fetch transactions for commissions (current month)
+    const debutMois = new Date();
+    debutMois.setDate(1); debutMois.setHours(0,0,0,0);
+
+    const qTrans = query(
+      collection(db, 'transactions_pos'),
+      where('etablissement_id', '==', profil.etablissement_id),
+      where('date', '>=', debutMois.toISOString())
+    );
+
+    const unsubTrans = onSnapshot(qTrans, (snap) => {
+      setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
 
     const qEmp = query(collection(db, 'employes'), where('etablissement_id', '==', profil.etablissement_id));
     const unsubEmp = onSnapshot(qEmp, (snapshot) => {
       setEmployes(snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Employe[]);
       setLoading(false);
     });
-
-    const debutMois = new Date();
-    debutMois.setDate(1); debutMois.setHours(0,0,0,0);
 
     const qAvances = query(
       collection(db, 'avances'), 
@@ -98,6 +111,25 @@ const GestionEmployes = () => {
       setMontantAvance(0); setMotivAvance(''); setShowAvanceModal(false);
     } catch {
       toast.error("Erreur avance");
+    }
+  };
+
+  const enregistrerPaiement = async (emp: Employe, montant: number) => {
+    if (!window.confirm(`Confirmer le paiement du solde de ${montant.toLocaleString()} F à ${emp.nom} ?`)) return;
+    
+    try {
+      await addDoc(collection(db, 'paiements_salaires'), {
+        employe_id: emp.id,
+        employe_nom: emp.nom,
+        montant: Number(montant),
+        date: new Date().toISOString(),
+        etablissement_id: profil.etablissement_id,
+        mois: new Date().getMonth() + 1,
+        annee: new Date().getFullYear()
+      });
+      toast.success(`Salaire soldé pour ${emp.nom}`);
+    } catch {
+      toast.error("Erreur lors du paiement");
     }
   };
 
@@ -150,6 +182,10 @@ const GestionEmployes = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {employes.map((emp) => {
               const totalAvances = avances.filter(a => a.employe_id === emp.id).reduce((acc, curr) => acc + curr.montant, 0);
+              const ventesEmploye = transactions.filter(t => t.serveurId === emp.id).reduce((acc, t) => acc + (t.total || 0), 0);
+              const commission = emp.role === 'serveur' ? Math.floor(ventesEmploye * 0.02) : 0; // 2% Commission
+              const soldeNet = (emp.salaire || 0) + commission - totalAvances;
+
               return (
               <motion.div layout key={emp.id}
                 className="bg-white p-8 rounded-3xl border border-slate-200 hover:border-slate-300 transition-all relative shadow-sm group"
@@ -178,9 +214,15 @@ const GestionEmployes = () => {
 
                 <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 space-y-3">
                   <div className="flex justify-between items-center text-xs font-medium text-slate-500">
-                    <span>Brut</span>
+                    <span>Salaire de base</span>
                     <span className="text-slate-900 font-bold">{emp.salaire?.toLocaleString()} F</span>
                   </div>
+                  {commission > 0 && (
+                    <div className="flex justify-between items-center text-xs font-bold text-emerald-600">
+                      <span>Commissions (2%)</span>
+                      <span>+{commission.toLocaleString()} F</span>
+                    </div>
+                  )}
                   {totalAvances > 0 && (
                     <div className="flex justify-between items-center text-xs font-bold text-rose-500 italic">
                       <span>Avances</span>
@@ -188,19 +230,26 @@ const GestionEmployes = () => {
                     </div>
                   )}
                   <div className="flex justify-between items-center pt-3 border-t border-slate-200">
-                    <span className="text-[10px] text-slate-400 font-black uppercase">Solde Net</span>
-                    <span className="text-slate-900 font-black text-lg">{(emp.salaire - totalAvances).toLocaleString()} F</span>
+                    <span className="text-[10px] text-slate-400 font-black uppercase">Solde à Payer</span>
+                    <span className="text-slate-900 font-black text-lg">{soldeNet.toLocaleString()} F</span>
                   </div>
                 </div>
 
-                <div className="mt-8 flex gap-3">
-                    <button onClick={() => { setSelectedEmploye(emp); setShowAvanceModal(true); }}
-                      className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-[10px] font-bold uppercase tracking-widest text-slate-700 transition-all"
-                    >
-                      Verser Avance
-                    </button>
-                    <button onClick={() => supprimerEmploye(emp.id, emp.nom)} className="p-3.5 bg-white border border-slate-200 rounded-xl text-slate-300 hover:text-rose-500 hover:border-rose-100 transition-all">
-                       <Trash2 size={16} />
+                <div className="mt-8 flex flex-col gap-3">
+                    <div className="flex gap-3">
+                        <button onClick={() => { setSelectedEmploye(emp); setShowAvanceModal(true); }}
+                          className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-[10px] font-bold uppercase tracking-widest text-slate-700 transition-all font-display"
+                        >
+                          Décaisser Avance
+                        </button>
+                        <button onClick={() => enregistrerPaiement(emp, soldeNet)}
+                          className="flex-1 py-3.5 bg-emerald-600 hover:bg-emerald-700 rounded-xl text-[10px] font-bold uppercase tracking-widest text-white transition-all shadow-lg shadow-emerald-600/20 font-display"
+                        >
+                          Solder Mois
+                        </button>
+                    </div>
+                    <button onClick={() => supprimerEmploye(emp.id, emp.nom)} className="w-full py-3 bg-white border border-slate-200 rounded-xl text-slate-300 hover:text-rose-500 hover:border-rose-100 transition-all flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest">
+                       <Trash2 size={14} /> Révoquer l'accès
                     </button>
                 </div>
               </motion.div>

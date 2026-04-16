@@ -327,7 +327,9 @@ export const usePOSStore = create<PosState>((set, get) => ({
       commandeId, total: totalFinal, montantRecu: paye || totalFinal,
       montantRestant: restant, modePaiement: mode, date: new Date().toISOString(),
       clientNom: client || 'Direct', clientContact: contact || '',
-      etablissement_id: useAuthStore.getState().profil?.etablissement_id
+      etablissement_id: useAuthStore.getState().profil?.etablissement_id,
+      serveurId: cmd.serveurId,
+      serveurNom: cmd.serveurNom
     });
 
     await batch.commit();

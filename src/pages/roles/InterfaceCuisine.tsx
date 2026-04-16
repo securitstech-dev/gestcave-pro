@@ -16,7 +16,7 @@ const InterfaceCuisine = () => {
   const { nomEmploye, quitterPoste } = usePosteSession();
   const navigate = useNavigate();
   const [derniereNotif, setDerniereNotif] = useState<number>(0);
-  const [filtreActif, setFiltreActif] = useState<'tous' | 'cuisine' | 'bar'>('tous');
+  const [filtreActif, setFiltreActif] = useState<'tous' | 'cuisine' | 'bar'>('cuisine');
   const [now, setNow] = useState(Date.now());
   const prevCommandesCount = useRef(0);
 
@@ -209,6 +209,14 @@ const InterfaceCuisine = () => {
                                                 </div>
                                                 <div className="flex-1">
                                                     <p className={`font-bold text-sm uppercase ${ligne.statut === 'pret' ? 'line-through text-slate-400' : 'text-slate-900'}`}>{ligne.produitNom}</p>
+                                                    <div className="flex gap-2 mt-1">
+                                                        {ligne.produitNom.toLowerCase().match(/riz|sauce|potage|précuit|déjà prêt/) && (
+                                                            <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-600 uppercase">Précuit</span>
+                                                        )}
+                                                        {ligne.produitNom.toLowerCase().match(/braisé|grillade|fufu|ndolé|yassa|préparer/) && (
+                                                            <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-amber-100 text-amber-600 uppercase">À Préparer (~45mn)</span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 <button 
                                                     onClick={() => marquerLignePrete(commande.id, ligne.id)}
