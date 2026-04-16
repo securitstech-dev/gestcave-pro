@@ -193,7 +193,12 @@ const PageActivation = () => {
                                 <CheckCircle2 size={44} />
                             </div>
                             <h2 className="text-2xl font-bold text-white mb-2">Bienvenue à bord !</h2>
-                            <p className="text-slate-400">Votre espace est prêt. Vous allez être redirigé vers la page de connexion...</p>
+                            <p className="text-slate-400 mb-6">Votre espace est prêt. Votre code PIN d'accès par défaut est :</p>
+                            <div className="bg-white/10 p-6 rounded-3xl border border-white/20 mb-8 inline-block">
+                                <span className="text-4xl font-black text-indigo-400 tracking-[0.3em]">0000</span>
+                            </div>
+                            <p className="text-xs text-slate-500 italic">Vous pourrez le modifier à tout moment dans le Centre de Gestion.</p>
+                            <p className="text-slate-400 mt-6">Redirection automatique dans quelques secondes...</p>
                         </div>
                     )}
                 </div>
