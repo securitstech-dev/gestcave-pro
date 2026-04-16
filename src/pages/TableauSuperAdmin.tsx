@@ -29,7 +29,7 @@ const TableauSuperAdmin = () => {
   const [motifRefus, setMotifRefus] = useState('');
   
   const [modalApprobation, setModalApprobation] = useState<{ demandeId: string; demande: any } | null>(null);
-  const [planApprobation, setPlanApprobation] = useState<'demo' | 'mensuel' | 'premium' | 'business'>('demo');
+  const [planApprobation, setPlanApprobation] = useState<string>('demo');
 
   const [modalEtabDetails, setModalEtabDetails] = useState<any | null>(null);
 
