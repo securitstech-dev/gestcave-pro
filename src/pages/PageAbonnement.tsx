@@ -4,7 +4,7 @@ import {
   Smartphone, Upload, CreditCard, CheckCircle2, 
   Copy, Info, ArrowLeft, Zap, ShieldCheck, 
   Clock, TrendingUp, Sparkles, X, ChevronRight,
-  UserCheck
+  UserCheck, PlusCircle, ArrowRight
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { toast } from 'react-hot-toast';

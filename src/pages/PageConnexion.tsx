@@ -75,9 +75,16 @@ const PageConnexion = () => {
               {typeCompte === 'admin' ? <ShieldCheck size={32} className="text-white" /> : <span className="text-3xl">🍷</span>}
             </div>
 
-            <h1 className="text-3xl font-display font-bold text-white mb-2">
+            <div className="mb-6">
+              <h1 className="text-3xl font-display font-bold text-white tracking-tight">GESTCAVE PRO</h1>
+              <div className="inline-block mt-2 px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full">
+                <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest">Version Alpha 1.5 - Onboarding Auto</p>
+              </div>
+            </div>
+
+            <h2 className="text-xl font-display font-bold text-white mb-2">
               {typeCompte === 'admin' ? 'Accès Privé' : 'Espace de Gestion'}
-            </h1>
+            </h2>
             <p className="text-slate-400 text-sm mb-8">
               {typeCompte === 'admin' 
                 ? 'Connexion sécurisée pour la gestion globale de la plateforme SaaS.'

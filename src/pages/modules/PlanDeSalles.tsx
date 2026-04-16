@@ -1,5 +1,8 @@
+import { motion } from 'framer-motion';
 import { Users, Clock, Coffee, Wine, Utensils, ShoppingBag, Package, Eye, ArrowUpRight } from 'lucide-react';
-import { usePOSStore, TablePlan, Commande, Produit } from '../../store/posStore';
+import { usePOSStore } from '../../store/posStore';
+import type { TablePlan, Commande } from '../../store/posStore';
+import type { Produit } from '../../store/posStore';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 

@@ -5,7 +5,7 @@ import {
   Settings, LogOut, ChevronRight, Package, CreditCard, 
   Layout, LayoutDashboard, Zap, Activity, ShieldCheck,
   Calendar, ArrowUpRight, ArrowDownRight, MoreVertical,
-  Bell, Search, Menu, X, PlusCircle, Globe
+  Bell, Search, Menu, X, PlusCircle, Globe, History as HistoryIcon, ArrowRight
 } from 'lucide-react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -277,7 +277,7 @@ const DashboardAccueil = ({ profil, navigate }: any) => {
           <div className="space-y-4">
             {commandes.length === 0 ? (
                 <div className="py-20 text-center text-slate-700 bg-black/20 rounded-[2rem] border border-dashed border-white/5">
-                    <History size={48} className="mx-auto mb-4 opacity-10" />
+                    <HistoryIcon size={48} className="mx-auto mb-4 opacity-10" />
                     <p className="font-bold uppercase tracking-widest text-xs">Aucun mouvement détecté</p>
                 </div>
             ) : (

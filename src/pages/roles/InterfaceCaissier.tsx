@@ -4,7 +4,7 @@ import {
   Banknote, CreditCard, Smartphone, Receipt, 
   CheckCircle2, Users, Clock, ShoppingBag, Wine,
   LogOut, ArrowRight, ShieldCheck, Wallet, 
-  TrendingUp, History, User, X, Info, Calculator
+  TrendingUp, History as HistoryIcon, User, X, Info, Calculator
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePOSStore } from '../../store/posStore';
@@ -160,7 +160,7 @@ const InterfaceCaissier = () => {
 
             {commandesActives.length === 0 && (
                 <div className="py-20 text-center text-slate-600">
-                    <History size={48} className="mx-auto mb-4 opacity-10" />
+                    <HistoryIcon size={48} className="mx-auto mb-4 opacity-10" />
                     <p className="text-sm font-bold uppercase tracking-widest">Aucun ticket actif</p>
                 </div>
             )}
@@ -248,7 +248,7 @@ const InterfaceCaissier = () => {
                                 { val: 'especes', label: 'ESPÈCES', icon: <Banknote size={24} /> },
                                 { val: 'mobile', label: 'MOBILE MONEY', icon: <Smartphone size={24} /> },
                                 { val: 'carte', label: 'CARTE BANCAIRE', icon: <CreditCard size={24} /> },
-                                { val: 'credit', label: 'COMPTE CLIENT', icon: <History size={24} /> },
+                                { val: 'credit', label: 'COMPTE CLIENT', icon: <HistoryIcon size={24} /> },
                             ].map(opts => (
                                 <button
                                     key={opts.val}

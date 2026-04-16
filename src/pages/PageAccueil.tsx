@@ -160,8 +160,7 @@ const PageAccueil = () => {
           </div>
 
           {/* FORMULAIRE D'INSCRIPTION DIRECT */}
-             <InscriptionDirecte />
-          </div>
+          <InscriptionDirecte />
 
           {/* TEMOIGNAGES */}
           <div className="mt-40 mb-32">

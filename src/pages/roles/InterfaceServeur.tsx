@@ -62,7 +62,7 @@ const InterfaceServeur = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
               <MiniStat label="Tables Actives" valeur={tables.filter(t => t.statut === 'occupee').length} icone={<Zap size={14} className="text-amber-400" />} />
               <MiniStat label="Libres" valeur={tables.filter(t => t.statut === 'libre').length} icone={<CheckCircle2 size={14} className="text-emerald-400" />} />
-              <MiniStat label="En Attente" valeur={commandes.filter(c => c.statut === 'en_cours').length} icone={<Clock size={14} className="text-indigo-400" />} />
+              <MiniStat label="Ouvertes" valeur={commandes.filter(c => c.statut === 'ouverte').length} icone={<Clock size={14} className="text-indigo-400" />} />
           </div>
 
           <AnimatePresence>

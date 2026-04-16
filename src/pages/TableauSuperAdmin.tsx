@@ -106,13 +106,17 @@ const TableauSuperAdmin = () => {
       });
 
       const urlComplete = `${window.location.origin}/activation?token=${invitationToken}`;
+      console.log("SUCCÈS : Lien d'activation généré ->", urlComplete);
+      
       setLienActivation({ url: urlComplete, nom: demande.nom_etablissement });
 
       toast.dismiss(toastId);
-      toast.success(`✅ Essai activé & Lien généré pour ${demande.nom_etablissement} !`);
+      toast.success(`✅ Essai activé pour ${demande.nom_etablissement} !`, { duration: 5000 });
+      
     } catch (err: any) {
+      console.error("ERREUR CRITIQUE APPROBATION :", err);
       toast.dismiss(toastId);
-      toast.error(`Erreur : ${err.message}`);
+      toast.error(`Erreur d'approbation : ${err.message}`);
     }
   };
 
@@ -260,6 +264,10 @@ const TableauSuperAdmin = () => {
         >
           <LogOut size={18} /> Déconnexion
         </button>
+
+        <div className="mt-4 px-4 py-2 border-t border-white/5">
+          <p className="text-[9px] text-slate-600 font-bold uppercase tracking-widest text-center">Version 1.2.0 • Onboarding Automatique</p>
+        </div>
       </aside>
 
       {/* Contenu principal */}

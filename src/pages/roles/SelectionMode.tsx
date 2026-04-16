@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Smartphone, ChefHat, Receipt, LayoutDashboard, 
   LogOut, Key, ArrowRight, UserPlus, ShieldCheck, 
-  Gamepad2, Zap, Star
+  Gamepad2, Zap, Star, X
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { db } from '../../lib/firebase';

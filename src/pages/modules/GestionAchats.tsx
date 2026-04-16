@@ -1,8 +1,10 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Layers, ShoppingCart, Plus, Calendar, Package, ArrowLeft, Save, Truck, Receipt, TrendingUp, X, ChevronRight, Info } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, writeBatch } from 'firebase/firestore';
 import { useAuthStore } from '../../store/authStore';
-import { Produit } from '../../store/posStore';
+import type { Produit } from '../../store/posStore';
 import toast from 'react-hot-toast';
 import StatCard from '../../components/ui/StatCard';
 
@@ -42,7 +44,7 @@ const GestionAchats = () => {
 
         const qP = query(collection(db, 'produits'), where('etablissement_id', '==', profil.etablissement_id));
         const unsubP = onSnapshot(qP, (snap) => {
-            setProduits(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+            setProduits(snap.docs.map(d => ({ id: d.id, ...d.data() })) as Produit[]);
         });
 
         return () => { unsubA(); unsubP(); };
