@@ -347,63 +347,97 @@ const TableauSuperAdmin = () => {
                     ))}
                   </tbody>
                 </table>
+            <motion.div key="paiements" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+              <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+                <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-lg tracking-tight">Flux des Paiements</h3>
+                    <p className="text-xs text-slate-400 font-medium">Suivi en temps réel des transactions entrantes</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-widest border border-amber-100">
+                      {paiements.filter(p => p.statut === 'en_attente').length} En attente
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="text-[10px] text-slate-400 font-black uppercase tracking-widest border-b border-slate-50 bg-slate-50/30">
+                      <tr>
+                        <th className="px-8 py-5">Date & Heure</th>
+                        <th className="px-8 py-5">Établissement</th>
+                        <th className="px-8 py-5">Pack / Période</th>
+                        <th className="px-8 py-5">Montant</th>
+                        <th className="px-8 py-5">Statut</th>
+                        <th className="px-8 py-5 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {paiements.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="py-24">
+                            <div className="flex flex-col items-center text-center">
+                              <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4 text-slate-200 border-2 border-dashed border-slate-100">
+                                <CreditCard size={32} />
+                              </div>
+                              <h4 className="text-slate-900 font-bold">Aucune transaction</h4>
+                              <p className="text-slate-400 text-sm max-w-[240px] mt-1 font-medium italic">Les demandes de paiement des établissements apparaîtront ici.</p>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        paiements.map((p) => (
+                          <tr key={p.id} className="hover:bg-slate-50/80 transition-all group">
+                            <td className="px-8 py-6">
+                              <p className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{new Date(p.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                              <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest mt-0.5">{new Date(p.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
+                            </td>
+                            <td className="px-8 py-6">
+                                <div className="font-black text-slate-900 text-xs uppercase tracking-tight">{nomEtab(p.etablissement_id)}</div>
+                                <div className="flex items-center gap-1.5 mt-1">
+                                    <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">{p.methode || 'DIRECT'}</span>
+                                </div>
+                            </td>
+                            <td className="px-8 py-6">
+                                <div className="text-xs font-bold text-slate-700 uppercase tracking-tighter">Pack {p.plan_id || 'Premium'}</div>
+                                <div className="text-[10px] text-slate-400 font-medium capitalize mt-0.5">{p.periode || 'Mensuel'}</div>
+                            </td>
+                            <td className="px-8 py-6">
+                              <span className="text-lg font-display font-black text-slate-900 tracking-tighter italic">{(p.montant || 0).toLocaleString()} <span className="text-[10px] text-slate-400 ml-0.5">F</span></span>
+                            </td>
+                            <td className="px-8 py-6">
+                                <BadgeStatut statut={p.statut} />
+                            </td>
+                            <td className="px-8 py-6 text-right">
+                              {p.statut === 'en_attente' ? (
+                                <button onClick={() => {
+                                    setPlanPaiement(p.plan_id || 'premium');
+                                    setModalPaiement(p);
+                                }} className="inline-flex items-center gap-2 bg-slate-900 hover:bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-all shadow-lg hover:shadow-indigo-500/25 active:scale-95">
+                                  Examiner <ArrowUpRight size={14} />
+                                </button>
+                              ) : (
+                                <div className="flex justify-end gap-2 opacity-50">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Traité</span>
+                                    {p.preuve_url && (
+                                      <a href={p.preuve_url} target="_blank" rel="noreferrer" className="text-indigo-400 hover:text-indigo-600">
+                                        <ExternalLink size={14} />
+                                      </a>
+                                    )}
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </motion.div>
           )}
 
-          {/* ── PAIEMENTS ── */}
-          {onglet === 'paiements' && (
-            <motion.div key="paiements" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-              className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-              <div className="p-6 border-b border-slate-100 bg-slate-50">
-                <h3 className="font-bold text-slate-900">Paiements à vérifier</h3>
-              </div>
-              <table className="w-full text-left">
-                <thead className="text-[10px] text-slate-400 font-black uppercase tracking-widest border-b border-slate-50">
-                  <tr>
-                    <th className="px-6 py-5">Date</th>
-                    <th className="px-6 py-5">Établissement</th>
-                    <th className="px-6 py-5">Montant</th>
-                    <th className="px-6 py-5">Statut</th>
-                    <th className="px-6 py-5 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {paiements.length === 0 && <tr><td colSpan={5} className="p-10 text-center text-slate-400 italic text-sm">Aucun paiement.</td></tr>}
-                  {paiements.map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-5">
-                        <p className="text-sm font-bold text-slate-900">{new Date(p.date).toLocaleDateString('fr-FR')}</p>
-                        <p className="text-[11px] text-slate-400">{new Date(p.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
-                      </td>
-                      <td className="px-6 py-5 font-bold text-slate-900">{nomEtab(p.etablissement_id)}</td>
-                      <td className="px-6 py-5 font-bold text-emerald-600 text-lg">{(p.montant || 0).toLocaleString()} F</td>
-                      <td className="px-6 py-5"><BadgeStatut statut={p.statut} /></td>
-                      <td className="px-6 py-5 text-right">
-                        {p.statut === 'en_attente' && (
-                          <button onClick={() => {
-                              const montant = p.montant || 0;
-                              let planRecommande = 'mensuel';
-                              if (montant >= 60000) planRecommande = 'business';
-                              else if (montant >= 30000) planRecommande = 'premium';
-                              setPlanPaiement(planRecommande as any);
-                              setModalPaiement(p);
-                          }} className="flex items-center gap-2 ml-auto bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all hover:bg-slate-700">
-                            Examiner <ArrowUpRight size={14} />
-                          </button>
-                        )}
-                        {p.preuve_url && p.statut !== 'en_attente' && (
-                          <a href={p.preuve_url} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-slate-900 text-xs underline flex items-center justify-end gap-1">
-                            Voir preuve <ExternalLink size={11} />
-                          </a>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </motion.div>
-          )}
 
           {/* ── ÉTABLISSEMENTS ── */}
           {onglet === 'etablissements' && (
