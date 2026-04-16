@@ -60,51 +60,51 @@ const InterfaceCuisine = () => {
     commande.lignes.filter(l => l.statut !== 'servi').every(l => l.statut === 'pret');
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-6 md:p-8 lg:p-10 transition-colors duration-300">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
-          <div className="flex items-center gap-6">
-              <div className="w-16 h-16 rounded-3xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shadow-orange-500/5 shadow-2xl overflow-hidden relative group">
+    <div className="min-h-screen bg-slate-950 text-white p-4 md:p-8 lg:p-10 transition-colors duration-300">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 md:mb-12">
+          <div className="flex items-center gap-4 md:gap-6">
+              <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl md:rounded-3xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shadow-orange-500/5 shadow-2xl overflow-hidden relative group">
                   <div className="absolute inset-0 bg-orange-500 opacity-20 animate-pulse" />
-                  <ChefHat size={32} className="text-orange-500 relative z-10" />
+                  <ChefHat size={24} md:size={32} className="text-orange-500 relative z-10" />
               </div>
               <div>
-                  <h1 className="text-3xl font-display font-black tracking-tight uppercase">MONITEUR <span className="text-orange-500">PRODUCTION</span></h1>
-                  <p className="text-slate-500 font-bold text-xs uppercase tracking-[0.3em] flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Posté par {nomEmploye} · {commandesActives.length} BONS ACTIFS
+                  <h1 className="text-xl md:text-3xl font-display font-black tracking-tight uppercase leading-none">MONITEUR <span className="text-orange-500">PROD</span></h1>
+                  <p className="text-slate-500 font-bold text-[9px] md:text-xs uppercase tracking-[0.2em] md:tracking-[0.3em] flex items-center gap-2 mt-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> {commandesActives.length} BONS ACTIFS
                   </p>
               </div>
           </div>
 
-          <div className="flex items-center gap-4 w-full md:w-auto">
-              <div className="bg-slate-900 border border-white/5 px-6 py-3 rounded-2xl flex items-center gap-4 shadow-inner">
-                  <div className="text-right">
-                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Temps Réel</p>
-                      <p className="text-xl font-display font-black tracking-tighter">
+          <div className="flex items-center gap-3 w-full md:w-auto">
+              <div className="flex-1 md:flex-none bg-slate-900 border border-white/5 px-4 md:px-6 py-2 md:py-3 rounded-xl md:rounded-2xl flex items-center justify-between md:justify-start gap-4 shadow-inner">
+                  <div className="text-left md:text-right">
+                      <p className="text-[8px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest">Service</p>
+                      <p className="text-sm md:text-xl font-display font-black tracking-tighter">
                           {new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                       </p>
                   </div>
-                  <Clock className="text-slate-600" size={24} />
+                  <Clock className="text-slate-600" size={18} md:size={24} />
               </div>
               <button
                 onClick={() => navigate(-1)}
-                className="p-4 rounded-2xl bg-white/5 hover:bg-white/10 text-slate-500 hover:text-white transition-all border border-white/5"
+                className="p-3 md:p-4 rounded-xl md:rounded-2xl bg-white/5 hover:bg-white/10 text-slate-500 hover:text-white transition-all border border-white/5"
               >
-                <LogOut size={24} />
+                <LogOut size={20} md:size={24} />
               </button>
           </div>
       </header>
 
       {/* Navigation entre sections de production */}
-      <div className="flex flex-wrap gap-4 mb-10">
+      <div className="flex flex-wrap gap-2 md:gap-4 mb-8 md:mb-10">
           {[
-            { id: 'tous', label: 'Toutes les Commandes', icon: <UtensilsCrossed size={18} />, color: 'indigo' },
-            { id: 'cuisine', label: 'Feux & Cuisine', icon: <Zap size={18} />, color: 'orange' },
-            { id: 'bar', label: 'Comptoir & Bar', icon: <Wine size={18} />, color: 'blue' },
+            { id: 'tous', label: 'Toutes', icon: <UtensilsCrossed size={14} md:size={18} />, color: 'indigo' },
+            { id: 'cuisine', label: 'Cuisine', icon: <Zap size={14} md:size={18} />, color: 'orange' },
+            { id: 'bar', label: 'Bar', icon: <Wine size={14} md:size={18} />, color: 'blue' },
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setFiltreActif(tab.id as any)}
-              className={`px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] flex items-center gap-3 transition-all border ${
+              className={`px-4 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl font-black uppercase text-[9px] md:text-[10px] tracking-[0.1em] md:tracking-[0.2em] flex items-center gap-2 md:gap-3 transition-all border ${
                 filtreActif === tab.id 
                   ? `bg-${tab.color === 'indigo' ? 'indigo' : tab.color === 'orange' ? 'orange' : 'blue'}-600 border-transparent text-white shadow-xl shadow-${tab.color === 'indigo' ? 'indigo' : tab.color === 'orange' ? 'orange' : 'blue'}-500/20 scale-105` 
                   : 'bg-slate-900/50 text-slate-500 border-white/5 hover:border-white/10'
@@ -117,19 +117,19 @@ const InterfaceCuisine = () => {
       </div>
 
       {commandesActives.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-[50vh] text-center">
+        <div className="flex flex-col items-center justify-center h-[50vh] text-center p-6">
           <motion.div 
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="w-32 h-32 rounded-full bg-slate-900/50 flex items-center justify-center mb-10 border border-white/5"
+            className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-slate-900/50 flex items-center justify-center mb-6 md:mb-10 border border-white/5"
           >
-              <ChefHat size={64} className="opacity-10" />
+              <ChefHat size={48} md:size={64} className="opacity-10" />
           </motion.div>
-          <h2 className="text-3xl font-display font-black text-slate-400 mb-2">ZONE DE PRODUCTION CALME</h2>
-          <p className="text-slate-600 font-bold uppercase tracking-widest text-[11px]">En attente de transmission WiFi des serveurs...</p>
+          <h2 className="text-xl md:text-3xl font-display font-black text-slate-400 mb-2 uppercase">Zone calme</h2>
+          <p className="text-slate-600 font-bold uppercase tracking-widest text-[9px] md:text-[11px]">En attente de transmission WiFi...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-start pb-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 items-start pb-20">
           <AnimatePresence mode="popLayout">
             {commandesActives.map(commande => {
               const mins = minutesEcoulees(commande.dateOuverture);
@@ -143,37 +143,37 @@ const InterfaceCuisine = () => {
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  className={`bg-slate-900 rounded-[2.5rem] border-2 flex flex-col overflow-hidden transition-all duration-500 ${
+                  className={`bg-slate-900 rounded-3xl md:rounded-[2.5rem] border-2 flex flex-col overflow-hidden transition-all duration-500 ${
                     niv === 'critique' ? 'border-rose-600 shadow-2xl shadow-rose-600/10' :
                     niv === 'attention' ? 'border-amber-500 shadow-2xl shadow-amber-500/10' :
                     'border-white/5'
                   }`}
                 >
                   {/* Header du Bon */}
-                  <div className={`p-6 border-b border-white/5 flex justify-between items-start ${
+                  <div className={`p-4 md:p-6 border-b border-white/5 flex justify-between items-start ${
                     niv === 'critique' ? 'bg-rose-600/10' :
                     niv === 'attention' ? 'bg-amber-500/10' : 'bg-slate-800/20'
                   }`}>
                     <div>
-                        <div className="flex items-center gap-3 mb-1">
-                            <h3 className="text-3xl font-display font-black text-white">{commande.tableNom}</h3>
-                            {estPret && <CheckCircle2 className="text-emerald-500 animate-pulse" size={24} />}
+                        <div className="flex items-center gap-2 md:gap-3 mb-1">
+                            <h3 className="text-xl md:text-3xl font-display font-black text-white leading-none">{commande.tableNom}</h3>
+                            {estPret && <CheckCircle2 className="text-emerald-500 animate-pulse" size={18} md:size={24} />}
                         </div>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                            {commande.serveurNom} · {commande.nombreCouverts} pers.
+                        <p className="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                            {commande.serveurNom} · {commande.nombreCouverts}p
                         </p>
                     </div>
-                    <div className={`flex flex-col items-end gap-2 px-4 py-2 rounded-2xl ${
+                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl ${
                         niv === 'critique' ? 'bg-rose-600 text-white' :
                         niv === 'attention' ? 'bg-amber-500 text-black' : 'bg-white/5 text-slate-300'
                     }`}>
-                        <Timer size={16} />
-                        <span className="font-mono font-black text-lg">{mins}'</span>
+                        <Timer size={12} md:size={14} />
+                        <span className="font-mono font-black text-sm md:text-base">{mins}'</span>
                     </div>
                   </div>
 
                   {/* Liste des items */}
-                  <div className="p-6 space-y-4 flex-1">
+                  <div className="p-3 md:p-6 space-y-2 md:space-y-4 flex-1">
                     {commande.lignes
                       .filter(l => {
                         if (filtreActif === 'tous') return true;
@@ -184,26 +184,26 @@ const InterfaceCuisine = () => {
                       <motion.div
                         key={ligne.id}
                         layout
-                        className={`flex items-start gap-4 p-4 rounded-3xl transition-all border ${
+                        className={`flex items-start gap-3 md:gap-4 p-3 md:p-4 rounded-2xl md:rounded-3xl transition-all border ${
                           ligne.statut === 'pret' || ligne.statut === 'servi' 
                             ? 'bg-emerald-500/5 border-emerald-500/20 opacity-40' 
                             : 'bg-white/5 border-white/5'
                         }`}
                       >
-                        <div className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center font-black text-2xl shadow-inner ${
+                        <div className={`shrink-0 w-8 h-8 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center font-black text-lg md:text-2xl shadow-inner ${
                             ligne.statut === 'pret' ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-indigo-400'
                         }`}>
                           {ligne.quantite}
                         </div>
-                        <div className="flex-1 pt-1">
-                          <p className={`font-black text-sm uppercase leading-tight tracking-tight ${
+                        <div className="flex-1 pt-0.5">
+                          <p className={`font-black text-[11px] md:text-sm uppercase leading-tight tracking-tight ${
                             ligne.statut === 'pret' || ligne.statut === 'servi' ? 'line-through text-slate-600' : 'text-white'
                           }`}>
                             {ligne.produitNom}
                           </p>
                           {ligne.note && (
-                            <div className="mt-2 flex items-center gap-2 text-[10px] font-bold text-amber-400 bg-amber-400/10 px-2 py-1 rounded w-fit uppercase">
-                                <AlertCircle size={10} /> {ligne.note}
+                            <div className="mt-1 flex items-center gap-1 text-[8px] md:text-[10px] font-bold text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded w-fit uppercase">
+                                <AlertCircle size={8} md:size={10} /> {ligne.note}
                             </div>
                           )}
                         </div>
@@ -215,15 +215,15 @@ const InterfaceCuisine = () => {
                             }
                           }}
                           disabled={ligne.statut !== 'en_preparation'}
-                          className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                          className={`shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center transition-all ${
                             ligne.statut === 'pret' || ligne.statut === 'servi'
                               ? 'bg-transparent text-emerald-500'
-                              : 'bg-indigo-600 hover:bg-orange-500 text-white shadow-lg active:scale-90 border-transparent'
+                              : 'bg-indigo-600 hover:bg-orange-500 text-white shadow-lg active:scale-95 border-transparent'
                           }`}
                         >
                           {ligne.statut === 'pret' || ligne.statut === 'servi' 
-                            ? <CheckCircle2 size={28} />
-                            : <Check size={24} />
+                            ? <CheckCircle2 size={24} md:size={28} />
+                            : <Check size={20} md:size={24} />
                           }
                         </button>
                       </motion.div>
@@ -231,20 +231,20 @@ const InterfaceCuisine = () => {
                   </div>
 
                   {/* Action Service */}
-                  <div className="p-6 pt-0 mt-auto">
+                  <div className="p-4 md:p-6 pt-0 mt-auto">
                     <button
                       onClick={() => {
                         marquerCommandeServie(commande.id);
                         toast.success(`${commande.tableNom} en route !`, { icon: '🏃' });
                       }}
                       disabled={!estPret}
-                      className={`w-full py-5 rounded-3xl font-black text-xs uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-4 border shadow-xl ${
+                      className={`w-full py-4 md:py-5 rounded-2xl md:rounded-3xl font-black text-[10px] md:text-xs uppercase tracking-[0.2em] md:tracking-[0.3em] transition-all flex items-center justify-center gap-3 md:gap-4 border shadow-xl ${
                           estPret 
                           ? 'bg-emerald-600 border-emerald-500 text-white hover:bg-emerald-500' 
-                          : 'bg-slate-800 border-white/5 text-slate-500 cursor-not-allowed opacity-30'
+                          : 'bg-slate-800 border-white/5 text-slate-500 cursor-not-allowed opacity-30 shadow-none'
                       }`}
                     >
-                      <Bell size={20} /> ALERTE SERVEUR
+                      <Bell size={18} md:size={20} /> ALERTE SERVEUR
                     </button>
                   </div>
                 </motion.div>
