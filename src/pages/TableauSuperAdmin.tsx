@@ -40,6 +40,8 @@ const TableauSuperAdmin = () => {
 
   const [prolongationMode, setProlongationMode] = useState(false);
   const [prolongationPlan, setProlongationPlan] = useState<'starter' | 'premium' | 'business'>('starter');
+  const [prolongationDuree, setProlongationDuree] = useState<number>(30); // Jours
+
 
 
 
@@ -141,7 +143,9 @@ const TableauSuperAdmin = () => {
     try {
       const etab = modalEtabDetails;
       const currentEndDate = new Date(etab.subscription_end_date || Date.now());
-      const newEndDate = new Date(currentEndDate.getTime() + 30 * 24 * 60 * 60 * 1000); // +30 jours
+      // On s'assure qu'on part de la date actuelle si l'abonnement est déjà expiré
+      const baseDate = currentEndDate.getTime() > Date.now() ? currentEndDate.getTime() : Date.now();
+      const newEndDate = new Date(baseDate + prolongationDuree * 24 * 60 * 60 * 1000);
       
       await updateDoc(doc(db, 'etablissements', etab.id), {
         subscription_status: 'actif',
@@ -150,7 +154,9 @@ const TableauSuperAdmin = () => {
       });
       
       toast.dismiss(toastId);
-      toast.success(`Abonnement ${prolongationPlan.toUpperCase()} prolongé pour ${etab.nom} jusqu'au ${newEndDate.toLocaleDateString('fr-FR')} !`);
+      const labelDuree = prolongationDuree === 365 ? '1 AN' : `${prolongationDuree / 30} MOIS`;
+      toast.success(`Abonnement ${prolongationPlan.toUpperCase()} prolongé (${labelDuree}) pour ${etab.nom} !`);
+
       setModalEtabDetails(null);
       setProlongationMode(false);
     } catch (err: any) {
@@ -607,19 +613,36 @@ const TableauSuperAdmin = () => {
                 </div>
               ) : (
                 <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 space-y-4">
-                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Sélectionner le pack de prolongation</p>
-                   <select 
-                      value={prolongationPlan} 
-                      onChange={(e: any) => setProlongationPlan(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl p-3 outline-none font-bold text-slate-700 appearance-none"
-                   >
-                      <option value="starter">SaaS STARTER (15 000 F)</option>
-                      <option value="premium">SaaS PREMIUM (30 000 F)</option>
-                      <option value="business">SaaS BUSINESS (60 000 F)</option>
-                   </select>
-                   <div className="flex gap-2">
+                   <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[9px] font-black text-slate-400 uppercase mb-1 block">Pack</label>
+                        <select 
+                           value={prolongationPlan} 
+                           onChange={(e: any) => setProlongationPlan(e.target.value)}
+                           className="w-full bg-white border border-slate-200 rounded-xl p-3 outline-none font-bold text-slate-700 appearance-none text-xs"
+                        >
+                           <option value="starter">STARTER</option>
+                           <option value="premium">PREMIUM</option>
+                           <option value="business">BUSINESS</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-black text-slate-400 uppercase mb-1 block">Durée</label>
+                        <select 
+                           value={prolongationDuree} 
+                           onChange={(e: any) => setProlongationDuree(Number(e.target.value))}
+                           className="w-full bg-white border border-slate-200 rounded-xl p-3 outline-none font-bold text-slate-700 appearance-none text-xs"
+                        >
+                           <option value={30}>1 Mois</option>
+                           <option value={90}>3 Mois</option>
+                           <option value={180}>6 Mois</option>
+                           <option value={365}>1 An</option>
+                        </select>
+                      </div>
+                   </div>
+                   <div className="flex gap-2 pt-2">
                       <button onClick={() => setProlongationMode(false)} className="flex-1 py-3 text-xs font-bold text-slate-500 hover:bg-slate-200 rounded-xl transition-all">Annuler</button>
-                      <button onClick={prolongerEtablissement} className="flex-[2] py-3 bg-indigo-600 text-white rounded-xl text-xs font-bold shadow-lg hover:bg-indigo-700 transition-all">Confirmer +30 jours</button>
+                      <button onClick={prolongerEtablissement} className="flex-[2] py-3 bg-indigo-600 text-white rounded-xl text-xs font-bold shadow-lg hover:bg-indigo-700 transition-all">Confirmer l'extension</button>
                    </div>
                 </div>
               )}
