@@ -62,12 +62,25 @@ const PageActivation = () => {
 
             // 2. Création du profil Firestore
             await setDoc(doc(db, 'utilisateurs', userCred.user.uid), {
+                id: userCred.user.uid,
                 email: invitation.email,
                 nom: invitation.nom,
                 prenom: 'Patron',
                 role: 'client_admin',
                 etablissement_id: invitation.etablissement_id,
                 date_creation: new Date().toISOString()
+            });
+
+            // 2.bis Création du profil Employé Maître (pour le PIN)
+            await setDoc(doc(db, 'employes', userCred.user.uid), {
+                id: userCred.user.uid,
+                nom: invitation.nom,
+                prenom: 'Patron',
+                email: invitation.email,
+                role: 'admin',
+                pin: '0000',
+                etablissement_id: invitation.etablissement_id,
+                actif: true
             });
 
             // 3. Supprimer l'invitation usagée
