@@ -58,15 +58,15 @@ const PageAccueil = () => {
               initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}
               className="text-5xl md:text-[5.5rem] font-display font-black tracking-tight text-slate-900 leading-[1.1] mb-8"
             >
-              Le système de gestion <br/>
-              <span className="text-slate-500">absolu pour les pros.</span>
+              Écoulez plus. <br/>
+              <span className="text-slate-500">Perdez moins.</span>
             </motion.h1>
             
             <motion.p 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.2 }}
               className="text-lg md:text-xl text-slate-500 font-medium leading-relaxed mb-10 max-w-2xl"
             >
-              Oubliez les logiciels lourds. GESTCAVE PRO synchronise les serveurs en salle, les écrans en cuisine, et la caisse en temps réel, le tout depuis le Cloud.
+              Le logiciel de caisse et de gestion de stock pensé pour l'Afrique Centrale. Stoppez les vols de bouteilles, accélérez vos encaissements et surveillez votre bar depuis votre téléphone.
             </motion.p>
             
             <motion.div 
@@ -133,25 +133,25 @@ const PageAccueil = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <PriceCard 
-                name="Essai" 
-                price="Gratuit" 
-                duration="14 jours" 
-                features={["Toutes les fonctions", "Zéro engagement", "1 établissement"]} 
-                onClick={() => scrollToSection('inscription-section')}
-              />
-              <PriceCard 
-                name="Standard" 
-                price="25.000 F" 
-                isRecommended={true}
+                name="Starter" 
+                price="15.000 F" 
                 duration="/ mois" 
-                features={["Multi-serveurs", "Gestion de stock", "Support 24/7"]} 
+                features={["1 Poste (Caisse/Serveur)", "Gestion inventaire simple", "Rapports journaliers"]} 
                 onClick={() => scrollToSection('inscription-section')}
               />
               <PriceCard 
                 name="Premium" 
-                price="Local" 
-                duration="Sur devis" 
-                features={["Multi-sites", "Tableaux d'analyse", "Personnalisation"]} 
+                price="30.000 F" 
+                isRecommended={true}
+                duration="/ mois" 
+                features={["Multi-postes (Cuisine/Salle)", "Gestion Casiers/Unités", "Commissions Serveurs"]} 
+                onClick={() => scrollToSection('inscription-section')}
+              />
+              <PriceCard 
+                name="Business" 
+                price="60.000 F" 
+                duration="/ mois" 
+                features={["Postes illimités", "Consolidation multi-sites", "Support Prioritaire 24/7"]} 
                 onClick={() => scrollToSection('inscription-section')}
               />
             </div>
