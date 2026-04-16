@@ -45,6 +45,7 @@ export interface LigneCommande {
   sousTotal: number;
   statut: 'en_attente' | 'en_preparation' | 'pret' | 'servi';
   note?: string;
+  heureEnvoi?: string; // Pour le suivi des tournées
 }
 
 export interface Commande {
@@ -244,8 +245,9 @@ export const usePOSStore = create<PosState>((set, get) => ({
     const commande = get().commandes.find(c => c.id === commandeId);
     if (!commande) return;
 
+    const maintenant = new Date().toISOString();
     const lignes = commande.lignes.map(l => 
-      l.statut === 'en_attente' ? { ...l, statut: 'en_preparation' } as LigneCommande : l
+      l.statut === 'en_attente' ? { ...l, statut: 'en_preparation', heureEnvoi: maintenant } as LigneCommande : l
     );
 
     await updateDoc(doc(db, 'commandes', commandeId), { 

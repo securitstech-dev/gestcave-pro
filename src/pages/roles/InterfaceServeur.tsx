@@ -1,17 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, ChevronRight, Plus, Minus, Send, 
   X, ShoppingBag, Smartphone, Clock, LogOut,
   LayoutGrid, Utensils, Coffee, Zap, Info,
   CheckCircle2, AlertTriangle, ArrowLeft, Star,
-  ShieldCheck, Crown, User, Search
+  ShieldCheck, Crown, User, Search, Receipt,
+  ClipboardList, CreditCard, ChevronDown, History
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePOSStore } from '../../store/posStore';
 import { usePosteSession } from '../../hooks/usePosteSession';
 import { useNavigate } from 'react-router-dom';
-import type { Produit, TablePlan } from '../../store/posStore';
+import type { Produit, TablePlan, Commande, LigneCommande } from '../../store/posStore';
 
 const InterfaceServeur = () => {
   const { tables, produits, commandes, ouvrirTable, ajouterLigne, modifierQuantite, supprimerLigne, envoyerCuisine } = usePOSStore();
@@ -26,9 +27,13 @@ const InterfaceServeur = () => {
   const [categorieActive, setCategorieActive] = useState<string>(
     [...new Set(produits.map(p => p.sousCategorie || p.categorie))][0] as string || 'Boissons'
   );
+
+  // Nouvel état pour voir l'historique/addition d'une table occupée
+  const [voirHistorique, setVoirHistorique] = useState(false);
   
   const commandeActive = commandes.find(c => c.id === commandeId);
   const categories = [...new Set(produits.map(p => p.sousCategorie || p.categorie))];
+  
   const produitsFiltres = produits.filter(p => 
     (p.sousCategorie || p.categorie) === categorieActive &&
     (p.nom.toLowerCase().includes(rechercheProduit.toLowerCase()))
@@ -37,58 +42,68 @@ const InterfaceServeur = () => {
   const minutesEcoulees = (iso: string) => 
     Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
 
+  // Groupement par tournées (basé sur heureEnvoi)
+  const tournees = useMemo(() => {
+    if (!commandeActive) return [];
+    const groups: { [key: string]: LigneCommande[] } = {};
+    
+    commandeActive.lignes.forEach(ligne => {
+      // Les articles non envoyés sont mis à part
+      if (!ligne.heureEnvoi) {
+        if (!groups['en_attente']) groups['en_attente'] = [];
+        groups['en_attente'].push(ligne);
+      } else {
+        if (!groups[ligne.heureEnvoi]) groups[ligne.heureEnvoi] = [];
+        groups[ligne.heureEnvoi].push(ligne);
+      }
+    });
+
+    return Object.entries(groups).map(([time, items]) => ({
+      time: time === 'en_attente' ? null : time,
+      items,
+      total: items.reduce((sum, item) => sum + item.sousTotal, 0)
+    })).sort((a, b) => {
+      if (!a.time) return -1;
+      if (!b.time) return 1;
+      return new Date(b.time).getTime() - new Date(a.time).getTime();
+    });
+  }, [commandeActive]);
+
   // Vue 1 : Sélection de Table
   if (etape === 'tables') {
     const zones = ['salle', 'terrasse', 'vip'] as const;
     return (
-      <div className="min-h-screen bg-[#020617] text-white selection:bg-indigo-500/30 overflow-x-hidden">
-        {/* Animated Background Orbs */}
-        <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none -z-10">
-            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/10 blur-[120px] rounded-full animate-pulse" />
-            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-600/10 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '2s' }} />
-        </div>
-
-        <header className="px-6 py-5 border-b border-white/5 bg-slate-950/40 backdrop-blur-2xl sticky top-0 z-50">
+      <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-indigo-100 overflow-x-hidden">
+        <header className="px-6 py-5 border-b border-slate-200 bg-white/90 backdrop-blur-2xl sticky top-0 z-50">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-5">
-              <div className="relative group">
-                <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
-                <div className="relative w-12 h-12 rounded-2xl bg-slate-900 border border-white/10 flex items-center justify-center">
-                    <Crown size={24} className="text-indigo-400" />
-                </div>
-              </div>
-              <div>
-                <h1 className="text-2xl font-display font-black tracking-tighter text-white">
-                    GESTCAVE <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-600">PRO</span>
-                </h1>
-                <div className="flex items-center gap-2 mt-0.5">
-                    <div className="px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
-                        <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest">Live Service</span>
-                    </div>
-                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest underline decoration-indigo-500/30 underline-offset-4">{nomEmploye}</span>
-                </div>
-              </div>
+            <div className="flex items-center gap-4">
+               <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center shadow-lg shadow-slate-900/20">
+                  <Crown size={20} className="text-white" />
+               </div>
+               <div>
+                 <h1 className="text-xl font-display font-black tracking-tight text-slate-900 uppercase">
+                    GESTCAVE <span className="text-slate-500">PRO</span>
+                 </h1>
+                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none mt-1">Serveur: {nomEmploye}</p>
+               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-                <button
-                onClick={() => navigate(-1)}
-                className="group flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/20 transition-all duration-300"
-                >
-                <LogOut size={16} className="text-slate-400 group-hover:text-white transition-colors" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-white transition-colors">Terminer Service</span>
-                </button>
-            </div>
+            <button
+              onClick={() => navigate(-1)}
+              className="px-4 py-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-500 font-bold text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-colors flex items-center gap-2"
+            >
+              <LogOut size={14} /> Terminer Service
+            </button>
           </div>
         </header>
 
         <main className="max-w-7xl mx-auto p-6 pb-32">
-          {/* Quick Stats Panel */}
-          <div className="flex gap-4 mb-12 overflow-x-auto pb-4 scrollbar-hide">
+          {/* Quick Stats Panel Modifié pour Style Administratif */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
               <QuickStat label="Occupées" valeur={tables.filter(t => t.statut === 'occupee').length} color="indigo" icone={<Users size={16} />} />
-              <QuickStat label="Disponibles" valeur={tables.filter(t => t.statut === 'libre').length} color="emerald" icone={<CheckCircle2 size={16} />} />
-              <QuickStat label="En Attente" valeur={tables.filter(t => t.statut === 'en_attente_paiement').length} color="amber" icone={<Clock size={16} />} />
-              <QuickStat label="Total Commandes" valeur={commandes.filter(c => c.statut === 'ouverte').length} color="purple" icone={<ShoppingBag size={16} />} />
+              <QuickStat label="Libres" valeur={tables.filter(t => t.statut === 'libre').length} color="emerald" icone={<CheckCircle2 size={16} />} />
+              <QuickStat label="En Attente" valeur={tables.filter(t => t.statut === 'en_attente_paiement').length} color="rose" icone={<Clock size={16} />} />
+              <QuickStat label="Total Encours" valeur={commandes.filter(c => c.statut !== 'payee').length} color="slate" icone={<ShoppingBag size={16} />} />
           </div>
 
           <AnimatePresence>
@@ -97,30 +112,24 @@ const InterfaceServeur = () => {
               if (!tablesZone.length) return null;
               return (
                 <motion.section 
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.15, type: 'spring' }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
                     key={zone} 
                     className="mb-14"
                 >
-                  <div className="flex items-center gap-4 mb-8">
-                      <div className="h-0.5 flex-1 bg-gradient-to-r from-indigo-500/30 to-transparent" />
-                      <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.5em] px-4 py-1.5 bg-slate-900/50 border border-white/5 rounded-full backdrop-blur-md">
-                        {zone === 'salle' ? 'SEJOUR PRINCIPAL' : zone === 'terrasse' ? 'TERRASSE EXTERIEURE' : 'SALON PRIVE VIP'}
-                      </h2>
-                      <div className="h-0.5 flex-1 bg-gradient-to-l from-indigo-500/30 to-transparent" />
-                  </div>
+                  <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6 flex items-center gap-4">
+                    <span className="w-8 h-px bg-slate-200" />
+                    {zone === 'salle' ? 'SALLE PRINCIPALE' : zone === 'terrasse' ? 'TERRASSE' : 'ESPACE VIP'}
+                  </h2>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
                     {tablesZone.map(table => {
                       const commande = commandes.find(c => c.id === table.commandeActiveId);
                       const isOccupee = table.statut === 'occupee';
-                      const isPaiement = table.statut === 'en_attente_paiement';
                       
                       return (
                         <motion.button
                           key={table.id}
-                          whileHover={{ y: -8, scale: 1.02 }}
                           whileTap={{ scale: 0.96 }}
                           onClick={() => {
                             setTableSelectionnee(table);
@@ -131,50 +140,36 @@ const InterfaceServeur = () => {
                               setEtape('commande');
                             }
                           }}
-                          className={`relative aspect-[5/6] rounded-[2.5rem] p-7 text-left border-2 transition-all duration-500 overflow-hidden shadow-2xl ${
+                          className={`relative aspect-square rounded-3xl p-6 text-center border-2 transition-all duration-300 shadow-sm flex flex-col items-center justify-between ${
                             table.statut === 'libre' 
-                              ? 'bg-white/[0.02] border-white/5 hover:border-emerald-500/40 hover:bg-emerald-500/[0.02]' 
+                              ? 'bg-white border-slate-100 hover:border-emerald-200 hover:bg-emerald-50' 
                               : isOccupee
-                              ? 'bg-indigo-500/10 border-indigo-500/30 shadow-indigo-500/10'
-                              : 'bg-amber-500/10 border-amber-500/30 shadow-amber-500/10'
+                              ? 'bg-slate-900 border-slate-900 shadow-xl shadow-slate-900/20'
+                              : 'bg-rose-50 border-rose-100'
                           }`}
                         >
-                          {/* Inner Glow Surface */}
-                          <div className={`absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-700 pointer-events-none ${
-                               table.statut === 'libre' ? 'bg-emerald-500' : 'bg-indigo-500'
-                          }`} />
-
-                          <div className="relative z-10 h-full flex flex-col items-center justify-between py-2">
-                             <div className="w-full flex justify-between items-start">
-                                <div className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest ${
-                                     table.statut === 'libre' ? 'bg-emerald-500/20 text-emerald-400' : isOccupee ? 'bg-indigo-500/20 text-indigo-400' : 'bg-amber-500/20 text-amber-400'
-                                }`}>
-                                    {table.statut.replace('_', ' ')}
-                                </div>
-                                <div className="flex items-center gap-1.5 opacity-40">
-                                    <Users size={12} />
-                                    <span className="text-[10px] font-black">{table.capacite}</span>
-                                </div>
-                             </div>
-
-                             <div className="flex flex-col items-center gap-3">
-                                <div className={`w-16 h-16 rounded-3xl flex items-center justify-center transition-all duration-500 shadow-xl ${
-                                     table.statut === 'libre' ? 'bg-white/5 text-slate-600' : isOccupee ? 'bg-indigo-600 text-white animate-pulse' : 'bg-amber-500 text-white'
-                                }`}>
-                                    <LayoutGrid size={32} strokeWidth={1.5} />
-                                </div>
-                                <h3 className="text-2xl font-display font-black text-white">{table.nom}</h3>
-                             </div>
-
-                             <div className="w-full h-1 rounded-full bg-white/5 overflow-hidden">
-                                {isOccupee && <motion.div initial={{ x: '-100%' }} animate={{ x: '100%' }} transition={{ repeat: Infinity, duration: 2 }} className="w-1/2 h-full bg-indigo-500/50" />}
-                             </div>
+                          <div className={`text-[10px] font-black uppercase tracking-widest ${isOccupee ? 'text-slate-400' : 'text-slate-500'}`}>
+                              {table.statut.replace('_', ' ')}
                           </div>
 
-                          {commande && (
-                            <div className="absolute top-7 right-7">
-                                <span className="text-[9px] font-black text-indigo-400 flex items-center gap-1.5">
-                                    <Clock size={10} strokeWidth={3} /> {minutesEcoulees(commande.dateOuverture)}M
+                          <div className="flex flex-col items-center">
+                             <h3 className={`text-2xl font-display font-black mb-1 ${isOccupee ? 'text-white' : 'text-slate-900'}`}>{table.nom}</h3>
+                             {isOccupee && commande && (
+                                <div className="text-emerald-400 font-bold text-lg leading-none -mt-1">
+                                    {commande.total.toLocaleString()} F
+                                </div>
+                             )}
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                              <Users size={12} className={isOccupee ? 'text-slate-400' : 'text-slate-300'} />
+                              <span className={`text-[11px] font-black ${isOccupee ? 'text-slate-400' : 'text-slate-400'}`}>{table.capacite} PERS.</span>
+                          </div>
+
+                          {isOccupee && commande && (
+                            <div className="absolute top-2 right-4">
+                                <span className="text-[9px] font-black text-slate-500 flex items-center gap-1">
+                                    <Clock size={10} /> {minutesEcoulees(commande.dateOuverture)}M
                                 </span>
                             </div>
                           )}
@@ -194,70 +189,28 @@ const InterfaceServeur = () => {
   // Vue 2 : Nombre de Couverts
   if (etape === 'couverts') {
     return (
-      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-6 text-white text-center selection:bg-indigo-500/30">
-        <div className="fixed inset-0 overflow-hidden -z-10">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-600/10 blur-[150px] rounded-full" />
-        </div>
-
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-slate-900">
         <motion.button 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
             onClick={() => setEtape('tables')} 
-            className="absolute top-10 left-10 py-3 px-6 rounded-2xl bg-white/5 border border-white/10 text-slate-400 hover:text-white transition-all flex items-center gap-3 text-xs font-black uppercase tracking-widest"
+            className="absolute top-10 left-10 py-3 px-6 rounded-2xl bg-white border border-slate-200 text-slate-400 hover:text-slate-900 shadow-sm transition-all flex items-center gap-3 text-[10px] font-black uppercase tracking-widest"
         >
-          <ArrowLeft size={16} /> Revenir au plan
+          <ArrowLeft size={16} /> Retour
         </motion.button>
 
-        <motion.div 
-            initial={{ y: 40, opacity: 0, scale: 0.95 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            className="max-w-xl w-full"
-        >
-          <div className="relative mb-8 md:mb-12 inline-block">
-            <div className="absolute -inset-4 bg-indigo-500/20 blur-2xl rounded-full animate-pulse" />
-            <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-[2rem] md:rounded-[2.5rem] bg-slate-900 border border-indigo-500/30 flex items-center justify-center shadow-indigo-500/10 shadow-3xl">
-                <Users size={40} className="text-indigo-400" />
-            </div>
+        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="max-w-md w-full text-center">
+          <div className="w-20 h-20 rounded-[2rem] bg-slate-900 flex items-center justify-center mx-auto mb-8 shadow-xl">
+              <Users size={32} className="text-white" />
           </div>
           
-          <h2 className="text-3xl md:text-5xl font-display font-black mb-2 md:mb-3 tracking-tighter text-white uppercase">{tableSelectionnee?.nom}</h2>
-          <p className="text-slate-500 font-bold uppercase tracking-[0.4em] text-[8px] md:text-[10px] mb-8 md:mb-16">Composition de la tablée</p>
+          <h2 className="text-4xl font-display font-black mb-2 tracking-tight uppercase">{tableSelectionnee?.nom}</h2>
+          <p className="text-slate-400 font-bold uppercase tracking-[0.4em] text-[10px] mb-12">Combien de personnes ?</p>
 
-          <div className="bg-slate-900/40 border border-white/5 rounded-[2.5rem] md:rounded-[3.5rem] p-6 md:p-12 mb-8 md:mb-16 shadow-2xl backdrop-blur-xl group transition-all">
-            <div className="flex items-center justify-around gap-4 md:gap-12">
-                <motion.button 
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.8 }}
-                  onClick={() => setNombreCouverts(Math.max(1, nombreCouverts - 1))}
-                  className="w-16 h-16 md:w-24 md:h-24 rounded-2xl md:rounded-3xl bg-slate-950 border border-white/10 flex items-center justify-center text-slate-500 shadow-inner"
-                >
-                  <Minus className="w-8 h-8 md:w-10 md:h-10" strokeWidth={2.5} />
-                </motion.button>
-
-                <div className="flex flex-col items-center px-4 md:px-8 relative">
-                    <AnimatePresence mode="wait">
-                        <motion.span 
-                            key={nombreCouverts}
-                            initial={{ y: 20, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: -20, opacity: 0 }}
-                            className="text-[100px] md:text-[160px] font-display font-black text-white leading-none tracking-tighter"
-                        >
-                            {nombreCouverts}
-                        </motion.span>
-                    </AnimatePresence>
-                    <span className="text-[8px] md:text-xs font-black text-indigo-400 tracking-[0.6em] uppercase mt-2">Convives</span>
+          <div className="bg-white border border-slate-200 rounded-[3rem] p-10 mb-12 shadow-sm flex items-center justify-between">
+                <button onClick={() => setNombreCouverts(Math.max(1, nombreCouverts - 1))} className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400"><Minus size={24} /></button>
+                <div className="flex flex-col">
+                    <span className="text-8xl font-display font-black text-slate-900 leading-none">{nombreCouverts}</span>
                 </div>
-
-                <motion.button 
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.8 }}
-                  onClick={() => setNombreCouverts(Math.min(tableSelectionnee?.capacite || 12, nombreCouverts + 1))}
-                  className="w-16 h-16 md:w-24 md:h-24 rounded-2xl md:rounded-3xl bg-indigo-600 shadow-indigo-500/30 shadow-2xl flex items-center justify-center text-white"
-                >
-                  <Plus className="w-8 h-8 md:w-10 md:h-10" strokeWidth={2.5} />
-                </motion.button>
-            </div>
+                <button onClick={() => setNombreCouverts(Math.min(tableSelectionnee?.capacite || 12, nombreCouverts + 1))} className="w-16 h-16 rounded-2xl bg-slate-900 flex items-center justify-center text-white"><Plus size={24} /></button>
           </div>
 
           <button 
@@ -267,14 +220,14 @@ const InterfaceServeur = () => {
                 const id = await ouvrirTable(tableSelectionnee.id, etablissementId || 'srv', nomEmploye, nombreCouverts);
                 setCommandeId(id);
                 setEtape('commande');
-                toast.success('Session ouverte ! 🍽️✨');
+                toast.success('Table ouverte !');
               } catch (err) {
-                toast.error("Échec d'ouverture");
+                toast.error("Erreur d'ouverture");
               }
             }}
-            className="group w-full max-w-md mx-auto py-5 md:py-7 rounded-2xl md:rounded-[2rem] bg-white text-slate-950 text-base md:text-xl font-black uppercase tracking-[0.2em] shadow-3xl active:scale-[0.97] transition-all flex items-center justify-center gap-3 md:gap-5"
+            className="w-full py-6 rounded-2xl bg-slate-900 text-white font-black uppercase tracking-[0.2em] shadow-xl shadow-slate-900/20 flex items-center justify-center gap-4 active:scale-[0.98] transition-all"
           >
-            Lancer la commande <ChevronRight size={24} className="group-hover:translate-x-2 transition-transform" />
+            Lancer la commande <ChevronRight size={20} />
           </button>
         </motion.div>
       </div>
@@ -283,226 +236,263 @@ const InterfaceServeur = () => {
 
   // Vue 3 : Prise de Commande
   return (
-    <div className="min-h-screen bg-[#020617] flex flex-col text-white selection:bg-indigo-500/30 overflow-hidden">
-      {/* Header Ultra-Premium */}
-      <header className="sticky top-0 z-[60] bg-slate-950/60 backdrop-blur-3xl border-b border-white/5 p-4 lg:px-12 safe-top">
-        <div className="max-w-7xl mx-auto flex justify-between items-center gap-4">
-          <div className="flex items-center gap-3 md:gap-6">
-              <motion.button 
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setEtape('tables')} 
-                className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400"
-              >
-                <ArrowLeft size={18} />
-              </motion.button>
-              <div>
-                <h2 className="font-display font-black text-xl md:text-3xl flex items-center gap-2 tracking-tighter uppercase whitespace-nowrap">
-                    {tableSelectionnee?.nom}
-                </h2>
-                <div className="flex items-center gap-2 text-[8px] md:text-[10px] text-slate-500 font-black tracking-widest uppercase">
-                    <span className="flex items-center gap-1"><Users size={10} className="text-indigo-400" /> {commandeActive?.nombreCouverts}</span>
-                    <span className="w-1 h-1 rounded-full bg-slate-800" />
-                    <span>#{commandeId?.slice(-4)}</span>
+    <div className="min-h-screen bg-slate-50 flex flex-col text-slate-900 overflow-hidden">
+      {/* Header Premium Redessiné */}
+      <header className="sticky top-0 z-[60] bg-white/90 backdrop-blur-3xl border-b border-slate-200 p-4 lg:px-12">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+            <div className="flex items-center gap-4">
+                <button onClick={() => setEtape('tables')} className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400">
+                    <ArrowLeft size={18} />
+                </button>
+                <div>
+                    <h2 className="font-display font-black text-2xl uppercase tracking-tighter">{tableSelectionnee?.nom}</h2>
+                    <div className="flex items-center gap-2 text-[9px] text-slate-400 font-bold tracking-widest uppercase">
+                        <Users size={10} /> {commandeActive?.nombreCouverts} PERS.
+                        <span className="w-1 h-1 rounded-full bg-slate-200" />
+                        <Clock size={10} /> {commandeActive ? minutesEcoulees(commandeActive.dateOuverture) : 0} MIN
+                    </div>
                 </div>
-              </div>
-          </div>
-          
-          <div className="flex flex-col items-end">
-              <span className="text-[8px] text-indigo-400 font-black uppercase tracking-[0.2em] mb-0.5">TOTAL</span>
-              <motion.div 
-                key={commandeActive?.total}
-                className="text-2xl md:text-4xl font-display font-black text-white"
-              >
-                 {commandeActive?.total.toLocaleString()} 
-                 <span className="text-[10px] md:text-sm text-slate-500 ml-1">F</span>
-              </motion.div>
-          </div>
+            </div>
+
+            <div className="flex items-center gap-6">
+                {/* Bouton Historique/Addition pour voir la situation au fur et à mesure */}
+                <button 
+                    onClick={() => setVoirHistorique(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-slate-900/20"
+                >
+                    <Receipt size={14} /> Addition
+                </button>
+
+                <div className="text-right">
+                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">Total Table</p>
+                    <p className="text-3xl font-display font-black text-slate-900">{commandeActive?.total.toLocaleString()} <span className="text-sm font-bold text-slate-400">F</span></p>
+                </div>
+            </div>
         </div>
 
         {/* Categories Bar */}
-        <div className="max-w-7xl mx-auto mt-6 md:mt-8 flex items-center gap-4 relative">
-            <div className="flex-1 flex gap-2 md:gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x no-scrollbar">
-                {categories.map(cat => (
-                    <button
-                        key={cat}
-                        onClick={() => setCategorieActive(cat as string)}
-                        className={`px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl text-[9px] md:text-[11px] font-black uppercase tracking-widest whitespace-nowrap snap-start transition-all border-2 ${
-                            categorieActive === cat 
-                            ? 'bg-indigo-600 text-white border-indigo-500 shadow-xl shadow-indigo-600/20' 
-                            : 'bg-white/[0.03] text-slate-500 border-transparent'
-                        }`}
-                    >
-                        {cat}
-                    </button>
-                ))}
-            </div>
+        <div className="max-w-7xl mx-auto mt-6 flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+            {categories.map(cat => (
+                <button
+                    key={cat}
+                    onClick={() => setCategorieActive(cat as string)}
+                    className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border-2 ${
+                        categorieActive === cat 
+                        ? 'bg-slate-900 text-white border-slate-900' 
+                        : 'bg-white text-slate-400 border-slate-100 hover:border-slate-200'
+                    }`}
+                >
+                    {cat}
+                </button>
+            ))}
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col overflow-hidden max-w-7xl mx-auto w-full px-4 md:px-6 pt-4 md:pt-6">
-        {/* Grille Produits */}
-        <div className="flex-1 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-5 pb-40 md:pb-52 custom-scrollbar no-scrollbar">
-          <AnimatePresence mode="popLayout">
-            {produitsFiltres.map((produit, idx) => (
+      <main className="flex-1 flex flex-col overflow-hidden max-w-7xl mx-auto w-full px-6 pt-6">
+        {/* Grille Produits - Stock plus visible */}
+        <div className="flex-1 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 pb-48 no-scrollbar">
+          {produitsFiltres.map((produit) => {
+            const lowStock = produit.stockTotal <= 5;
+            const inOrder = commandeActive?.lignes.find(l => l.produitId === produit.id && l.statut === 'en_attente')?.quantite || 0;
+            
+            return (
               <motion.button
                 key={produit.id}
-                layout
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: idx * 0.02 }}
-                whileTap={{ scale: 0.94 }}
+                whileTap={{ scale: 0.95 }}
                 disabled={produit.stockTotal <= 0}
                 onClick={() => {
                   if (commandeId) {
                       ajouterLigne(commandeId, produit);
-                      toast.success(`+1 ${produit.nom}`, { position: 'bottom-center', icon: '📝', duration: 1000 });
+                      toast.success(`+1 ${produit.nom}`, { position: 'bottom-center' });
                   }
                 }}
-                className={`group relative h-48 md:h-64 bg-slate-900 border border-white/5 rounded-[1.5rem] md:rounded-[2.5rem] p-4 md:p-7 text-left hover:border-indigo-500/30 transition-all shadow-2xl overflow-hidden ${produit.stockTotal <= 0 ? 'opacity-40 grayscale pointer-events-none' : ''}`}
+                className={`group relative bg-white border rounded-[2.5rem] p-6 text-left transition-all shadow-sm ${
+                    produit.stockTotal <= 0 ? 'opacity-40 grayscale pointer-events-none' : 'hover:border-slate-900 hover:shadow-md'
+                } ${inOrder > 0 ? 'border-slate-900 ring-4 ring-slate-900/5' : 'border-slate-100'}`}
               >
-                {/* Background Glow */}
-                <div className="absolute -top-10 -right-10 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full" />
-                
-                {/* Badge Stock Flottant */}
-                <div className={`absolute top-4 right-4 px-2 py-1 rounded-lg border text-[8px] font-black uppercase tracking-widest z-20 ${
-                    produit.stockTotal <= 0 ? 'bg-rose-500 border-rose-400 text-white' :
-                    produit.stockTotal <= 5 ? 'bg-amber-500 text-black border-amber-400 animate-pulse' :
-                    'bg-white/5 border-white/10 text-slate-400'
+                {/* SITUATION EN STOCK RECLAMÉ */}
+                <div className={`absolute top-4 right-4 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${
+                    produit.stockTotal <= 0 ? 'bg-rose-500 text-white' :
+                    lowStock ? 'bg-rose-100 text-rose-600 animate-pulse' :
+                    'bg-slate-50 text-slate-400 border border-slate-100'
                 }`}>
-                    {produit.stockTotal <= 0 ? 'RUPTURE' : `${produit.stockTotal} EN STOCK`}
+                    {produit.stockTotal <= 0 ? 'EPUISE' : `${produit.stockTotal} EN STOCK`}
                 </div>
 
-                <div className="relative z-10 flex flex-col h-full justify-between">
-                    <div className="relative w-12 h-12 md:w-16 md:h-16 rounded-2xl md:rounded-[1.8rem] bg-slate-800/80 border border-white/5 flex items-center justify-center text-2xl md:text-4xl shadow-inner group-hover:scale-110 transition-transform duration-500">
-                        {produit.emoji}
+                <div className="flex flex-col h-full justify-between">
+                    <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
+                        {produit.emoji || '🍷'}
                     </div>
                     
                     <div>
-                        <h4 className="font-bold text-white text-[13px] md:text-base leading-tight mb-2 md:mb-3 uppercase tracking-tight line-clamp-2 group-hover:text-indigo-400 transition-colors">{produit.nom}</h4>
-                        <div className="flex justify-between items-end">
-                            <span className="text-lg md:text-2xl font-display font-black text-white tracking-tighter">{produit.prix.toLocaleString()}<span className="text-[8px] md:text-[10px] text-slate-500 ml-1">F</span></span>
+                        <h4 className="font-bold text-slate-900 text-[14px] leading-tight mb-2 uppercase tracking-tight line-clamp-2">{produit.nom}</h4>
+                        <div className="flex justify-between items-center">
+                            <span className="text-xl font-display font-black text-slate-900 tracking-tighter">{produit.prix.toLocaleString()} F</span>
+                            {inOrder > 0 && (
+                                <div className="bg-slate-900 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black">
+                                    {inOrder}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
-
-                {/* Progress Bar au bas de la carte */}
-                <div className="absolute bottom-0 left-0 w-full h-1 md:h-1.5 bg-white/5">
-                    <motion.div 
-                        initial={{ width: 0 }}
-                        animate={{ width: `${Math.min((produit.stockTotal/20)*100, 100)}%` }}
-                        className={`h-full ${produit.stockTotal <= 5 ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]' : 'bg-indigo-600'}`}
-                    />
-                </div>
               </motion.button>
-            ))}
-          </AnimatePresence>
+            );
+          })}
         </div>
 
-        {/* Le Panier Flottant */}
+        {/* Le Panier Flottant avec Bouton Envoyer */}
         <AnimatePresence>
           {commandeActive && commandeActive.lignes.length > 0 && (
             <motion.div
-              initial={{ y: 200, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 200, opacity: 0 }}
-              className="fixed bottom-0 left-0 right-0 z-[100] p-4 md:p-10 pointer-events-none"
+              initial={{ y: 200 }}
+              animate={{ y: 0 }}
+              className="fixed bottom-0 left-0 right-0 z-[100] p-6 pointer-events-none"
             >
-              <div className="w-full max-w-4xl mx-auto bg-slate-900/90 backdrop-blur-3xl border border-white/10 rounded-[2rem] md:rounded-[3.5rem] shadow-3xl shadow-indigo-600/20 flex flex-col md:flex-row pointer-events-auto overflow-hidden max-h-[60vh] md:max-h-[500px]">
-                
-                {/* Tickets List */}
-                <div className="flex-1 flex flex-col border-r border-white/5 min-w-0">
-                    <div className="p-4 md:p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
-                        <h3 className="text-[9px] md:text-[11px] font-black text-white uppercase tracking-[0.2em] md:tracking-[0.4em] flex items-center gap-3">
-                            <ShoppingBag size={18} className="text-indigo-500" />
-                            COMMANDE
-                        </h3>
-                        <div className="bg-white/5 px-3 py-1 rounded-full text-[8px] font-black text-slate-400 uppercase tracking-widest border border-white/5">
-                            {commandeActive.lignes.length} RÉFS
+              <div className="w-full max-w-4xl mx-auto bg-slate-900 rounded-[3rem] shadow-2xl p-6 md:p-10 pointer-events-auto flex flex-col md:flex-row gap-6 md:items-center justify-between border-t border-white/10">
+                <div className="flex-1 flex gap-6 overflow-x-auto no-scrollbar">
+                    {commandeActive.lignes.filter(l => l.statut === 'en_attente').map(ligne => (
+                        <div key={ligne.id} className="flex-shrink-0 bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-4 min-w-[180px]">
+                             <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white font-black text-xs">x{ligne.quantite}</div>
+                             <div className="min-w-0">
+                                <p className="text-[10px] font-black text-white uppercase truncate">{ligne.produitNom}</p>
+                                <p className="text-[9px] text-slate-500 font-bold">{ligne.sousTotal.toLocaleString()} F</p>
+                             </div>
+                             <button onClick={() => modifierQuantite(commandeId!, ligne.id, -1)} className="ml-auto p-1.5 hover:bg-rose-500/20 rounded-lg text-rose-500"><Minus size={14} /></button>
                         </div>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 md:space-y-4 custom-scrollbar no-scrollbar">
-                        {commandeActive.lignes.map(ligne => (
-                            <motion.div 
-                                layout
-                                key={ligne.id} 
-                                className={`flex items-center gap-3 md:gap-5 p-3 md:p-5 rounded-2xl md:rounded-[2rem] border ${
-                                    ligne.statut === 'en_attente' ? 'bg-white/[0.03] border-white/5' : 'bg-slate-950/40 border-indigo-500/20 opacity-80'
-                                }`}
-                            >
-                                <div className="flex items-center gap-1 bg-slate-950/80 border border-white/10 rounded-xl p-1 md:p-2">
-                                    <button onClick={() => modifierQuantite(commandeId!, ligne.id, -1)} className="w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center text-slate-500"><Minus size={12} /></button>
-                                    <span className="w-6 md:w-10 text-center font-display font-black text-xl md:text-2xl text-white">{ligne.quantite}</span>
-                                    <button onClick={() => modifierQuantite(commandeId!, ligne.id, 1)} className="w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center text-indigo-400"><Plus size={12} /></button>
-                                </div>
-
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-[11px] md:text-sm font-black text-white truncate uppercase tracking-tight">{ligne.produitNom}</p>
-                                    <p className="text-[8px] md:text-[10px] text-slate-500 font-bold uppercase">{ligne.prixUnitaire.toLocaleString()} F</p>
-                                </div>
-
-                                <div className="flex flex-col items-end gap-1 md:gap-3">
-                                    <span className="font-display font-black text-base md:text-xl text-white">{ligne.sousTotal.toLocaleString()} F</span>
-                                    {ligne.statut === 'en_attente' && (
-                                        <button onClick={() => supprimerLigne(commandeId!, ligne.id)} className="p-1.5 md:p-2 bg-rose-500/10 text-rose-500 rounded-lg"><X size={12} /></button>
-                                    )}
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
+                    ))}
+                    {commandeActive.lignes.filter(l => l.statut === 'en_attente').length === 0 && (
+                        <div className="flex items-center gap-3 text-slate-500 italic text-sm">
+                            <Info size={16} /> Cliquez sur les articles pour les ajouter à la commande...
+                        </div>
+                    )}
                 </div>
 
-                {/* Right Side: Total & Actions */}
-                <div className="w-full md:w-72 bg-slate-950 p-6 md:p-10 flex flex-col justify-center">
-                    <div className="hidden md:block mb-6">
-                        <div className="flex justify-between items-end">
-                            <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">TOTAL</span>
-                            <div className="text-3xl font-display font-black text-white">{commandeActive.total.toLocaleString()}</div>
-                        </div>
-                    </div>
-
-                    <button
-                        onClick={() => {
+                <button
+                    onClick={() => {
                         if (commandeId) {
                             envoyerCuisine(commandeId);
-                            toast.success('Envoyé ! 🍳⚡');
+                            toast.success('Envoyé ! ⚡');
                         }
-                        }}
-                        disabled={!commandeActive.lignes.some(l => l.statut === 'en_attente')}
-                        className="w-full bg-indigo-600 disabled:opacity-20 text-white font-black py-4 md:py-6 rounded-xl md:rounded-[2rem] flex items-center justify-center gap-3 text-[10px] md:text-[11px] tracking-[0.2em] md:tracking-[0.4em] shadow-xl shadow-indigo-600/40 uppercase"
-                    >
-                        <Send size={18} /> ENVOYER
-                    </button>
-                </div>
+                    }}
+                    disabled={!commandeActive.lignes.some(l => l.statut === 'en_attente')}
+                    className="h-16 px-10 bg-white disabled:opacity-30 text-slate-900 font-black rounded-2xl shadow-xl flex items-center justify-center gap-3 text-[11px] tracking-widest uppercase active:scale-95 transition-all"
+                >
+                    <Send size={18} /> Lancer Tournée
+                </button>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </main>
 
+      {/* MODAL HISTORIQUE / ADDITION / RESUME RECLAMÉ */}
+      <AnimatePresence>
+        {voirHistorique && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-md flex items-end md:items-center justify-center p-4 md:p-6"
+          >
+            <motion.div 
+                initial={{ y: 100 }} animate={{ y: 0 }}
+                className="w-full max-w-2xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+            >
+                <div className="p-8 border-b border-slate-100 flex justify-between items-center">
+                    <div>
+                        <h3 className="text-2xl font-display font-black uppercase tracking-tight">Détail de la Table {tableSelectionnee?.nom}</h3>
+                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">SITUATION AU FUR ET À MESURE</p>
+                    </div>
+                    <button onClick={() => setVoirHistorique(false)} className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400">
+                        <X size={24} />
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                    {/* Résumé des tournées */}
+                    <div className="space-y-10">
+                        {tournees.map((tournee, idx) => (
+                            <div key={idx} className="relative pl-10">
+                                <div className="absolute left-[18px] top-2 bottom-0 w-px bg-slate-100" />
+                                <div className={`absolute left-0 top-0 w-10 h-10 rounded-xl border-2 flex items-center justify-center z-10 ${tournee.time ? 'bg-white border-slate-100 text-slate-400' : 'bg-slate-900 border-slate-900 text-white'}`}>
+                                   {tournee.time ? <History size={16} /> : <Zap size={16} />}
+                                </div>
+                                
+                                <div className="mb-4">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                                            {tournee.time ? `Tournée #${tournees.length - idx} • ${new Date(tournee.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : 'Sélection en cours...'}
+                                        </h4>
+                                        <span className="font-display font-black text-slate-900">{tournee.total.toLocaleString()} F</span>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {tournee.items.map(l => (
+                                            <div key={l.id} className="flex justify-between items-center">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center font-black text-[10px] text-slate-400">x{l.quantite}</span>
+                                                    <span className="text-sm font-bold text-slate-700 uppercase">{l.produitNom}</span>
+                                                </div>
+                                                <span className="text-sm font-bold text-slate-400">{l.sousTotal.toLocaleString()} F</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="p-8 bg-slate-50 border-t border-slate-100">
+                    <div className="flex justify-between items-center mb-6">
+                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total à régler</span>
+                        <span className="text-4xl font-display font-black text-slate-900">{commandeActive?.total.toLocaleString()} F</span>
+                    </div>
+
+                    <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center text-white"><CreditCard size={20} /></div>
+                            <div>
+                                <p className="text-[10px] font-black uppercase text-slate-400">Mode de paiement prévisionnel</p>
+                                <p className="text-sm font-bold text-slate-700">Comptant / Cash (Par défaut)</p>
+                            </div>
+                        </div>
+                        <div className="text-[9px] text-slate-400 font-bold uppercase text-center md:text-right">
+                            Le choix final (Crédit/Cash) <br/> se fait à l'encaissement (Caisse).
+                        </div>
+                    </div>
+                </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <style>{`
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-        .safe-top { padding-top: env(safe-area-inset-top); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
       `}</style>
     </div>
   );
 };
 
-const QuickStat = ({ label, valeur, color, icone }: any) => (
-    <div className={`bg-slate-900/40 border border-${color}-500/10 rounded-2xl p-4 flex items-center gap-4 min-w-[160px] snap-start hover:border-${color}-500/30 transition-all`}>
-        <div className={`w-10 h-10 rounded-xl bg-${color}-500/10 flex items-center justify-center text-${color}-400 shadow-lg`}>
-            {icone}
+const QuickStat = ({ label, valeur, color, icone }: any) => {
+    const colors: any = {
+        indigo: 'bg-indigo-50 border-indigo-100 text-indigo-600',
+        emerald: 'bg-emerald-50 border-emerald-100 text-emerald-600',
+        rose: 'bg-rose-50 border-rose-100 text-rose-600',
+        slate: 'bg-slate-100 border-slate-200 text-slate-900'
+    };
+    return (
+        <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm flex items-center gap-4">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${colors[color] || colors.slate}`}>
+                {icone}
+            </div>
+            <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
+                <p className="text-2xl font-display font-black text-slate-900 leading-none">{valeur}</p>
+            </div>
         </div>
-        <div>
-            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-0.5">{label}</p>
-            <p className="text-lg font-display font-black text-white">{valeur}</p>
-        </div>
-    </div>
-);
+    );
+};
 
 export default InterfaceServeur;
