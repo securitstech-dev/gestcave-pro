@@ -93,7 +93,7 @@ interface PosState {
   envoyerCuisine: (commandeId: string) => Promise<void>;
   marquerLignePrete: (commandeId: string, ligneId: string) => Promise<void>;
   marquerCommandeServie: (commandeId: string) => Promise<void>;
-  encaisserCommande: (commandeId: string, modePaiement: 'comptant' | 'credit', clientNom: string, montantRemise?: number, montantPaye?: number, clientContact?: string) => Promise<void>;
+  encaisserCommande: (commandeId: string, modePaiement: 'comptant' | 'credit', clientNom: string, montantRemise?: number, montantPaye?: number, clientContact?: string, refPaiement?: string) => Promise<void>;
   annulerCommande: (commandeId: string) => Promise<void>;
 }
 
@@ -307,7 +307,7 @@ export const usePOSStore = create<PosState>((set, get) => ({
     await get().refreshCommande(commandeId);
   },
 
-  encaisserCommande: async (commandeId, mode, client, remise = 0, paye = 0, contact = '') => {
+  encaisserCommande: async (commandeId, mode, client, remise = 0, paye = 0, contact = '', refPaiement = '') => {
     const batch = writeBatch(db);
     const commandeRef = doc(db, 'commandes', commandeId);
     const snap = await getDoc(commandeRef);
@@ -331,7 +331,8 @@ export const usePOSStore = create<PosState>((set, get) => ({
       clientNom: client || 'Direct', clientContact: contact || '',
       etablissement_id: useAuthStore.getState().profil?.etablissement_id,
       serveurId: cmd.serveurId,
-      serveurNom: cmd.serveurNom
+      serveurNom: cmd.serveurNom,
+      refPaiement: refPaiement || null
     });
 
     await batch.commit();

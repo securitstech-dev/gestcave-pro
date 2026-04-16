@@ -5,7 +5,7 @@ import {
   CheckCircle2, Users, Clock, ShoppingBag, Wine,
   LogOut, ArrowRight, ShieldCheck, Wallet, 
   TrendingUp, History as HistoryIcon, User, X, Info, Calculator, ArrowLeft, ChevronLeft,
-  History, Zap, Phone, UserPlus, AlertCircle
+  History, Zap, Phone, UserPlus, AlertCircle, Search
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePOSStore } from '../../store/posStore';
@@ -24,6 +24,7 @@ const InterfaceCaissier = () => {
   const [nomClient, setNomClient] = useState('');
   const [contactClient, setContactClient] = useState('');
   const [remise, setRemise] = useState(0);
+  const [refPaiement, setRefPaiement] = useState('');
 
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -88,7 +89,8 @@ const InterfaceCaissier = () => {
         nomClient, 
         remise, 
         montantRecu, 
-        contactClient
+        contactClient,
+        refPaiement
       );
       
       toast.success("Transaction validée !", { id: toastId, icon: '💰' });
@@ -99,6 +101,7 @@ const InterfaceCaissier = () => {
       setNomClient('');
       setContactClient('');
       setRemise(0);
+      setRefPaiement('');
     } catch {
       toast.error("Erreur serveur", { id: toastId });
     }
@@ -365,6 +368,23 @@ const InterfaceCaissier = () => {
                                               <p className="text-2xl font-black text-amber-800 tracking-tighter">{resteAPayer.toLocaleString()} F</p>
                                            </div>
                                         )}
+                                     </div>
+                                  </div>
+                               )}
+
+                               {modePaiement === 'mobile' && (
+                                  <div className="space-y-4">
+                                     <div className="flex items-center gap-3 ml-4 mb-2">
+                                        <Zap size={16} className="text-indigo-500" />
+                                        <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Preuve de Transfert</span>
+                                     </div>
+                                     <div className="bg-indigo-50 p-8 rounded-[2.5rem] border border-indigo-100 flex items-center gap-6 shadow-xl shadow-indigo-500/5">
+                                        <Smartphone size={24} className="text-indigo-300" />
+                                        <input 
+                                           value={refPaiement} onChange={e => setRefPaiement(e.target.value)}
+                                           placeholder="N° TRANSACTION (Réf)..."
+                                           className="w-full font-black text-sm uppercase outline-none bg-transparent placeholder:text-indigo-200 text-indigo-900"
+                                        />
                                      </div>
                                   </div>
                                )}

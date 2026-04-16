@@ -23,31 +23,31 @@ const PageAbonnement = () => {
 
   const forfaits = [
     { 
-      id: 'mensuel', 
-      nom: 'STARTER', 
+      id: 'starter', 
+      nom: 'SaaS STARTER', 
       prix: '15 000 FCFA', 
       montant: 15000,
-      desc: 'Accès complet 30 jours. Sans engagement.',
-      features: ['Toutes les interfaces', 'Staff illimité', 'Support Email'],
+      desc: 'Idéal pour les petites caves & débits de boisson.',
+      features: ['1 Poste (Caisse/Serveur)', 'Gestion inventaire simple', 'Rapports journaliers'],
       color: 'slate'
     },
     { 
-      id: 'trimestriel', 
-      nom: 'PROFESSIONNEL', 
-      prix: '40 000 FCFA', 
-      montant: 40000,
-      desc: '90 jours d\'opérations. Le meilleur rapport qualité/prix.',
-      features: ['Priorité technique', 'Multi-postes synchros', 'Sauvegarde cloud'],
+      id: 'premium', 
+      nom: 'SaaS PREMIUM', 
+      prix: '30 000 FCFA', 
+      montant: 30000,
+      desc: 'Pour les restaurants & lounges à fort débit.',
+      features: ['Multi-postes (Cuisine/Salle)', 'Gestion Casiers/Unités', 'Commissions Serveurs'],
       populaire: true,
       color: 'indigo'
     },
     { 
-      id: 'annuel', 
-      nom: 'ULTRA', 
-      prix: '150 000 FCFA', 
-      montant: 150000,
-      desc: '1 an de sérénité totale. 2 mois offerts.',
-      features: ['Accès anticipé v2', 'Soutien VIP 24/7', 'Certificat Performance'],
+      id: 'business', 
+      nom: 'SaaS BUSINESS', 
+      prix: '60 000 FCFA', 
+      montant: 60000,
+      desc: 'Gestion multi-sites & chaines d\'établissements.',
+      features: ['Postes illimités', 'Consolidation multi-sites', 'Support Prioritaire'],
       color: 'amber'
     },
   ];
