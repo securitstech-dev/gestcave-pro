@@ -347,6 +347,12 @@ const TableauSuperAdmin = () => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── PAIEMENTS ── */}
+          {onglet === 'paiements' && (
             <motion.div key="paiements" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
               <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
                 <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
