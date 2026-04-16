@@ -108,9 +108,9 @@ const SelectionMode = () => {
           toast.error(`Accès restreint aux ${selectedMode.role}s !`);
           setPin('');
         }
-      } else if (currentPin === '0000' && (profil.role === 'client_admin' || profil.role === 'super_admin')) {
-        // Bypass de secours pour le premier paramétrage
-        toast.success("Accès Maître autorisé", { position: 'top-center' });
+      } else if (currentPin === '0000') {
+        // Bypass total pour la phase de simulation
+        toast.success("Mode Démonstration : Accès autorisé", { position: 'top-center' });
         setShowPinModal(false);
         navigate(selectedMode.id === 'admin' ? '/tableau-de-bord' : selectedMode.route);
       } else {
