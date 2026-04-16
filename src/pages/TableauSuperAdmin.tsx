@@ -27,8 +27,15 @@ const TableauSuperAdmin = () => {
 
   const [modalRefus, setModalRefus] = useState<{ id: string; nom: string } | null>(null);
   const [motifRefus, setMotifRefus] = useState('');
+  
+  const [modalApprobation, setModalApprobation] = useState<{ demandeId: string; demande: any } | null>(null);
+  const [planApprobation, setPlanApprobation] = useState<'demo' | 'mensuel' | 'premium' | 'business'>('demo');
+
   const [modalPaiement, setModalPaiement] = useState<any | null>(null);
+  const [planPaiement, setPlanPaiement] = useState<'mensuel' | 'premium' | 'business'>('mensuel');
+  
   const [lienActivation, setLienActivation] = useState<{ url: string; nom: string } | null>(null);
+
 
   useEffect(() => {
     setChargement(true);
@@ -49,22 +56,34 @@ const TableauSuperAdmin = () => {
 
   const nomEtab = (etabId: string) => { const etab = etablissements.find(e => e.id === etabId); return etab?.nom || etab?.contact_principal || `...${etabId?.slice(-6)}`; };
 
-  const approuverDemande = async (demandeId: string, demande: any) => {
+  const validerApprobation = async () => {
+    if (!modalApprobation) return;
+    const { demandeId, demande } = modalApprobation;
     const toastId = toast.loading('Approbation en cours...');
+    
+    let jours = 14;
+    let typePlan = 'essai_gratuit';
+    let statut = 'essai';
+    
+    if (planApprobation === 'mensuel') { jours = 30; typePlan = 'starter'; statut = 'actif'; }
+    if (planApprobation === 'premium') { jours = 30; typePlan = 'premium'; statut = 'actif'; }
+    if (planApprobation === 'business') { jours = 30; typePlan = 'business'; statut = 'actif'; }
+
     try {
       const etabRef = await addDoc(collection(db, 'etablissements'), {
         nom: demande.nom_etablissement, adresse: demande.adresse_etablissement || 'N/A',
         telephone: demande.telephone_contact || 'N/A', contact_principal: demande.nom_contact,
-        email_contact: demande.email_contact, subscription_plan: 'essai_gratuit',
-        subscription_status: 'essai', subscription_start_date: new Date().toISOString(),
-        subscription_end_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+        email_contact: demande.email_contact, subscription_plan: typePlan,
+        subscription_status: statut, subscription_start_date: new Date().toISOString(),
+        subscription_end_date: new Date(Date.now() + jours * 24 * 60 * 60 * 1000).toISOString(),
       });
-      await updateDoc(doc(db, 'demandes_acces', demandeId), { statut: 'essai_actif', etablissement_id: etabRef.id });
+      await updateDoc(doc(db, 'demandes_acces', demandeId), { statut: 'valide', etablissement_id: etabRef.id });
       const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       await addDoc(collection(db, 'invitations'), { token: invitationToken, email: demande.email_contact, nom: demande.nom_contact, etablissement_id: etabRef.id, role: 'client_admin', date_creation: new Date().toISOString(), expire: Date.now() + (72 * 60 * 60 * 1000) });
       const urlComplete = `${window.location.origin}/activation?token=${invitationToken}`;
       setLienActivation({ url: urlComplete, nom: demande.nom_etablissement });
-      toast.dismiss(toastId); toast.success(`Essai activé pour ${demande.nom_etablissement} !`);
+      setModalApprobation(null);
+      toast.dismiss(toastId); toast.success(`Accès activé pour ${demande.nom_etablissement} !`);
     } catch (err: any) { toast.dismiss(toastId); toast.error(`Erreur : ${err.message}`); }
   };
 
@@ -78,12 +97,18 @@ const TableauSuperAdmin = () => {
     } catch (err: any) { toast.dismiss(toastId); toast.error(`Erreur : ${err.message}`); }
   };
 
-  const validerPaiement = async (paiementId: string, etabId: string, montant: number) => {
+  const validerPaiementAction = async () => {
+    if (!modalPaiement) return;
     const toastId = toast.loading('Validation...');
+    let jours = 30;
+    
     try {
-      await updateDoc(doc(db, 'paiements', paiementId), { statut: 'valide', date_validation: new Date().toISOString() });
-      const jours = montant >= 150000 ? 365 : montant >= 40000 ? 90 : 30;
-      await updateDoc(doc(db, 'etablissements', etabId), { subscription_status: 'actif', subscription_end_date: new Date(Date.now() + jours * 24 * 60 * 60 * 1000).toISOString() });
+      await updateDoc(doc(db, 'paiements', modalPaiement.id), { statut: 'valide', date_validation: new Date().toISOString() });
+      await updateDoc(doc(db, 'etablissements', modalPaiement.etablissement_id), { 
+          subscription_status: 'actif', 
+          subscription_plan: planPaiement,
+          subscription_end_date: new Date(Date.now() + jours * 24 * 60 * 60 * 1000).toISOString() 
+      });
       toast.dismiss(toastId); toast.success('Abonnement activé !'); setModalPaiement(null);
     } catch (err: any) { toast.dismiss(toastId); toast.error(`Erreur : ${err.message}`); }
   };
@@ -257,7 +282,7 @@ const TableauSuperAdmin = () => {
                         <td className="px-6 py-5 text-right">
                           {dem.statut === 'en_attente' && (
                             <div className="flex justify-end gap-2">
-                              <button onClick={() => approuverDemande(dem.id, dem)} className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg border border-emerald-200 transition-all" title="Approuver">
+                              <button onClick={() => setModalApprobation({ demandeId: dem.id, demande: dem })} className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg border border-emerald-200 transition-all" title="Approuver">
                                 <CheckCircle size={18} />
                               </button>
                               <button onClick={() => setModalRefus({ id: dem.id, nom: dem.nom_etablissement })} className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-lg border border-rose-200 transition-all" title="Refuser">
@@ -305,7 +330,14 @@ const TableauSuperAdmin = () => {
                       <td className="px-6 py-5"><BadgeStatut statut={p.statut} /></td>
                       <td className="px-6 py-5 text-right">
                         {p.statut === 'en_attente' && (
-                          <button onClick={() => setModalPaiement(p)} className="flex items-center gap-2 ml-auto bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all hover:bg-slate-700">
+                          <button onClick={() => {
+                              const montant = p.montant || 0;
+                              let planRecommande = 'mensuel';
+                              if (montant >= 60000) planRecommande = 'business';
+                              else if (montant >= 30000) planRecommande = 'premium';
+                              setPlanPaiement(planRecommande as any);
+                              setModalPaiement(p);
+                          }} className="flex items-center gap-2 ml-auto bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all hover:bg-slate-700">
                             Examiner <ArrowUpRight size={14} />
                           </button>
                         )}
@@ -513,6 +545,37 @@ const TableauSuperAdmin = () => {
         )}
       </AnimatePresence>
 
+      {/* ── MODAL APPROBATION DEMANDE ── */}
+      <AnimatePresence>
+        {modalApprobation && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="w-full max-w-md bg-white rounded-3xl p-8 shadow-2xl">
+              <div className="flex justify-between items-start mb-6">
+                <div><h3 className="text-xl font-bold text-slate-900">Approuver la demande</h3><p className="text-slate-400 text-sm mt-1">{modalApprobation.demande.nom_etablissement}</p></div>
+                <button onClick={() => setModalApprobation(null)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-400"><X size={18} /></button>
+              </div>
+              <div className="mb-6">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Choisir le plan à attribuer</label>
+                <select 
+                   value={planApprobation} 
+                   onChange={(e: any) => setPlanApprobation(e.target.value)}
+                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none font-bold text-slate-700 appearance-none"
+                >
+                   <option value="demo">Essai Gratuit (14 jours)</option>
+                   <option value="mensuel">SaaS STARTER (1 mois)</option>
+                   <option value="premium">SaaS PREMIUM (1 mois)</option>
+                   <option value="business">SaaS BUSINESS (1 mois)</option>
+                </select>
+              </div>
+              <div className="flex gap-4">
+                <button onClick={() => setModalApprobation(null)} className="flex-1 py-3 bg-slate-50 hover:bg-slate-100 rounded-xl text-slate-600 font-bold transition-all">Annuler</button>
+                <button onClick={validerApprobation} className="flex-1 py-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-xl font-bold border border-emerald-200 transition-all">Activer le compte</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* ── MODAL PAIEMENT ── */}
       <AnimatePresence>
         {modalPaiement && (
@@ -534,10 +597,23 @@ const TableauSuperAdmin = () => {
                   </a>
                 </div>
               )}
+              <div className="mb-6">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Valider comme abonnement</label>
+                <select 
+                   value={planPaiement} 
+                   onChange={(e: any) => setPlanPaiement(e.target.value)}
+                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none font-bold text-slate-700 appearance-none"
+                >
+                   <option value="starter">SaaS STARTER (15 000 FCFA)</option>
+                   <option value="premium">SaaS PREMIUM (30 000 FCFA)</option>
+                   <option value="business">SaaS BUSINESS (60 000 FCFA)</option>
+                </select>
+              </div>
               <div className="flex gap-4">
                 <button onClick={() => rejeterPaiement(modalPaiement.id)} className="flex-1 py-3 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl font-bold border border-rose-200 transition-all">Rejeter</button>
-                <button onClick={() => validerPaiement(modalPaiement.id, modalPaiement.etablissement_id, modalPaiement.montant)} className="flex-1 py-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-bold border border-emerald-200 transition-all">✅ Valider & Activer</button>
+                <button onClick={validerPaiementAction} className="flex-1 py-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-bold border border-emerald-200 transition-all">✅ Valider & Activer</button>
               </div>
+
             </motion.div>
           </div>
         )}
