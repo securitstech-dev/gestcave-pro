@@ -34,13 +34,11 @@ const GestionEmployes = () => {
   const [avances, setAvances] = useState<Avance[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Formulaire Employé
   const [nouveauNom, setNouveauNom] = useState('');
   const [nouveauRole, setNouveauRole] = useState<'serveur' | 'caissier' | 'cuisine' | 'admin' | 'support'>('serveur');
   const [nouveauSalaire, setNouveauSalaire] = useState(0);
   const [showModal, setShowModal] = useState(false);
 
-  // Formulaire Avance
   const [selectedEmploye, setSelectedEmploye] = useState<Employe | null>(null);
   const [montantAvance, setMontantAvance] = useState(0);
   const [motifAvance, setMotivAvance] = useState('');
@@ -49,18 +47,14 @@ const GestionEmployes = () => {
   useEffect(() => {
     if (!profil?.etablissement_id) return;
 
-    // Charger les employés
     const qEmp = query(collection(db, 'employes'), where('etablissement_id', '==', profil.etablissement_id));
     const unsubEmp = onSnapshot(qEmp, (snapshot) => {
-      const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Employe[];
-      setEmployes(docs);
+      setEmployes(snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Employe[]);
       setLoading(false);
     });
 
-    // Charger les avances du mois en cours
     const debutMois = new Date();
-    debutMois.setDate(1);
-    debutMois.setHours(0,0,0,0);
+    debutMois.setDate(1); debutMois.setHours(0,0,0,0);
 
     const qAvances = query(
       collection(db, 'avances'), 
@@ -69,412 +63,215 @@ const GestionEmployes = () => {
     );
 
     const unsubAvances = onSnapshot(qAvances, (snapshot) => {
-      const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Avance[];
-      setAvances(docs);
+      setAvances(snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Avance[]);
     });
 
-    return () => {
-      unsubEmp();
-      unsubAvances();
-    };
+    return () => { unsubEmp(); unsubAvances(); };
   }, [profil?.etablissement_id]);
 
-  const genererPIN = () => {
-    return Math.floor(1000 + Math.random() * 9000).toString();
-  };
+  const genererPIN = () => Math.floor(1000 + Math.random() * 9000).toString();
 
   const ajouterEmploye = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nouveauNom) return;
-
-    const toastId = toast.loading("Création de l'accès employé...");
-
     try {
       await addDoc(collection(db, 'employes'), {
-        nom: nouveauNom,
-        role: nouveauRole,
-        pin: genererPIN(),
-        salaire: Number(nouveauSalaire),
-        actif: true,
-        etablissement_id: profil.etablissement_id,
-        dateCreation: new Date().toISOString()
+        nom: nouveauNom, role: nouveauRole, pin: genererPIN(), salaire: Number(nouveauSalaire),
+        actif: true, etablissement_id: profil.etablissement_id, dateCreation: new Date().toISOString()
       });
-      toast.success(`${nouveauNom} fait maintenant partie de l'équipe !`, { id: toastId, icon: '🎉' });
-      setNouveauNom('');
-      setNouveauSalaire(0);
-      setShowModal(false);
-    } catch (error: any) {
-      toast.error(`Erreur : ${error.message || "Impossible d'ajouter"}`, { id: toastId });
+      toast.success(`${nouveauNom} recruté !`);
+      setNouveauNom(''); setNouveauSalaire(0); setShowModal(false);
+    } catch {
+      toast.error("Échec du recrutement");
     }
   };
 
   const enregistrerAvance = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEmploye || montantAvance <= 0) return;
-
-    const toastId = toast.loading("Enregistrement de l'avance...");
-
     try {
       await addDoc(collection(db, 'avances'), {
-        employe_id: selectedEmploye.id,
-        employe_nom: selectedEmploye.nom,
-        montant: Number(montantAvance),
-        motif: motifAvance,
-        date: new Date().toISOString(),
-        etablissement_id: profil.etablissement_id
+        employe_id: selectedEmploye.id, employe_nom: selectedEmploye.nom,
+        montant: Number(montantAvance), motif: motifAvance,
+        date: new Date().toISOString(), etablissement_id: profil.etablissement_id
       });
-      
-      toast.success(`Avance de ${montantAvance} F enregistrée pour ${selectedEmploye.nom}`, { id: toastId, icon: '💸' });
-      setMontantAvance(0);
-      setMotivAvance('');
-      setShowAvanceModal(false);
-    } catch (error: any) {
-      toast.error("Erreur lors de l'enregistrement", { id: toastId });
+      toast.success(`Avance enregistrée pour ${selectedEmploye.nom}`);
+      setMontantAvance(0); setMotivAvance(''); setShowAvanceModal(false);
+    } catch {
+      toast.error("Erreur avance");
     }
   };
 
   const supprimerEmploye = async (id: string, nom: string) => {
-    if (window.confirm(`Supprimer définitivement l'accès de ${nom} ?`)) {
+    if (window.confirm(`Supprimer l'accès de ${nom} ?`)) {
       try {
         await deleteDoc(doc(db, 'employes', id));
-        toast.success("Compte employé révoqué");
-      } catch (error) {
-        toast.error("Erreur de suppression");
-      }
-    }
-  };
-
-  const changerPIN = async (id: string, nom: string) => {
-    const nouveauPIN = genererPIN();
-    try {
-      await updateDoc(doc(db, 'employes', id), { pin: nouveauPIN });
-      toast.success(`Le nouveau PIN de ${nom} est ${nouveauPIN}`, { duration: 5000, icon: '🔐' });
-    } catch (error) {
-      toast.error("Erreur de régénération");
+        toast.success("Accès révoqué");
+      } catch { toast.error("Échec"); }
     }
   };
 
   const copierPIN = (pin: string, nom: string) => {
     navigator.clipboard.writeText(pin);
-    toast.success(`PIN de ${nom} copié !`, { icon: '📋' });
+    toast.success(`PIN de ${nom} copié !`);
   };
 
-  const roleEmoji = (role: string) => {
-    const map: Record<string, string> = { caissier: '💰', cuisine: '👨‍🍳', admin: '🛡️', serveur: '🤵', support: '🧹' };
-    return map[role] || '👤';
-  };
-
-  // Stats
   const masseSalariale = employes.reduce((acc, curr) => acc + (curr.salaire || 0), 0);
   const totalAvancesMois = avances.reduce((acc, curr) => acc + (curr.montant || 0), 0);
 
-  const getAvancesEmploye = (empId: string) => {
-    return avances.filter(a => a.employe_id === empId).reduce((acc, curr) => acc + curr.montant, 0);
-  };
-
   return (
-    <div className="space-y-8 pb-20">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+    <div className="space-y-10">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-          <h2 className="text-3xl font-display font-bold text-white tracking-tight">Ressources Humaines</h2>
-          <p className="text-slate-400 mt-1">Gérez votre personnel, les salaires et les avances.</p>
+          <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Ressources Humaines</h2>
+          <p className="text-slate-500 font-medium mt-1">Supervisez votre personnel et gérez la trésorerie salariale.</p>
         </div>
-        <button 
-          onClick={() => setShowModal(true)}
-          className="btn-primary flex items-center gap-2 py-3 px-6 shadow-indigo-500/20 shadow-lg"
-        >
-          <UserPlus size={18} /> Recruter du personnel
+        <button onClick={() => setShowModal(true)} className="px-6 py-4 rounded-2xl bg-slate-900 text-white font-bold text-[11px] uppercase tracking-widest flex items-center gap-3 shadow-xl shadow-slate-900/20 active:scale-95 transition-all">
+          <UserPlus size={18} /> Recruter un employé
         </button>
       </header>
 
-      {/* Statistiques Bento Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <StatCard 
-            label="Effectif" 
-            valeur={employes.length} 
-            subtext="Membres actifs"
-            icon={<Users size={20} className="text-indigo-400" />}
-            color="indigo"
-          />
-          <StatCard 
-            label="Masse Salariale Brut" 
-            valeur={`${masseSalariale.toLocaleString()}`} 
-            suffix="F"
-            subtext="Total des contrats"
-            icon={<Briefcase size={20} className="text-slate-400" />}
-            color="slate"
-          />
-          <StatCard 
-            label="Avances (Mois)" 
-            valeur={`${totalAvancesMois.toLocaleString()}`} 
-            suffix="F"
-            subtext="Déjà versé ce mois"
-            icon={<Wallet size={20} className="text-amber-400" />}
-            color="amber"
-          />
-          <StatCard 
-            label="Net à Payer (Restant)" 
-            valeur={`${(masseSalariale - totalAvancesMois).toLocaleString()}`} 
-            suffix="F"
-            subtext="Trésorerie à prévoir"
-            icon={<Check size={20} className="text-emerald-400" />}
-            color="emerald"
-          />
+          <StatCard label="Effectif" valeur={employes.length} subtext="Contrats actifs" color="slate" />
+          <StatCard label="Masse Brut" valeur={`${masseSalariale.toLocaleString()}`} suffix="F" subtext="Total salaires" color="slate" />
+          <StatCard label="Avances" valeur={`${totalAvancesMois.toLocaleString()}`} suffix="F" subtext="Déboursés ce mois" color="slate" />
+          <StatCard label="Net mensuel" valeur={`${(masseSalariale - totalAvancesMois).toLocaleString()}`} suffix="F" subtext="Restant à payer" color="slate" />
       </div>
 
-      {/* Bannière d'Info High-End */}
-      <motion.div 
-        initial={{ opacity: 0, x: -20 }}
-        whileInView={{ opacity: 1, x: 0 }}
-        className="flex gap-6 p-8 bg-gradient-to-r from-indigo-500/10 to-transparent border border-indigo-500/20 rounded-3xl relative overflow-hidden"
-      >
-        <div className="absolute top-0 right-0 p-4 opacity-10">
-            <Key size={80} className="text-indigo-500" />
-        </div>
-        <div className="w-14 h-14 rounded-2xl bg-indigo-500/20 flex items-center justify-center shrink-0 border border-indigo-500/20">
-            <Info className="text-indigo-400" size={28} />
-        </div>
-        <div className="space-y-2 relative z-10">
-          <p className="font-bold text-white text-lg lg:text-xl">Sécurité des accès multi-tablettes</p>
-          <p className="text-slate-400 text-sm leading-relaxed max-w-2xl">
-            Chaque membre possède un PIN unique. <strong className="text-indigo-400">En tant que patron, créez-vous un profil "Responsable"</strong> pour débloquer votre accès au tableau de bord. Distribuez les PINs aux serveurs pour leurs tablettes respectives.
-          </p>
-        </div>
-      </motion.div>
+      <div className="bg-white p-8 rounded-3xl border border-slate-200 flex gap-6 items-center shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 outline outline-4 outline-blue-50/50">
+              <ShieldCheck size={28} />
+          </div>
+          <div>
+              <p className="font-bold text-slate-900 text-lg">Sécurité et Accès Tablettes</p>
+              <p className="text-slate-500 text-sm">Chaque employé utilise son <span className="font-bold text-slate-900 italic underline">PIN unique</span> pour se connecter sur les tablettes de service.</p>
+          </div>
+      </div>
 
-      {/* Liste Interactive des Employés */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        <AnimatePresence>
             {employes.map((emp) => {
-              const totalAvances = getAvancesEmploye(emp.id);
-              const netAPayer = emp.salaire - totalAvances;
-
+              const totalAvances = avances.filter(a => a.employe_id === emp.id).reduce((acc, curr) => acc + curr.montant, 0);
               return (
-              <motion.div 
-                layout
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                key={emp.id}
-                className={`glass-panel p-8 hover:border-indigo-500/30 transition-all relative group overflow-hidden ${
-                  emp.role === 'admin' ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/5'
-                }`}
+              <motion.div layout key={emp.id}
+                className="bg-white p-8 rounded-3xl border border-slate-200 hover:border-slate-300 transition-all relative shadow-sm group"
               >
-                <div className={`absolute top-0 left-0 w-1.5 h-full ${emp.role === 'admin' ? 'bg-amber-500' : 'bg-indigo-500'}`} />
-                
-                <div className="flex justify-between items-start mb-8">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-inner ${emp.role === 'admin' ? 'bg-amber-500/10' : 'bg-slate-800'}`}>
-                    {roleEmoji(emp.role)}
+                <div className="flex justify-between items-start mb-6">
+                  <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-xl border border-slate-100 shadow-inner">
+                    {emp.role === 'caissier' ? '💰' : emp.role === 'cuisine' ? '👨‍🍳' : emp.role === 'admin' ? '🛡️' : '🤵'}
                   </div>
-                  <div className="flex flex-col items-end">
-                      <span className={`text-[9px] font-black px-2.5 py-1 rounded-md mb-2 tracking-widest uppercase border ${
-                          emp.role === 'admin' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
-                      }`}>
-                        {emp.role}
-                      </span>
-                  </div>
+                  <span className="text-[10px] font-black px-2.5 py-1 rounded-lg tracking-widest uppercase bg-slate-900 text-white">
+                    {emp.role}
+                  </span>
                 </div>
 
-                <div className="mb-8">
-                    <h3 className="font-bold text-white text-xl mb-1">{emp.nom}</h3>
-                    <div className="flex items-center gap-2 text-slate-500 text-[10px] uppercase font-bold tracking-widest">
-                        <Key size={10} className="text-indigo-500" /> 
-                        PIN : <span className="text-white font-mono tracking-widest">{emp.pin}</span>
-                        <button 
-                            onClick={() => copierPIN(emp.pin, emp.nom)}
-                            className="ml-2 p-1 hover:bg-white/10 rounded-md text-slate-600 hover:text-indigo-400 transition-colors"
-                        >
-                            <Copy size={10} />
-                        </button>
+                <div className="mb-6">
+                    <h3 className="font-bold text-slate-900 text-xl">{emp.nom}</h3>
+                    <div className="flex items-center gap-2 text-slate-400 text-[10px] uppercase font-bold tracking-widest mt-1">
+                        PIN: <span className="text-slate-900 font-mono tracking-widest">{emp.pin}</span>
+                        <button onClick={() => copierPIN(emp.pin, emp.nom)} className="p-1 hover:text-slate-900 transition-colors"><Copy size={12} /></button>
                     </div>
                 </div>
 
-                {/* Section Finance (Premium) */}
-                <div className="bg-slate-950/60 rounded-2xl p-6 border border-white/5 space-y-4 shadow-inner">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500 font-bold uppercase tracking-wider">Salaire Brut</span>
-                    <span className="text-white font-bold">{emp.salaire?.toLocaleString()} F</span>
+                <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 space-y-3">
+                  <div className="flex justify-between items-center text-xs font-medium text-slate-500">
+                    <span>Brut</span>
+                    <span className="text-slate-900 font-bold">{emp.salaire?.toLocaleString()} F</span>
                   </div>
                   {totalAvances > 0 && (
-                    <div className="flex justify-between items-center text-xs text-amber-500">
-                      <span className="font-bold uppercase tracking-wider italic">Avance(s) déduite(s)</span>
-                      <span className="font-bold">- {totalAvances.toLocaleString()} F</span>
+                    <div className="flex justify-between items-center text-xs font-bold text-rose-500 italic">
+                      <span>Avances</span>
+                      <span>-{totalAvances.toLocaleString()} F</span>
                     </div>
                   )}
-                  <div className="flex justify-between items-center pt-3 border-t border-white/5">
-                    <span className="text-[10px] text-emerald-400 font-black uppercase tracking-widest italic">Net à Payer</span>
-                    <span className="text-emerald-400 font-black text-lg">{netAPayer.toLocaleString()} F</span>
+                  <div className="flex justify-between items-center pt-3 border-t border-slate-200">
+                    <span className="text-[10px] text-slate-400 font-black uppercase">Solde Net</span>
+                    <span className="text-slate-900 font-black text-lg">{(emp.salaire - totalAvances).toLocaleString()} F</span>
                   </div>
                 </div>
 
-                <div className="mt-8 flex flex-col gap-3">
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => { setSelectedEmploye(emp); setShowAvanceModal(true); }}
-                      className="flex-1 py-3 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest text-indigo-400 flex items-center justify-center gap-2 transition-all"
+                <div className="mt-8 flex gap-3">
+                    <button onClick={() => { setSelectedEmploye(emp); setShowAvanceModal(true); }}
+                      className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-[10px] font-bold uppercase tracking-widest text-slate-700 transition-all"
                     >
-                      <Wallet size={14} /> Octroyer une avance
+                      Verser Avance
                     </button>
-                    <button 
-                      onClick={() => copierPIN(emp.pin, emp.nom)}
-                      className="p-3 bg-white/5 hover:bg-white/10 rounded-xl text-slate-400 border border-white/5 transition-all"
-                      title="PIN"
-                    >
-                      <Key size={16} />
+                    <button onClick={() => supprimerEmploye(emp.id, emp.nom)} className="p-3.5 bg-white border border-slate-200 rounded-xl text-slate-300 hover:text-rose-500 hover:border-rose-100 transition-all">
+                       <Trash2 size={16} />
                     </button>
-                  </div>
-                  
-                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        onClick={() => changerPIN(emp.id, emp.nom)}
-                        className="flex-1 py-1.5 text-[8px] font-bold text-slate-500 uppercase tracking-widest hover:text-white"
-                      >
-                        Changer PIN
-                      </button>
-                      <button 
-                        onClick={() => supprimerEmploye(emp.id, emp.nom)}
-                        className="p-1 px-3 text-rose-500/50 hover:text-rose-500"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                  </div>
                 </div>
               </motion.div>
             )})}
-        </AnimatePresence>
       </div>
 
-      {/* Modal Recrutement */}
       <AnimatePresence>
           {showModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-950/90 backdrop-blur-md">
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="w-full max-w-md glass-panel p-10 relative"
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                className="w-full max-w-md bg-white rounded-[2.5rem] p-10 shadow-2xl relative"
               >
-                <button onClick={() => setShowModal(false)} className="absolute top-6 right-6 p-2 text-slate-500"><X size={20} /></button>
+                <button onClick={() => setShowModal(false)} className="absolute top-8 right-8 p-3 text-slate-400 hover:text-slate-900"><X size={24} /></button>
                 <div className="mb-10 text-center">
-                    <div className="w-16 h-16 bg-indigo-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-indigo-500/20">
-                        <UserPlus size={32} className="text-indigo-400" />
-                    </div>
-                    <h3 className="text-3xl font-display font-bold text-white uppercase tracking-tighter italic">Nouveau Recrutement</h3>
+                    <h3 className="text-3xl font-bold text-slate-900 tracking-tight">Embauche</h3>
+                    <p className="text-slate-500 font-medium">Enregistrez un nouvel accès employé.</p>
                 </div>
-
-                <form onSubmit={ajouterEmploye} className="space-y-6 text-left">
-                  <div className="space-y-2">
-                    <label className="label-style">Identité</label>
-                    <input 
-                      type="text" 
-                      value={nouveauNom}
-                      onChange={(e) => setNouveauNom(e.target.value)}
-                      className="glass-input w-full"
-                      placeholder="Prénom et Nom"
-                      required
-                    />
+                <form onSubmit={ajouterEmploye} className="space-y-6">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Nom complet</label>
+                    <input type="text" value={nouveauNom} onChange={(e) => setNouveauNom(e.target.value)} required placeholder="Prénom Nom"
+                      className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none focus:border-slate-900 transition-all font-bold text-slate-900" />
                   </div>
-                  <div className="space-y-2">
-                    <label className="label-style">Rôle</label>
-                    <div className="grid grid-cols-2 gap-2">
-                        {(['serveur', 'caissier', 'cuisine', 'support', 'admin'] as const).map((r) => (
-                            <button
-                                key={r}
-                                type="button"
-                                onClick={() => setNouveauRole(r)}
-                                className={`py-3 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${
-                                    nouveauRole === r ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'bg-white/5 border-white/5 text-slate-500 hover:text-slate-300'
-                                }`}
-                            >
-                                {r}
-                            </button>
-                        ))}
-                    </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Rôle affecté</label>
+                    <select value={nouveauRole} onChange={(e) => setNouveauRole(e.target.value as any)} className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-4 outline-none font-bold text-slate-900">
+                        <option value="serveur">🤵 Serveur</option>
+                        <option value="caissier">💰 Caissier</option>
+                        <option value="cuisine">👨‍🍳 Cuisine / Barman</option>
+                        <option value="admin">🛡️ Responsable / Admin</option>
+                    </select>
                   </div>
-                  <div className="space-y-2">
-                    <label className="label-style">Salaire Mensuel (F CFA)</label>
-                    <div className="relative">
-                       <Wallet className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-                       <input 
-                         type="number" 
-                         value={nouveauSalaire}
-                         onChange={(e) => setNouveauSalaire(Number(e.target.value))}
-                         className="glass-input w-full pl-11 font-bold text-emerald-400"
-                         required
-                       />
-                    </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Salaire (F CFA)</label>
+                    <input type="number" value={nouveauSalaire} onChange={(e) => setNouveauSalaire(Number(e.target.value))} required
+                      className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-bold text-emerald-600" />
                   </div>
-                  <button type="submit" className="w-full btn-primary py-4 font-black uppercase tracking-widest text-xs mt-4">
-                    Confirmer l'embauche
+                  <button type="submit" className="w-full py-5 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-[11px] shadow-xl shadow-slate-900/20 active:scale-95 transition-all mt-4">
+                    Valider le recrutement
                   </button>
                 </form>
               </motion.div>
             </div>
           )}
-      </AnimatePresence>
 
-      {/* Modal Avance sur Salaire */}
-      <AnimatePresence>
           {showAvanceModal && selectedEmploye && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-950/90 backdrop-blur-md">
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                className="w-full max-w-sm glass-panel p-10 relative overflow-hidden"
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
+                className="w-full max-w-sm bg-white rounded-[2.5rem] p-10 shadow-2xl"
               >
-                <div className="absolute top-0 left-0 w-full h-1 bg-amber-500/50" />
-                <button onClick={() => setShowAvanceModal(false)} className="absolute top-6 right-6 p-2 text-slate-500"><X size={20} /></button>
-                
                 <div className="mb-8">
-                    <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest border border-amber-500/20 px-3 py-1 rounded-full bg-amber-500/5 shadow-inner">
-                        Trésorerie / RH
-                    </span>
-                    <h3 className="text-2xl font-bold text-white mt-4 italic">Avance sur Salaire</h3>
-                    <p className="text-slate-400 text-sm mt-1">Bénéficiaire : <strong className="text-white">{selectedEmploye.nom}</strong></p>
+                    <h3 className="text-2xl font-bold text-slate-900">Décaisser Avance</h3>
+                    <p className="text-slate-500 font-medium">Bénéficiaire : <strong className="text-slate-900">{selectedEmploye.nom}</strong></p>
                 </div>
-
-                <form onSubmit={enregistrerAvance} className="space-y-6 text-left">
-                  <div className="space-y-2">
-                    <label className="label-style">Montant (F CFA)</label>
-                    <input 
-                      type="number" 
-                      autoFocus
-                      value={montantAvance}
-                      onChange={(e) => setMontantAvance(Number(e.target.value))}
-                      className="glass-input w-full text-2xl font-black text-amber-500"
-                      required
-                      placeholder="5000"
-                    />
+                <form onSubmit={enregistrerAvance} className="space-y-6">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Montant de l'avance (F CFA)</label>
+                    <input type="number" value={montantAvance} onChange={(e) => setMontantAvance(Number(e.target.value))} required autoFocus
+                      className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-black text-slate-900 text-xl" />
                   </div>
-                  <div className="space-y-2">
-                    <label className="label-style">Motif / Justification</label>
-                    <textarea 
-                      value={motifAvance}
-                      onChange={(e) => setMotivAvance(e.target.value)}
-                      className="glass-input w-full text-xs h-20 resize-none pt-3"
-                      placeholder="Ex: Urgent, Loyer, Transport..."
-                    />
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Justificatif rapide</label>
+                    <input type="text" value={motifAvance} onChange={(e) => setMotivAvance(e.target.value)} placeholder="Urgent, loyer, etc."
+                      className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-medium text-slate-600" />
                   </div>
-                  <div className="p-4 bg-amber-500/5 border border-amber-500/10 rounded-2xl">
-                      <p className="text-[10px] text-amber-500 leading-relaxed font-bold italic">
-                        ⚠️ Cette somme sera automatiquement déduite du net à payer à la fin du mois dans ses bulletins de paie.
-                      </p>
-                  </div>
-                  <button type="submit" className="w-full bg-amber-600 hover:bg-amber-500 text-white py-4 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-lg shadow-amber-600/20">
-                    Décaisser l'avance
+                  <button type="submit" className="w-full py-5 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-[11px] active:scale-95 transition-all">
+                    Enregistrer l'avance
                   </button>
+                  <button type="button" onClick={() => setShowAvanceModal(false)} className="w-full py-2 text-slate-400 font-bold uppercase text-[9px] tracking-widest">Abandonner</button>
                 </form>
               </motion.div>
             </div>
           )}
       </AnimatePresence>
-
-      <style>{`.label-style { @apply block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2 px-1; }`}</style>
     </div>
   );
 };
-
-
 
 export default GestionEmployes;

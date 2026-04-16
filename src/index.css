@@ -1,48 +1,50 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #1e293b;
-  --color-accent: #2563eb;
-  --color-success: #059669;
-  --color-surface: #ffffff;
+  --color-primary-admin: #0f172a;   /* Slate 950 - Profond */
+  --color-accent-admin: #2563eb;    /* Blue 600 - Pro */
+  --color-bg-admin: #f8fafc;        /* Slate 50 - Background */
+  --color-border-admin: #e2e8f0;    /* Slate 200 - Bordures */
   
   --font-sans: "Inter", "Segoe UI", system-ui, sans-serif;
-  --font-display: "Inter", sans-serif;
 }
 
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-900 font-sans antialiased overflow-x-hidden;
+    background-color: var(--color-bg-admin);
+    color: var(--color-primary-admin);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
   }
-  
-  h1, h2, h3, h4 {
-    @apply font-bold tracking-tight text-slate-900;
+
+  /* Force le noir sur les titres pour éviter tout blanc sur blanc */
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--color-primary-admin) !important;
+    font-weight: 700;
   }
 }
 
 @layer components {
-  .admin-panel {
-    @apply bg-white border border-slate-200 rounded-2xl shadow-sm;
+  /* Cartes Administratives Blanches avec Ombre Légère */
+  .card-admin {
+    @apply bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden;
   }
 
-  .admin-card {
-    @apply bg-white border border-slate-100 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-200;
+  /* Navigation Sidebar Blanche */
+  .nav-sidebar-link {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-semibold text-sm;
   }
 
-  .admin-input {
-    @apply bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-slate-900 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 placeholder:text-slate-400 font-medium;
-  }
-  
-  .btn-admin-primary {
-    @apply bg-slate-900 text-white font-semibold py-2.5 px-6 rounded-lg transition-all hover:bg-slate-800 active:scale-[0.98] shadow-sm flex items-center justify-center gap-2;
+  .nav-sidebar-link-active {
+    @apply bg-slate-900 text-white shadow-md shadow-slate-900/10;
   }
 
-  /* Support pour l'ancien code */
-  .glass-panel { @apply bg-white border border-slate-200 rounded-2xl shadow-sm; }
-  .glass-card { @apply bg-white border border-slate-100 rounded-xl shadow-sm; }
-  .bento-item { @apply bg-white border border-slate-100 rounded-xl shadow-sm; }
+  .nav-sidebar-link-inactive {
+    @apply text-slate-500 hover:text-slate-900 hover:bg-slate-100;
+  }
 }
 
-.custom-scrollbar::-webkit-scrollbar { width: 6px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { @apply bg-slate-200 rounded-full hover:bg-slate-300; }
+/* Scrollbar Fine Admin */
+.custom-scrollbar-admin::-webkit-scrollbar { width: 5px; }
+.custom-scrollbar-admin::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar-admin::-webkit-scrollbar-thumb { @apply bg-slate-200 rounded-full hover:bg-slate-300; }
