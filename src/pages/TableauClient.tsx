@@ -29,6 +29,8 @@ const TableauClient = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   useEffect(() => {
     if (profil?.etablissement_id) {
       initialiserTempsReel(profil.etablissement_id);
@@ -36,12 +38,15 @@ const TableauClient = () => {
     return () => arreterTempsReel();
   }, [profil?.etablissement_id, initialiserTempsReel, arreterTempsReel]);
 
+  // Fermer la sidebar mobile lors d'un changement de route
+  useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [location.pathname]);
+
   const isActif = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
-  return (
-    <div className="flex min-h-screen bg-[#020617] text-slate-200 overflow-hidden font-sans">
-      {/* Sidebar - Premium Glassmorphism */}
-      <aside className="w-80 h-screen hidden lg:flex flex-col border-r border-white/5 bg-[#030712]/50 backdrop-blur-3xl sticky top-0 z-50">
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full">
         <div className="p-8 flex items-center gap-4 mb-4">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center shadow-lg shadow-indigo-500/20">
             <Wine size={26} className="text-white" />
@@ -104,49 +109,87 @@ const TableauClient = () => {
                 </div>
                 <div className="text-left">
                     <p className="text-sm font-bold text-white group-hover:text-red-400 transition-colors">Déconnexion</p>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Bureau Principal</p>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest text-left">Bureau Principal</p>
                 </div>
               </div>
               <ChevronRight size={16} className="text-slate-600 group-hover:text-red-400" />
             </button>
         </div>
+    </div>
+  );
+
+  return (
+    <div className="flex min-h-screen bg-[#020617] text-slate-200 overflow-hidden font-sans">
+      {/* Sidebar - Desktop */}
+      <aside className="w-80 h-screen hidden lg:flex flex-col border-r border-white/5 bg-[#030712]/50 backdrop-blur-3xl sticky top-0 z-50">
+        <SidebarContent />
       </aside>
+
+      {/* Sidebar - Mobile Drawer */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSidebarOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] lg:hidden"
+            />
+            <motion.aside 
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed left-0 top-0 bottom-0 w-[280px] bg-[#030712] border-r border-white/10 z-[70] lg:hidden flex flex-col"
+            >
+              <SidebarContent />
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Main Content Area */}
       <main className="flex-1 h-screen overflow-y-auto custom-scrollbar bg-[#020617] relative">
-        {/* Top Floating bar (Mobile & Search) */}
-        <header className="sticky top-0 z-40 p-6 flex justify-between items-center bg-[#020617]/80 backdrop-blur-xl border-b border-white/5">
-             <div className="flex items-center gap-4 flex-1">
-                 <button className="lg:hidden w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center">
-                    <Menu size={20} />
+        {/* Top Floating bar */}
+        <header className="sticky top-0 z-40 p-4 md:p-6 flex justify-between items-center bg-[#020617]/80 backdrop-blur-xl border-b border-white/5">
+             <div className="flex items-center gap-3 md:gap-4 flex-1">
+                 <button 
+                    onClick={() => setIsSidebarOpen(true)}
+                    className="lg:hidden w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white/5 flex items-center justify-center border border-white/10"
+                 >
+                    <Menu size={18} />
                  </button>
                  <div className="hidden md:flex items-center gap-3 bg-white/5 border border-white/10 px-6 py-2.5 rounded-2xl w-full max-w-md group focus-within:border-indigo-500/50 transition-all">
                     <Search size={18} className="text-slate-500 group-focus-within:text-indigo-500" />
-                    <input type="text" placeholder="Rechercher une vente, un produit, un employé..." className="bg-transparent border-none outline-none text-sm w-full placeholder:text-slate-600" />
-                    <span className="text-[10px] font-black text-slate-700 border border-white/10 px-1.5 py-0.5 rounded uppercase">CRTL+K</span>
+                    <input type="text" placeholder="Recherche rapide..." className="bg-transparent border-none outline-none text-sm w-full placeholder:text-slate-600" />
+                 </div>
+                 {/* Mobile Logo Visibility */}
+                 <div className="lg:hidden flex items-center gap-2 px-2">
+                    <Wine size={18} className="text-indigo-500" />
+                    <h1 className="font-display font-black text-sm text-white tracking-tighter truncate max-w-[100px]">GC PRO</h1>
                  </div>
              </div>
 
-             <div className="flex items-center gap-4">
+             <div className="flex items-center gap-2 md:gap-4">
                  <div className="hidden sm:flex items-center gap-3 px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl">
                     <Calendar size={16} className="text-indigo-400" />
-                    <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">
-                       {new Date().toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
+                    <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest underline underline-offset-4 decoration-indigo-500/30">
+                       {new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                     </span>
                  </div>
-                 <button className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all relative">
-                    <Bell size={20} />
-                    <span className="absolute top-3 right-3 w-2 h-2 bg-red-500 rounded-full border-2 border-[#020617]" />
+                 <button className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 relative">
+                    <Bell size={18} />
+                    <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-red-500 rounded-full" />
                  </button>
-                 <div className="w-12 h-12 rounded-2xl border-2 border-indigo-500/30 p-1 flex items-center justify-center overflow-hidden">
-                    <div className="w-full h-full bg-indigo-600 rounded-xl flex items-center justify-center font-black text-white text-sm">
+                 <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl border-2 border-indigo-500/30 p-1 flex items-center justify-center overflow-hidden">
+                    <div className="w-full h-full bg-indigo-600 rounded-lg md:rounded-xl flex items-center justify-center font-black text-white text-xs md:text-sm shadow-lg shadow-indigo-600/30">
                         {profil?.prenom?.[0] || 'A'}
                     </div>
                  </div>
              </div>
         </header>
 
-        <div className="p-8 md:p-12">
             <Routes>
                 <Route path="/" element={<DashboardAccueil profil={profil} navigate={navigate} />} />
                 <Route path="/plan-salles" element={<PlanDeSalles />} />
@@ -188,35 +231,37 @@ const DashboardAccueil = ({ profil, navigate }: any) => {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="space-y-12 pb-20">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5 pb-10">
-        <div>
+    <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="space-y-8 md:space-y-12 pb-20">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5 pb-8 md:pb-10">
+        <div className="w-full md:w-auto">
           <p className="text-indigo-400 font-bold uppercase tracking-[0.4em] text-[10px] mb-3 flex items-center gap-2">
              <Activity size={14} /> LIVE DASHBOARD
           </p>
-          <h1 className="text-5xl font-display font-black tracking-tighter text-white uppercase italic">
-            HELLO, {profil?.prenom?.toUpperCase() || 'MANAGER'}
+          <h1 className="text-3xl md:text-5xl font-display font-black tracking-tight text-white uppercase italic leading-none">
+            HELLO, <span className="text-indigo-500 block md:inline">{profil?.prenom?.toUpperCase() || 'MANAGER'}</span>
           </h1>
-          <p className="text-slate-500 font-bold text-sm mt-3 uppercase tracking-widest">Performance stabilisée · 9 connexions actives</p>
+          <p className="text-slate-500 font-bold text-[10px] md:text-sm mt-3 uppercase tracking-widest flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Performance stabilisée
+          </p>
         </div>
         
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-3 w-full md:w-auto">
              <button
                onClick={copierLienPoste}
-               className={`h-14 px-8 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-3 border ${
+               className={`flex-1 md:flex-none h-12 md:h-14 px-4 md:px-8 rounded-xl md:rounded-2xl font-black text-[9px] md:text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-3 border ${
                  lienCopie 
-                   ? 'bg-emerald-500 border-transparent text-white shadow-xl shadow-emerald-500/20' 
-                   : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white'
+                   ? 'bg-emerald-500 border-transparent text-white' 
+                   : 'bg-white/5 border-white/10 text-slate-300'
                }`}
              >
-               {lienCopie ? <ShieldCheck size={18} /> : <Globe size={18} />}
-               {lienCopie ? 'LIEN PERSONNEL COPIÉ' : 'ACCÈS STAFF CLOUD'}
+               {lienCopie ? <ShieldCheck size={16} /> : <Globe size={16} />}
+               <span>ACCÈS STAFF</span>
              </button>
              <button 
                onClick={() => navigate('/abonnement')}
-               className="h-14 px-8 rounded-2xl bg-indigo-600 font-black text-[10px] text-white uppercase tracking-[0.2em] shadow-xl shadow-indigo-600/20 hover:bg-indigo-500 active:scale-95 transition-all flex items-center gap-3"
+               className="flex-1 md:flex-none h-12 md:h-14 px-4 md:px-8 rounded-xl md:rounded-2xl bg-indigo-600 font-black text-[9px] md:text-[10px] text-white uppercase tracking-[0.2em] shadow-lg shadow-indigo-600/20 active:scale-95 transition-all flex items-center justify-center gap-3"
              >
-               <PlusCircle size={18} /> GÉRER ABONNEMENT
+               <PlusCircle size={16} /> ABONNEMENT
              </button>
         </div>
       </header>
