@@ -201,7 +201,6 @@ const TableauClient = () => {
                 <Route path="/tables" element={<GestionTables />} />
                 <Route path="/admin" element={<GestionFinance />} />
             </Routes>
-        </div>
       </main>
 
       <style>{`

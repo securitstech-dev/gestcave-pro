@@ -65,7 +65,7 @@ const InterfaceCuisine = () => {
           <div className="flex items-center gap-4 md:gap-6">
               <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl md:rounded-3xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shadow-orange-500/5 shadow-2xl overflow-hidden relative group">
                   <div className="absolute inset-0 bg-orange-500 opacity-20 animate-pulse" />
-                  <ChefHat size={24} md:size={32} className="text-orange-500 relative z-10" />
+                  <ChefHat className="w-6 h-6 md:w-8 md:h-8 text-orange-500 relative z-10" />
               </div>
               <div>
                   <h1 className="text-xl md:text-3xl font-display font-black tracking-tight uppercase leading-none">MONITEUR <span className="text-orange-500">PROD</span></h1>
@@ -83,13 +83,13 @@ const InterfaceCuisine = () => {
                           {new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                       </p>
                   </div>
-                  <Clock className="text-slate-600" size={18} md:size={24} />
+                  <Clock className="w-[18px] h-[18px] md:w-6 md:h-6 text-slate-600" />
               </div>
               <button
                 onClick={() => navigate(-1)}
                 className="p-3 md:p-4 rounded-xl md:rounded-2xl bg-white/5 hover:bg-white/10 text-slate-500 hover:text-white transition-all border border-white/5"
               >
-                <LogOut size={20} md:size={24} />
+                <LogOut className="w-5 h-5 md:w-6 md:h-6" />
               </button>
           </div>
       </header>
@@ -97,9 +97,9 @@ const InterfaceCuisine = () => {
       {/* Navigation entre sections de production */}
       <div className="flex flex-wrap gap-2 md:gap-4 mb-8 md:mb-10">
           {[
-            { id: 'tous', label: 'Toutes', icon: <UtensilsCrossed size={14} md:size={18} />, color: 'indigo' },
-            { id: 'cuisine', label: 'Cuisine', icon: <Zap size={14} md:size={18} />, color: 'orange' },
-            { id: 'bar', label: 'Bar', icon: <Wine size={14} md:size={18} />, color: 'blue' },
+            { id: 'tous', label: 'Toutes', icon: <UtensilsCrossed className="w-3.5 h-3.5 md:w-[18px] md:h-[18px]" />, color: 'indigo' },
+            { id: 'cuisine', label: 'Cuisine', icon: <Zap className="w-3.5 h-3.5 md:w-[18px] md:h-[18px]" />, color: 'orange' },
+            { id: 'bar', label: 'Bar', icon: <Wine className="w-3.5 h-3.5 md:w-[18px] md:h-[18px]" />, color: 'blue' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -123,7 +123,7 @@ const InterfaceCuisine = () => {
             animate={{ scale: 1, opacity: 1 }}
             className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-slate-900/50 flex items-center justify-center mb-6 md:mb-10 border border-white/5"
           >
-              <ChefHat size={48} md:size={64} className="opacity-10" />
+              <ChefHat className="w-12 h-12 md:w-16 md:h-16 opacity-10" />
           </motion.div>
           <h2 className="text-xl md:text-3xl font-display font-black text-slate-400 mb-2 uppercase">Zone calme</h2>
           <p className="text-slate-600 font-bold uppercase tracking-widest text-[9px] md:text-[11px]">En attente de transmission WiFi...</p>
@@ -157,7 +157,7 @@ const InterfaceCuisine = () => {
                     <div>
                         <div className="flex items-center gap-2 md:gap-3 mb-1">
                             <h3 className="text-xl md:text-3xl font-display font-black text-white leading-none">{commande.tableNom}</h3>
-                            {estPret && <CheckCircle2 className="text-emerald-500 animate-pulse" size={18} md:size={24} />}
+                            {estPret && <CheckCircle2 className="text-emerald-500 animate-pulse w-[18px] h-[18px] md:w-6 md:h-6" />}
                         </div>
                         <p className="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest">
                             {commande.serveurNom} · {commande.nombreCouverts}p
@@ -167,7 +167,7 @@ const InterfaceCuisine = () => {
                         niv === 'critique' ? 'bg-rose-600 text-white' :
                         niv === 'attention' ? 'bg-amber-500 text-black' : 'bg-white/5 text-slate-300'
                     }`}>
-                        <Timer size={12} md:size={14} />
+                        <Timer className="w-3 h-3 md:w-3.5 md:h-3.5" />
                         <span className="font-mono font-black text-sm md:text-base">{mins}'</span>
                     </div>
                   </div>
@@ -203,7 +203,7 @@ const InterfaceCuisine = () => {
                           </p>
                           {ligne.note && (
                             <div className="mt-1 flex items-center gap-1 text-[8px] md:text-[10px] font-bold text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded w-fit uppercase">
-                                <AlertCircle size={8} md:size={10} /> {ligne.note}
+                                <AlertCircle className="w-2 h-2 md:w-2.5 md:h-2.5" /> {ligne.note}
                             </div>
                           )}
                         </div>
@@ -222,8 +222,8 @@ const InterfaceCuisine = () => {
                           }`}
                         >
                           {ligne.statut === 'pret' || ligne.statut === 'servi' 
-                            ? <CheckCircle2 size={24} md:size={28} />
-                            : <Check size={20} md:size={24} />
+                            ? <CheckCircle2 className="w-6 h-6 md:w-7 md:h-7" />
+                            : <Check className="w-5 h-5 md:w-6 md:h-6" />
                           }
                         </button>
                       </motion.div>
@@ -244,7 +244,7 @@ const InterfaceCuisine = () => {
                           : 'bg-slate-800 border-white/5 text-slate-500 cursor-not-allowed opacity-30 shadow-none'
                       }`}
                     >
-                      <Bell size={18} md:size={20} /> ALERTE SERVEUR
+                      <Bell className="w-[18px] h-[18px] md:w-5 md:h-5" /> ALERTE SERVEUR
                     </button>
                   </div>
                 </motion.div>

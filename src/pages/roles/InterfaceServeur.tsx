@@ -231,7 +231,7 @@ const InterfaceServeur = () => {
                   onClick={() => setNombreCouverts(Math.max(1, nombreCouverts - 1))}
                   className="w-16 h-16 md:w-24 md:h-24 rounded-2xl md:rounded-3xl bg-slate-950 border border-white/10 flex items-center justify-center text-slate-500 shadow-inner"
                 >
-                  <Minus size={30} md:size={40} strokeWidth={2.5} />
+                  <Minus className="w-8 h-8 md:w-10 md:h-10" strokeWidth={2.5} />
                 </motion.button>
 
                 <div className="flex flex-col items-center px-4 md:px-8 relative">
@@ -255,7 +255,7 @@ const InterfaceServeur = () => {
                   onClick={() => setNombreCouverts(Math.min(tableSelectionnee?.capacite || 12, nombreCouverts + 1))}
                   className="w-16 h-16 md:w-24 md:h-24 rounded-2xl md:rounded-3xl bg-indigo-600 shadow-indigo-500/30 shadow-2xl flex items-center justify-center text-white"
                 >
-                  <Plus size={30} md:size={40} strokeWidth={2.5} />
+                  <Plus className="w-8 h-8 md:w-10 md:h-10" strokeWidth={2.5} />
                 </motion.button>
             </div>
           </div>

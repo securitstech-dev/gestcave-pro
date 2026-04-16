@@ -167,7 +167,7 @@ const InterfaceCaissier = () => {
                 className="flex-1 flex flex-col items-center justify-center text-center p-10"
             >
               <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border border-white/5 flex items-center justify-center mb-6 md:mb-10 opacity-20">
-                  <Calculator size={48} md:size={64} />
+                  <Calculator className="w-12 h-12 md:w-16 md:h-16" />
               </div>
               <h2 className="text-2xl md:text-4xl font-display font-black text-slate-800">POSTE EN ATTENTE</h2>
               <p className="text-slate-600 font-bold uppercase tracking-[0.3em] text-[9px] md:text-[11px] mt-4">Sélectionnez un ticket pour finaliser la vente</p>
@@ -194,7 +194,7 @@ const InterfaceCaissier = () => {
                             <h2 className="text-2xl md:text-4xl font-display font-black">{commandeActive.tableNom}</h2>
                         </div>
                         <div className="bg-slate-100 p-3 md:p-4 rounded-2xl md:rounded-3xl">
-                             <Receipt size={20} md:size={24} className="text-slate-400" />
+                             <Receipt className="w-5 h-5 md:w-6 md:h-6 text-slate-400" />
                         </div>
                     </div>
 
