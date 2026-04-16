@@ -38,6 +38,10 @@ const TableauSuperAdmin = () => {
   
   const [lienActivation, setLienActivation] = useState<{ url: string; nom: string } | null>(null);
 
+  const [prolongationMode, setProlongationMode] = useState(false);
+  const [prolongationPlan, setProlongationPlan] = useState<'starter' | 'premium' | 'business'>('starter');
+
+
 
   useEffect(() => {
     setChargement(true);
@@ -130,6 +134,29 @@ const TableauSuperAdmin = () => {
       await updateDoc(doc(db, 'etablissements', etab.id), { subscription_status: 'suspendu', subscription_end_date: new Date().toISOString() });
       toast.dismiss(toastId); toast.success(`${etab.nom} suspendu.`);
     } catch (err: any) { toast.dismiss(toastId); toast.error(`Erreur : ${err.message}`); }
+  };
+  const prolongerEtablissement = async () => {
+    if (!modalEtabDetails) return;
+    const toastId = toast.loading('Calcul de la prolongation...');
+    try {
+      const etab = modalEtabDetails;
+      const currentEndDate = new Date(etab.subscription_end_date || Date.now());
+      const newEndDate = new Date(currentEndDate.getTime() + 30 * 24 * 60 * 60 * 1000); // +30 jours
+      
+      await updateDoc(doc(db, 'etablissements', etab.id), {
+        subscription_status: 'actif',
+        subscription_plan: prolongationPlan,
+        subscription_end_date: newEndDate.toISOString()
+      });
+      
+      toast.dismiss(toastId);
+      toast.success(`Abonnement ${prolongationPlan.toUpperCase()} prolongé pour ${etab.nom} jusqu'au ${newEndDate.toLocaleDateString('fr-FR')} !`);
+      setModalEtabDetails(null);
+      setProlongationMode(false);
+    } catch (err: any) {
+      toast.dismiss(toastId);
+      toast.error(`Erreur : ${err.message}`);
+    }
   };
 
   const viderBase = async () => {
@@ -566,15 +593,41 @@ const TableauSuperAdmin = () => {
                    </div>
                    <div>
                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Expiration</label>
-                     <p className="text-sm font-bold text-slate-900">{modalEtabDetails.subscription_end_date ? new Date(modalEtabDetails.subscription_end_date).toLocaleDateString('fr-FR') : 'N/A'}</p>
+                     <p className="text-sm font-bold text-slate-900 italic">{modalEtabDetails.subscription_end_date ? new Date(modalEtabDetails.subscription_end_date).toLocaleDateString('fr-FR') : 'N/A'}</p>
                    </div>
                 </div>
               </div>
-              <button onClick={() => setModalEtabDetails(null)} className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold transition-all">Fermer</button>
+
+              {!prolongationMode ? (
+                <div className="flex gap-4">
+                  <button onClick={() => setModalEtabDetails(null)} className="flex-1 py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-bold transition-all">Fermer</button>
+                  <button onClick={() => { setProlongationPlan(modalEtabDetails.subscription_plan || 'starter'); setProlongationMode(true); }} className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all shadow-lg flex items-center justify-center gap-2">
+                    <TrendingUp size={16} /> Rallonger +30j
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 space-y-4">
+                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Sélectionner le pack de prolongation</p>
+                   <select 
+                      value={prolongationPlan} 
+                      onChange={(e: any) => setProlongationPlan(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl p-3 outline-none font-bold text-slate-700 appearance-none"
+                   >
+                      <option value="starter">SaaS STARTER (15 000 F)</option>
+                      <option value="premium">SaaS PREMIUM (30 000 F)</option>
+                      <option value="business">SaaS BUSINESS (60 000 F)</option>
+                   </select>
+                   <div className="flex gap-2">
+                      <button onClick={() => setProlongationMode(false)} className="flex-1 py-3 text-xs font-bold text-slate-500 hover:bg-slate-200 rounded-xl transition-all">Annuler</button>
+                      <button onClick={prolongerEtablissement} className="flex-[2] py-3 bg-indigo-600 text-white rounded-xl text-xs font-bold shadow-lg hover:bg-indigo-700 transition-all">Confirmer +30 jours</button>
+                   </div>
+                </div>
+              )}
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+
 
       {/* ── MODAL REFUS ── */}
       <AnimatePresence>
