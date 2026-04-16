@@ -4,7 +4,7 @@ import {
   Smartphone, Upload, CreditCard, CheckCircle2, 
   Copy, Info, ArrowLeft, Zap, ShieldCheck, 
   Clock, TrendingUp, Sparkles, X, ChevronRight,
-  UserCheck, PlusCircle, ArrowRight
+  UserCheck, PlusCircle, ArrowRight, Building2
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { toast } from 'react-hot-toast';
@@ -19,7 +19,9 @@ const PageAbonnement = () => {
   const { profil } = useAuthStore();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const [etape, setEtape] = useState(1);
   const [annuel, setAnnuel] = useState(searchParams.get('period') === 'annuel');
+
   const [chargement, setChargement] = useState(false);
   const [forfaitChoisi, setForfaitChoisi] = useState<any>(null);
   const [fichier, setFichier] = useState<File | null>(null);
@@ -102,6 +104,12 @@ const PageAbonnement = () => {
       setChargement(false);
     }
   };
+
+  const copierNumero = (num: string) => {
+    navigator.clipboard.writeText(num);
+    toast.success('Numéro copié !');
+  };
+
 
   const copierNumero = (texte: string) => {
     navigator.clipboard.writeText(texte);
