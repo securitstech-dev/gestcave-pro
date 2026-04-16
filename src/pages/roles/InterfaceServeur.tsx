@@ -351,25 +351,47 @@ const InterfaceServeur = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: idx * 0.02 }}
                 whileTap={{ scale: 0.94 }}
+                disabled={produit.stockTotal <= 0}
                 onClick={() => {
                   if (commandeId) {
                       ajouterLigne(commandeId, produit);
                       toast.success(`+1 ${produit.nom}`, { position: 'bottom-center', icon: '📝', duration: 1000 });
                   }
                 }}
-                className="group relative h-48 md:h-64 bg-slate-900/40 border border-white/5 rounded-[1.5rem] md:rounded-[2.5rem] p-4 md:p-7 text-left hover:border-indigo-500/30 transition-all shadow-2xl overflow-hidden"
+                className={`group relative h-48 md:h-64 bg-slate-900 border border-white/5 rounded-[1.5rem] md:rounded-[2.5rem] p-4 md:p-7 text-left hover:border-indigo-500/30 transition-all shadow-2xl overflow-hidden ${produit.stockTotal <= 0 ? 'opacity-40 grayscale pointer-events-none' : ''}`}
               >
+                {/* Background Glow */}
+                <div className="absolute -top-10 -right-10 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full" />
+                
+                {/* Badge Stock Flottant */}
+                <div className={`absolute top-4 right-4 px-2 py-1 rounded-lg border text-[8px] font-black uppercase tracking-widest z-20 ${
+                    produit.stockTotal <= 0 ? 'bg-rose-500 border-rose-400 text-white' :
+                    produit.stockTotal <= 5 ? 'bg-amber-500 text-black border-amber-400 animate-pulse' :
+                    'bg-white/5 border-white/10 text-slate-400'
+                }`}>
+                    {produit.stockTotal <= 0 ? 'RUPTURE' : `${produit.stockTotal} EN STOCK`}
+                </div>
+
                 <div className="relative z-10 flex flex-col h-full justify-between">
-                    <div className="relative w-12 h-12 md:w-16 md:h-16 rounded-2xl md:rounded-[1.8rem] bg-slate-800/80 border border-white/5 flex items-center justify-center text-2xl md:text-4xl">
+                    <div className="relative w-12 h-12 md:w-16 md:h-16 rounded-2xl md:rounded-[1.8rem] bg-slate-800/80 border border-white/5 flex items-center justify-center text-2xl md:text-4xl shadow-inner group-hover:scale-110 transition-transform duration-500">
                         {produit.emoji}
                     </div>
                     
                     <div>
-                        <h4 className="font-bold text-white text-[13px] md:text-base leading-tight mb-2 md:mb-3 uppercase tracking-tight line-clamp-2">{produit.nom}</h4>
+                        <h4 className="font-bold text-white text-[13px] md:text-base leading-tight mb-2 md:mb-3 uppercase tracking-tight line-clamp-2 group-hover:text-indigo-400 transition-colors">{produit.nom}</h4>
                         <div className="flex justify-between items-end">
                             <span className="text-lg md:text-2xl font-display font-black text-white tracking-tighter">{produit.prix.toLocaleString()}<span className="text-[8px] md:text-[10px] text-slate-500 ml-1">F</span></span>
                         </div>
                     </div>
+                </div>
+
+                {/* Progress Bar au bas de la carte */}
+                <div className="absolute bottom-0 left-0 w-full h-1 md:h-1.5 bg-white/5">
+                    <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min((produit.stockTotal/20)*100, 100)}%` }}
+                        className={`h-full ${produit.stockTotal <= 5 ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]' : 'bg-indigo-600'}`}
+                    />
                 </div>
               </motion.button>
             ))}
