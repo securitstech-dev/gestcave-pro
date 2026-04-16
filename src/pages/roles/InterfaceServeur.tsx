@@ -228,7 +228,7 @@ const InterfaceServeur = () => {
           <div className="flex items-center gap-6">
               <div className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 text-right">
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Addition en cours</p>
-                  <p className="font-display font-black text-slate-900 text-xl leading-none">{commandeActive?.total.toLocaleString()} F</p>
+                  <p className="font-display font-black text-slate-900 text-xl leading-none">{(commandeActive?.total || 0).toLocaleString()} F</p>
               </div>
           </div>
       </header>
@@ -386,7 +386,7 @@ const InterfaceServeur = () => {
             <div className="p-8 bg-slate-900 text-white rounded-t-[2.5rem] shadow-2xl">
                  <div className="flex justify-between items-center mb-1">
                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">TOTAL À PAYER</span>
-                     <span className="text-3xl font-display font-black">{commandeActive?.total.toLocaleString()} F</span>
+                     <span className="text-3xl font-display font-black">{(commandeActive?.total || 0).toLocaleString()} F</span>
                  </div>
                  <p className="text-[9px] text-slate-500 font-bold uppercase">Les stocks diminuent en temps réel à chaque tournée validée.</p>
             </div>
