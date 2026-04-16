@@ -160,8 +160,36 @@ const PageAccueil = () => {
           </div>
 
           {/* FORMULAIRE D'INSCRIPTION DIRECT */}
-          <div id="inscription-section" className="mt-40 mb-32 scroll-mt-24">
              <InscriptionDirecte />
+          </div>
+
+          {/* TEMOIGNAGES */}
+          <div className="mt-40 mb-32">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-display font-bold text-white mb-4">Ils nous font confiance</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <TestimonialCard 
+                name="Mireille M." 
+                role="Gérante de La Cave Dorée" 
+                content="Depuis qu'on utilise GestCave Pro, je ne perds plus une seule bouteille. Le suivi des stocks par casier est une révolution pour mon inventaire." 
+              />
+              <TestimonialCard 
+                name="Jean-Paul B." 
+                role="Propriétaire de l'Escale VIP" 
+                content="Mes serveurs ne courent plus dans tous les sens. La commande part en cuisine instantanément. Le gain de temps est incroyable." 
+              />
+            </div>
+          </div>
+
+          {/* FAQ */}
+          <div className="mt-40 mb-32 max-w-3xl mx-auto">
+            <h2 className="text-3xl font-display font-bold text-white text-center mb-16">Questions Fréquentes</h2>
+            <div className="space-y-6">
+              <FAQItem question="Mes données sont-elles sécurisées ?" answer="Oui, toutes vos données sont stockées sur les serveurs sécurisés de Google Firebase avec des sauvegardes quotidiennes et un chiffrement de bout en bout." />
+              <FAQItem question="Puis-je l'utiliser sur mon téléphone ?" answer="Absolument. GestCave Pro est une application Cloud optimisée pour smartphones, tablettes et ordinateurs sans aucune installation requise." />
+              <FAQItem question="Comment se passe le paiement de l'abonnement ?" answer="Le paiement se fait par Mobile Money ou virement. Notre équipe vous contacte 5 jours avant la fin de votre période pour renouveler votre accès." />
+            </div>
           </div>
         </div>
       </main>
@@ -211,7 +239,14 @@ const PageAccueil = () => {
 
 // -- Sous-Composants --
 
-const CardRole = ({ icon, color, title, desc }: any) => (
+interface CardRoleProps {
+  icon: React.ReactNode;
+  color: string;
+  title: string;
+  desc: string;
+}
+
+const CardRole = ({ icon, color, title, desc }: CardRoleProps) => (
   <div className="bento-item p-8 flex flex-col items-start gap-4">
     <div className={`w-16 h-16 rounded-2xl bg-${color}-500/20 border border-${color}-500/30 text-${color}-400 flex items-center justify-center`}>
       {icon}
@@ -221,7 +256,16 @@ const CardRole = ({ icon, color, title, desc }: any) => (
   </div>
 );
 
-const PriceCard = ({ name, price, duration, features, onClick, isRecommended = false }: any) => (
+interface PriceCardProps {
+  name: string;
+  price: string;
+  duration: string;
+  features: string[];
+  onClick: () => void;
+  isRecommended?: boolean;
+}
+
+const PriceCard = ({ name, price, duration, features, onClick, isRecommended = false }: PriceCardProps) => (
   <div className={`glass-panel p-8 relative flex flex-col ${isRecommended ? 'border-indigo-500/40 shadow-[0_0_40px_rgba(99,102,241,0.2)]' : ''}`}>
     {isRecommended && (
       <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-3 py-1 rounded-full text-[10px] uppercase font-black tracking-tighter">
@@ -337,5 +381,35 @@ const InscriptionDirecte = () => {
     </div>
   );
 };
+
+// -- Nouveaux Composants --
+
+const TestimonialCard = ({ name, role, content }: { name: string, role: string, content: string }) => (
+  <div className="glass-panel p-8 border-white/5 bg-white/5 relative overflow-hidden group">
+    <div className="absolute top-0 right-0 p-6 text-indigo-500 opacity-20">
+      <CheckCircle2 size={40} />
+    </div>
+    <p className="text-slate-300 italic mb-6 relative z-10">"{content}"</p>
+    <div className="flex items-center gap-4">
+      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white text-xs">
+        {name.charAt(0)}
+      </div>
+      <div>
+        <h4 className="text-white font-bold text-sm">{name}</h4>
+        <p className="text-slate-500 text-[10px] uppercase tracking-widest">{role}</p>
+      </div>
+    </div>
+  </div>
+);
+
+const FAQItem = ({ question, answer }: { question: string, answer: string }) => (
+  <div className="p-6 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/[0.07] transition-all group">
+    <h4 className="text-white font-bold mb-2 flex items-center justify-between">
+      {question}
+      <ArrowRight size={16} className="text-indigo-400 opacity-0 group-hover:opacity-100 transition-all -translate-x-4 group-hover:translate-x-0" />
+    </h4>
+    <p className="text-slate-400 text-sm leading-relaxed">{answer}</p>
+  </div>
+);
 
 export default PageAccueil;

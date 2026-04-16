@@ -28,6 +28,7 @@ const TableauSuperAdmin = () => {
   const [modalRefus, setModalRefus] = useState<{ id: string; nom: string } | null>(null);
   const [motifRefus, setMotifRefus] = useState('');
   const [modalPaiement, setModalPaiement] = useState<any | null>(null);
+  const [lienActivation, setLienActivation] = useState<{ url: string; nom: string } | null>(null);
 
   // ✅ FIX 1 : onSnapshot — temps réel sur toutes les collections
   useEffect(() => {
@@ -92,8 +93,23 @@ const TableauSuperAdmin = () => {
         etablissement_id: etabRef.id,
       });
 
+      // 🆕 GÉNÉRATION DU LIEN D'ACTIVATION AUTOMATIQUE
+      const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      await addDoc(collection(db, 'invitations'), {
+        token: invitationToken,
+        email: demande.email_contact,
+        nom: demande.nom_contact,
+        etablissement_id: etabRef.id,
+        role: 'client_admin',
+        date_creation: new Date().toISOString(),
+        expire: Date.now() + (72 * 60 * 60 * 1000) // Valide 72 heures
+      });
+
+      const urlComplete = `${window.location.origin}/activation?token=${invitationToken}`;
+      setLienActivation({ url: urlComplete, nom: demande.nom_etablissement });
+
       toast.dismiss(toastId);
-      toast.success(`✅ Essai activé pour ${demande.nom_etablissement} !`);
+      toast.success(`✅ Essai activé & Lien généré pour ${demande.nom_etablissement} !`);
     } catch (err: any) {
       toast.dismiss(toastId);
       toast.error(`Erreur : ${err.message}`);
@@ -707,6 +723,41 @@ const TableauSuperAdmin = () => {
                   ✅ Valider & Activer
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── MODAL LIEN ACTIVATION ── */}
+      <AnimatePresence>
+        {lienActivation && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-slate-950/90 backdrop-blur-xl">
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="w-full max-w-md glass-panel p-10 text-center border-indigo-500/30">
+              <div className="w-20 h-20 bg-indigo-600/20 rounded-full flex items-center justify-center mx-auto mb-6 text-indigo-400">
+                <CheckCircle size={40} />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2">Accès automatique prêt !</h3>
+              <p className="text-slate-400 text-sm mb-8">Copiez ce lien et envoyez-le au patron de <span className="text-white font-bold">{lienActivation.nom}</span> pour qu'il active son compte.</p>
+              
+              <div className="bg-white/5 p-4 rounded-xl border border-white/10 mb-8 flex items-center gap-3">
+                <input readOnly value={lienActivation.url} className="bg-transparent border-none text-xs text-indigo-300 w-full outline-none" />
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(lienActivation.url);
+                    toast.success("Lien copié !");
+                  }}
+                  className="p-2 hover:bg-white/10 rounded-lg text-white"
+                >
+                  <ExternalLink size={18} />
+                </button>
+              </div>
+
+              <button 
+                onClick={() => setLienActivation(null)}
+                className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl shadow-glow transition-all hover:bg-indigo-500"
+              >
+                Terminé
+              </button>
             </motion.div>
           </div>
         )}

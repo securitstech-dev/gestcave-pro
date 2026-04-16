@@ -7,7 +7,9 @@ import {
   addDoc, 
   updateDoc, 
   query, 
-  where 
+  where,
+  increment,
+  writeBatch 
 } from 'firebase/firestore';
 import { useAuthStore } from './authStore';
 
@@ -77,8 +79,8 @@ interface PosState {
   ouvrirTable: (tableId: string, serveurId: string, serveurNom: string, couverts: number) => Promise<string>;
   ouvrirVenteEmporter: (serveurId: string, serveurNom: string) => Promise<string>;
   marquerLignePrete: (commandeId: string, ligneId: string) => Promise<void>;
-  marquerCommandeServie: (commandeId: string) => Promise<void>;
-  encaisserCommande: (commandeId: string, modePaiement: 'comptant' | 'credit', clientNom?: string) => Promise<void>;
+   marquerCommandeServie: (commandeId: string) => Promise<void>;
+  encaisserCommande: (commandeId: string, modePaiement: 'comptant' | 'credit', clientNom?: string, montantRemise?: number) => Promise<void>;
 }
 
 export const usePOSStore = create<PosState>((set, get) => ({
@@ -252,35 +254,63 @@ export const usePOSStore = create<PosState>((set, get) => ({
     });
   },
 
-  encaisserCommande: async (commandeId, modePaiement, clientNom) => {
+  encaisserCommande: async (commandeId, modePaiement, clientNom, montantRemise = 0) => {
     const commande = get().commandes.find(c => c.id === commandeId);
     if (!commande) return;
 
-    // Archiver la commande
-    await updateDoc(doc(db, 'commandes', commandeId), { 
-      statut: 'payee',
-      methodePaiement: modePaiement,
-      clientNom: clientNom || null
-    });
+    try {
+      const batch = writeBatch(db);
+      const totalApresRemise = Math.max(0, commande.total - montantRemise);
 
-    // Libérer la table si c'était sur place
-    if (commande.tableId) {
-      await updateDoc(doc(db, 'tables', commande.tableId), {
-        statut: 'libre',
-        commandeActiveId: null
+      // 1. Archiver la commande
+      const commandeRef = doc(db, 'commandes', commandeId);
+      batch.update(commandeRef, { 
+        statut: 'payee',
+        methodePaiement: modePaiement,
+        clientNom: clientNom || null,
+        remise: montantRemise,
+        totalFinal: totalApresRemise
       });
-    }
 
-    // Optionnel : Générer la transaction POS sur Firebase
-    await addDoc(collection(db, 'transactions_pos'), {
-      commandeId,
-      total: commande.total,
-      modePaiement,
-      clientNom: clientNom || 'Client Anonyme',
-      type: commande.type,
-      date: new Date().toISOString(),
-      etablissement_id: useAuthStore.getState().profil?.etablissement_id
-    });
+      // 2. Libérer la table si c'était sur place
+      if (commande.tableId) {
+        const tableRef = doc(db, 'tables', commande.tableId);
+        batch.update(tableRef, {
+          statut: 'libre',
+          commandeActiveId: null
+        });
+      }
+
+      // 3. Déduire les stocks pour chaque ligne
+      commande.lignes.forEach(ligne => {
+        const produitRef = doc(db, 'produits', ligne.produitId);
+        // On utilise increment avec une valeur négative pour déduire
+        batch.update(produitRef, {
+          stockTotal: increment(-ligne.quantite)
+        });
+      });
+
+      // 4. Générer la transaction POS
+      const transactionRef = doc(collection(db, 'transactions_pos'));
+      batch.set(transactionRef, {
+        commandeId,
+        total: totalApresRemise,
+        totalInitial: commande.total,
+        montantRemise,
+        modePaiement,
+        clientNom: clientNom || 'Client Anonyme',
+        type: commande.type,
+        date: new Date().toISOString(),
+        etablissement_id: useAuthStore.getState().profil?.etablissement_id
+      });
+
+      // Exécuter toutes les opérations de manière atomique
+      await batch.commit();
+      
+    } catch (error) {
+      console.error("Erreur lors de l'encaissement :", error);
+      throw error;
+    }
   },
 
   marquerLignePrete: async (commandeId, ligneId) => {

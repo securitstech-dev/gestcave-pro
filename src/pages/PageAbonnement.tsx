@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Smartphone, Upload, CreditCard, CheckCircle2, Copy, Info, ArrowLeft } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Smartphone, Upload, CreditCard, CheckCircle2, 
+  Copy, Info, ArrowLeft, Zap, ShieldCheck, 
+  Clock, TrendingUp, Sparkles, X, ChevronRight,
+  UserCheck
+} from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -19,27 +24,31 @@ const PageAbonnement = () => {
   const forfaits = [
     { 
       id: 'mensuel', 
-      nom: 'Mensuel', 
+      nom: 'STARTER', 
       prix: '15 000 FCFA', 
       montant: 15000,
-      desc: 'Accès complet pendant 1 mois. Idéal pour tester.',
-      populaire: false 
+      desc: 'Accès complet 30 jours. Sans engagement.',
+      features: ['Toutes les interfaces', 'Staff illimité', 'Support Email'],
+      color: 'slate'
     },
     { 
       id: 'trimestriel', 
-      nom: 'Trimestriel', 
+      nom: 'PROFESSIONNEL', 
       prix: '40 000 FCFA', 
       montant: 40000,
-      desc: '3 mois d\'accès complet. Économisez 5 000 F.',
-      populaire: true 
+      desc: '90 jours d\'opérations. Le meilleur rapport qualité/prix.',
+      features: ['Priorité technique', 'Multi-postes synchros', 'Sauvegarde cloud'],
+      populaire: true,
+      color: 'indigo'
     },
     { 
       id: 'annuel', 
-      nom: 'Annuel', 
+      nom: 'ULTRA', 
       prix: '150 000 FCFA', 
       montant: 150000,
-      desc: '12 mois au prix de 10. La meilleure offre.',
-      populaire: false 
+      desc: '1 an de sérénité totale. 2 mois offerts.',
+      features: ['Accès anticipé v2', 'Soutien VIP 24/7', 'Certificat Performance'],
+      color: 'amber'
     },
   ];
 
@@ -54,7 +63,6 @@ const PageAbonnement = () => {
     setChargement(true);
     
     try {
-      // 1. Upload l'image sur Firebase Storage
       const extension = fichier.name.split('.').pop();
       const nomFichier = `preuves/${Date.now()}-${Math.random().toString(36).substring(7)}.${extension}`;
       const imageRef = ref(storage, nomFichier);
@@ -62,7 +70,6 @@ const PageAbonnement = () => {
       const snapshot = await uploadBytes(imageRef, fichier);
       const urlPreuve = await getDownloadURL(snapshot.ref);
 
-      // 2. Créer l'entrée dans Firestore
       await addDoc(collection(db, 'paiements'), {
         etablissement_id: profil?.etablissement_id || '',
         montant: forfaitChoisi.montant,
@@ -71,10 +78,10 @@ const PageAbonnement = () => {
         date: new Date().toISOString()
       });
       
-      toast.success('Preuve envoyée ! Votre abonnement sera activé après vérification par notre équipe.');
+      toast.success('Paiement enregistré ! Activation imminente.', { position: 'top-center' });
       setEtape(4);
     } catch (erreur: any) {
-      toast.error(erreur.message || 'Erreur lors de l\'envoi de la preuve');
+      toast.error(erreur.message || 'Erreur lors de l\'envoi');
     } finally {
       setChargement(false);
     }
@@ -82,200 +89,288 @@ const PageAbonnement = () => {
 
   const copierNumero = (texte: string) => {
     navigator.clipboard.writeText(texte);
-    toast.success('Numéro copié dans le presse-papier !');
+    toast.success('Numéro copié !', { icon: '📋' });
   };
 
   return (
-    <div className="min-h-screen py-12 px-6">
-      <div className="max-w-5xl mx-auto">
-        <header className="mb-12">
-          <button 
+    <div className="min-h-screen bg-[#020617] text-white py-12 md:py-20 px-6 overflow-hidden relative">
+      {/* Background elements */}
+      <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(79,70,229,0.05),transparent_50%)]" />
+
+      <div className="max-w-7xl mx-auto relative z-10">
+        <header className="mb-16 md:mb-24 text-center">
+          <motion.button 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             onClick={() => navigate('/tableau-de-bord')}
-            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-6"
+            className="inline-flex items-center gap-2 text-slate-500 hover:text-white transition-all bg-white/[0.03] px-6 py-2 rounded-full border border-white/5 mb-10 text-xs font-black tracking-widest uppercase"
           >
-            <ArrowLeft size={18} /> Retour au tableau de bord
-          </button>
-          <div className="text-center">
-            <h1 className="text-4xl font-display font-bold mb-4">Gestion de l'abonnement</h1>
-            <p className="text-slate-400 text-lg">Choisissez votre forfait et payez via Mobile Money</p>
-          </div>
+            <ArrowLeft size={14} /> Retour au Dashboard
+          </motion.button>
+          
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-5xl md:text-7xl font-display font-black mb-6 tracking-tighter"
+          >
+            ACTIVEZ VOTRE <span className="text-indigo-500">POTENTIEL</span>
+          </motion.h1>
+          <p className="text-slate-500 text-lg md:text-xl font-bold uppercase tracking-widest max-w-2xl mx-auto opacity-60">
+            Choisissez la durée de votre licence et boostez votre établissement
+          </p>
         </header>
 
-        <div className="flex justify-center items-center gap-2 mb-12">
-          {['Forfait', 'Paiement', 'Preuve'].map((label, i) => (
+        {/* Stepper Premium */}
+        <div className="flex justify-center flex-wrap items-center gap-4 md:gap-8 mb-20">
+          {['FORFAIT', 'RÈGLEMENT', 'VALIDATION'].map((label, i) => (
             <React.Fragment key={i}>
-              <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                etape > i + 1 ? 'bg-accent/20 text-accent' :
-                etape === i + 1 ? 'bg-primary/20 text-primary border border-primary/30' : 
-                'bg-white/5 text-slate-500'
+              <div className={`flex items-center gap-4 transition-all duration-500 ${
+                etape === i + 1 ? 'opacity-100 scale-110' : 'opacity-30'
               }`}>
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                  etape > i + 1 ? 'bg-accent text-white' :
-                  etape === i + 1 ? 'bg-primary text-white' : 'bg-slate-700'
-                }`}>{etape > i + 1 ? '✓' : i + 1}</span>
-                {label}
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-sm border-2 ${
+                  etape === i + 1 ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)]' : 'border-white/20 text-slate-500'
+                }`}>
+                  {i + 1}
+                </div>
+                <span className="font-black text-[10px] tracking-[0.2em]">{label}</span>
               </div>
-              {i < 2 && <div className={`w-12 h-0.5 ${etape > i + 1 ? 'bg-accent' : 'bg-slate-700'}`} />}
+              {i < 2 && <div className={`w-12 h-[2px] rounded-full ${etape > i + 1 ? 'bg-indigo-600' : 'bg-white/5'}`} />}
             </React.Fragment>
           ))}
         </div>
 
-        {etape === 1 && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid md:grid-cols-3 gap-6">
-            {forfaits.map((f) => (
-              <div 
-                key={f.id}
-                onClick={() => { setForfaitChoisi(f); setEtape(2); }}
-                className={`glass-card p-8 border-2 cursor-pointer transition-all group relative ${
-                  f.populaire ? 'border-primary hover:border-primary' : 'border-transparent hover:border-primary/50'
-                }`}
-              >
-                {f.populaire && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white text-xs font-bold px-4 py-1 rounded-full">
-                    Recommandé
+        <AnimatePresence mode="wait">
+          {etape === 1 && (
+            <motion.div 
+              key="stage1"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.05 }}
+              className="grid grid-cols-1 md:grid-cols-3 gap-8"
+            >
+              {forfaits.map((f) => (
+                <div 
+                  key={f.id}
+                  onClick={() => { setForfaitChoisi(f); setEtape(2); }}
+                  className={`relative p-10 rounded-[3.5rem] bg-white/[0.02] border-2 cursor-pointer transition-all duration-500 group flex flex-col items-center text-center overflow-hidden ${
+                    f.populaire ? 'border-indigo-500 shadow-2xl shadow-indigo-500/10' : 'border-white/5 hover:border-white/20'
+                  }`}
+                >
+                  {f.populaire && (
+                    <div className="absolute top-0 right-0 p-8">
+                       <Sparkles className="text-indigo-500 animate-pulse" size={24} />
+                    </div>
+                  )}
+                  
+                  <div className={`w-20 h-20 rounded-[2rem] bg-white/5 flex items-center justify-center mb-10 group-hover:scale-110 transition-transform ${f.populaire ? 'text-indigo-400' : 'text-slate-500'}`}>
+                    <Zap size={32} />
                   </div>
-                )}
-                <CreditCard className="text-slate-500 group-hover:text-primary mb-4 transition-colors" size={32} />
-                <h3 className="text-2xl font-bold mb-2">{f.nom}</h3>
-                <p className="text-3xl font-display font-extrabold text-primary mb-4">{f.prix}</p>
-                <p className="text-slate-400 mb-6 text-sm">{f.desc}</p>
-                <button className="btn-secondary w-full group-hover:bg-primary group-hover:text-white transition-all">
-                  Sélectionner
+                  
+                  <h3 className="text-2xl font-display font-black mb-2 text-white italic">{f.nom}</h3>
+                  <div className="text-4xl font-display font-black text-white mb-6 tracking-tighter">
+                     {f.prix}
+                  </div>
+                  
+                  <p className="text-slate-500 text-sm font-bold uppercase tracking-tight mb-10 leading-relaxed italic">
+                    {f.desc}
+                  </p>
+
+                  <div className="w-full space-y-4 mb-12">
+                     {f.features.map((feat, idx) => (
+                       <div key={idx} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                          <CheckCircle2 size={14} className="text-indigo-500" /> {feat}
+                       </div>
+                     ))}
+                  </div>
+
+                  <button className={`w-full py-5 rounded-2xl font-black text-[10px] tracking-widest transition-all ${
+                    f.populaire ? 'bg-indigo-600 text-white shadow-xl' : 'bg-white/5 text-slate-400 group-hover:bg-white/10 group-hover:text-white'
+                  }`}>
+                    SÉLECTIONNER CE PLAN
+                  </button>
+                </div>
+              ))}
+            </motion.div>
+          )}
+
+          {etape === 2 && (
+            <motion.div 
+              key="stage2"
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -50 }}
+              className="max-w-3xl mx-auto bg-white/[0.02] border border-white/10 rounded-[4rem] p-10 md:p-16 relative overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-600 to-transparent" />
+              
+              <div className="flex items-center gap-6 mb-12">
+                  <div className="w-16 h-16 rounded-[1.8rem] bg-indigo-600/10 flex items-center justify-center text-indigo-500">
+                      <Smartphone size={32} />
+                  </div>
+                  <div>
+                      <h3 className="text-3xl font-display font-black tracking-tight italic uppercase">Paiement Mobile</h3>
+                      <p className="text-slate-500 text-xs font-bold uppercase tracking-[0.2em]">{forfaitChoisi?.nom} — {forfaitChoisi?.prix}</p>
+                  </div>
+              </div>
+
+              <div className="space-y-6 mb-12">
+                  <PaymentMethod 
+                    brand="AIRTEL MONEY" 
+                    number="+242 05 302 8383" 
+                    color="rose" 
+                    onCopy={() => copierNumero('+242053028383')} 
+                  />
+                  <PaymentMethod 
+                    brand="MTN MOBILE MONEY" 
+                    number="+242 06 881 7104" 
+                    color="amber" 
+                    onCopy={() => copierNumero('+242068817104')} 
+                  />
+              </div>
+
+              <div className="bg-indigo-600/10 border border-indigo-500/20 rounded-[2rem] p-8 mb-12 flex gap-6">
+                  <Info className="text-indigo-400 shrink-0" size={24} />
+                  <div className="text-xs font-bold uppercase tracking-widest leading-relaxed text-indigo-300">
+                      Envoyez le montant exact au numéro désiré, puis capturez l'écran du SMS de confirmation reçu. Vous devrez l'envoyer à l'étape suivante.
+                  </div>
+              </div>
+
+              <div className="flex gap-4">
+                  <button onClick={() => setEtape(1)} className="flex-1 py-5 rounded-2xl bg-white/5 text-slate-500 font-black text-[10px] tracking-widest uppercase hover:text-white transition-all">ANNULER</button>
+                  <button onClick={() => setEtape(3)} className="flex-[2] py-5 rounded-2xl bg-indigo-600 text-white font-black text-[10px] tracking-widest uppercase shadow-xl hover:bg-indigo-500 transition-all flex items-center justify-center gap-3">
+                    J'AI EFFECTUÉ LE TRANSFERT <ChevronRight size={16} />
+                  </button>
+              </div>
+            </motion.div>
+          )}
+
+          {etape === 3 && (
+            <motion.div 
+              key="stage3"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="max-w-xl mx-auto text-center"
+            >
+              <div className="w-24 h-24 rounded-[2.5rem] bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center mx-auto mb-10 text-indigo-400">
+                <Upload size={40} className="animate-bounce" />
+              </div>
+              <h3 className="text-4xl font-display font-black mb-4 uppercase tracking-tighter">Transmission Preuve</h3>
+              <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mb-12 opacity-60 italic">Chargez la capture du SMS de transfert Airtel ou MTN</p>
+              
+              <div className="mb-12 group">
+                <input 
+                  type="file" 
+                  id="preuve" 
+                  className="hidden" 
+                  accept="image/*"
+                  onChange={gererFichier}
+                />
+                <label 
+                  htmlFor="preuve"
+                  className={`block border-2 border-dashed rounded-[3rem] p-16 cursor-pointer transition-all duration-500 bg-white/[0.02] ${
+                    fichier ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/10 hover:border-indigo-500/50'
+                  }`}
+                >
+                  {fichier ? (
+                    <div className="space-y-4">
+                      <ShieldCheck className="mx-auto text-emerald-500" size={48} />
+                      <p className="text-white font-black text-xs uppercase tracking-widest truncate max-w-xs mx-auto">{fichier.name}</p>
+                      <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Cliquer pour remplacer</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4 text-slate-700">
+                          <PlusCircle size={24} />
+                      </div>
+                      <span className="text-slate-500 font-black text-[10px] uppercase tracking-widest">Choisir un fichier (PNG, JPG)</span>
+                    </div>
+                  )}
+                </label>
+              </div>
+
+              <div className="flex gap-4">
+                <button onClick={() => setEtape(2)} className="flex-1 py-5 rounded-2xl bg-white/5 text-slate-500 font-black text-[10px] tracking-widest uppercase hover:text-white transition-all">RETOUR</button>
+                <button 
+                  onClick={envoyerPaiement}
+                  disabled={!fichier || chargement}
+                  className="flex-[2] py-5 rounded-2xl bg-indigo-600 text-white font-black text-[10px] tracking-widest uppercase shadow-2xl disabled:opacity-30 disabled:grayscale transition-all flex items-center justify-center gap-3"
+                >
+                  {chargement ? (
+                      <> <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> ENVOI EN COURS...</>
+                  ) : 'VALIDER MON ACCÈS'}
                 </button>
               </div>
-            ))}
-          </motion.div>
-        )}
+            </motion.div>
+          )}
 
-        {etape === 2 && (
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="glass-card p-8 max-w-2xl mx-auto">
-            <h3 className="text-2xl font-bold mb-6 flex items-center gap-3">
-              <Smartphone className="text-primary" /> Instructions Mobile Money
-            </h3>
-            
-            <div className="mb-6 p-4 bg-primary/10 rounded-xl border border-primary/20">
-              <p className="text-sm font-medium text-primary">
-                Forfait sélectionné : <strong>{forfaitChoisi?.nom}</strong> — <strong>{forfaitChoisi?.prix}</strong>
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="p-5 bg-white/5 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
-                <p className="text-xs text-slate-500 mb-2 uppercase font-bold tracking-wider">🔴 Airtel Money Congo</p>
-                <div className="flex justify-between items-center">
-                  <span className="text-xl font-mono text-white tracking-widest">+242 05 302 8383</span>
-                  <button onClick={() => copierNumero('+242053028383')} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-                    <Copy size={18} className="text-primary" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-5 bg-white/5 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
-                <p className="text-xs text-slate-500 mb-2 uppercase font-bold tracking-wider">🟡 MTN Mobile Money Congo</p>
-                <div className="flex justify-between items-center">
-                  <span className="text-xl font-mono text-white tracking-widest">+242 06 881 7104</span>
-                  <button onClick={() => copierNumero('+242068817104')} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-                    <Copy size={18} className="text-primary" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex gap-4 p-4 bg-blue-500/10 rounded-xl border border-blue-500/20">
-                <Info className="text-blue-400 shrink-0 mt-0.5" size={20} />
-                <div className="text-sm text-blue-300/90">
-                  <p className="font-medium mb-1">Comment procéder :</p>
-                  <ol className="list-decimal list-inside space-y-1 text-blue-400/80">
-                    <li>Envoyez <strong>{forfaitChoisi?.prix}</strong> au numéro ci-dessus</li>
-                    <li>Attendez le SMS de confirmation</li>
-                    <li>Prenez une capture d'écran du SMS</li>
-                    <li>Cliquez sur « J'ai effectué le paiement »</li>
-                  </ol>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-8 flex gap-4">
-              <button onClick={() => setEtape(1)} className="btn-secondary flex-1">Retour</button>
-              <button onClick={() => setEtape(3)} className="btn-primary flex-1">J'ai effectué le paiement</button>
-            </div>
-          </motion.div>
-        )}
-
-        {etape === 3 && (
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-8 max-w-lg mx-auto text-center">
-            <Upload className="mx-auto text-primary mb-6" size={48} />
-            <h3 className="text-2xl font-bold mb-2">Preuve de paiement</h3>
-            <p className="text-slate-400 mb-8">Téléchargez la capture d'écran du SMS de confirmation de votre transfert</p>
-            
-            <div className="mb-8">
-              <input 
-                type="file" 
-                id="preuve" 
-                className="hidden" 
-                accept="image/*"
-                onChange={gererFichier}
-              />
-              <label 
-                htmlFor="preuve"
-                className={`block border-2 border-dashed rounded-2xl p-10 cursor-pointer transition-all bg-white/5 ${
-                  fichier ? 'border-accent/50 bg-accent/5' : 'border-white/10 hover:border-primary/50'
-                }`}
-              >
-                {fichier ? (
-                  <div>
-                    <CheckCircle2 className="mx-auto text-accent mb-2" size={24} />
-                    <span className="text-white font-medium">{fichier.name}</span>
-                    <p className="text-xs text-slate-500 mt-1">Cliquez pour changer de fichier</p>
-                  </div>
-                ) : (
-                  <div>
-                    <Upload className="mx-auto text-slate-500 mb-2" size={24} />
-                    <span className="text-slate-500">Cliquez pour choisir un fichier</span>
-                  </div>
-                )}
-              </label>
-            </div>
-
-            <div className="flex gap-4">
-              <button onClick={() => setEtape(2)} className="btn-secondary flex-1">Retour</button>
-              <button 
-                onClick={envoyerPaiement}
-                disabled={!fichier || chargement}
-                className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {chargement ? 'Envoi en cours...' : 'Confirmer le paiement'}
-              </button>
-            </div>
-          </motion.div>
-        )}
-
-        {etape === 4 && (
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-20">
-            <div className="flex justify-center mb-6">
-              <motion.div 
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
-                className="bg-accent/20 p-8 rounded-full"
-              >
-                <CheckCircle2 className="text-accent w-20 h-20" />
-              </motion.div>
-            </div>
-            <h2 className="text-4xl font-display font-bold mb-4">Paiement reçu !</h2>
-            <p className="text-xl text-slate-400 mb-10 max-w-md mx-auto leading-relaxed">
-              Votre preuve de paiement a été transmise avec succès. Notre équipe va la vérifier et activer votre abonnement sous 30 minutes.
-            </p>
-            <button 
-              onClick={() => navigate('/tableau-de-bord')} 
-              className="btn-primary px-8 py-3 text-lg"
+          {etape === 4 && (
+            <motion.div 
+              key="stage4"
+              initial={{ opacity: 0, scale: 0.8 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              className="max-w-2xl mx-auto text-center py-10"
             >
-              Retour au tableau de bord
-            </button>
-          </motion.div>
-        )}
+              <div className="relative inline-block mb-12">
+                  <motion.div 
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 200, delay: 0.4 }}
+                    className="bg-indigo-600/20 p-12 rounded-[3.5rem] relative z-10"
+                  >
+                    <UserCheck className="text-indigo-500 w-24 h-24" />
+                  </motion.div>
+                  <div className="absolute inset-0 bg-indigo-600 blur-[80px] opacity-20" />
+              </div>
+              
+              <h2 className="text-5xl font-display font-black mb-6 uppercase tracking-tighter italic">Demande Soumise !</h2>
+              <p className="text-lg text-slate-500 font-bold uppercase tracking-widest mb-14 max-w-lg mx-auto opacity-70 leading-relaxed italic text-center">
+                Merci ! Votre preuve a été envoyée. Notre équipe vérifie le transfert et active votre accès sous 30 minutes.
+              </p>
+              
+              <button 
+                onClick={() => navigate('/tableau-de-bord')} 
+                className="group h-16 px-12 rounded-2xl bg-indigo-600 text-white font-black text-xs uppercase tracking-[0.3em] shadow-2xl shadow-indigo-600/40 hover:bg-indigo-500 transition-all flex items-center justify-center gap-4 mx-auto"
+              >
+                RETOUR AU TABLEAU DE BORD <ArrowRight size={20} className="group-hover:translate-x-2 transition-transform" />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
+
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100;400;700;900&display=swap');
+        .font-display { font-family: 'Outfit', sans-serif; }
+      `}</style>
     </div>
   );
+};
+
+// -- HELPERS --
+
+const PaymentMethod = ({ brand, number, color, onCopy }: any) => {
+    const bgColor = color === 'rose' ? 'bg-rose-500/10' : 'bg-amber-500/10';
+    const borderColor = color === 'rose' ? 'border-rose-500/20' : 'border-amber-500/20';
+    const textColor = color === 'rose' ? 'text-rose-500' : 'text-amber-500';
+    const dotColor = color === 'rose' ? 'bg-rose-600' : 'bg-amber-600';
+
+    return (
+        <div className={`p-8 rounded-[2.5rem] bg-white/[0.03] border border-white/10 group hover:border-white/20 transition-all`}>
+            <div className="flex items-center gap-3 mb-4">
+                <div className={`w-2 h-2 rounded-full ${dotColor} animate-pulse`} />
+                <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em]">{brand}</p>
+            </div>
+            <div className="flex justify-between items-center">
+                <span className="text-2xl md:text-3xl font-display font-black text-white tracking-widest italic">{number}</span>
+                <button 
+                    onClick={onCopy} 
+                    className={`p-4 rounded-xl ${bgColor} ${textColor} hover:scale-110 active:scale-95 transition-all border ${borderColor}`}
+                >
+                    <Copy size={20} />
+                </button>
+            </div>
+        </div>
+    );
 };
 
 export default PageAbonnement;

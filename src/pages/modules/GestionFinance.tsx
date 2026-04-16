@@ -9,10 +9,14 @@ import {
 import { db } from '../../lib/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useAuthStore } from '../../store/authStore';
+import toast from 'react-hot-toast';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, 
   Tooltip, ResponsiveContainer 
 } from 'recharts';
+import StatCard from '../../components/ui/StatCard';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface Transaction {
   id: string;
@@ -79,6 +83,57 @@ const GestionFinance = () => {
     }));
   })();
 
+  const genererRapportPDF = () => {
+    const doc = new jsPDF();
+    const date = new Date().toLocaleDateString('fr-FR');
+    
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(99, 102, 241); // Indigo-500
+    doc.text("GESTCAVE PRO", 14, 20);
+    
+    doc.setFontSize(12);
+    doc.setTextColor(100, 116, 139); // Slate-500
+    doc.text(`Rapport Financier - ${profil?.nom || 'Établissement'}`, 14, 28);
+    doc.text(`Édité le : ${date}`, 14, 34);
+
+    // Summary Section
+    doc.setFontSize(14);
+    doc.setTextColor(15, 23, 42); // Slate-900
+    doc.text("Résumé Financier", 14, 45);
+    
+    doc.setFontSize(11);
+    doc.setTextColor(71, 85, 105);
+    doc.text(`Chiffre d'Affaires : ${chiffreAffairesTotal.toLocaleString()} F CFA`, 14, 53);
+    doc.text(`Dettes Clients (À Recouvrer) : ${totalCredits.toLocaleString()} F CFA`, 14, 60);
+    doc.text(`TVA Estimée (${tauxTaxe}%) : ${taxesEstimees.toLocaleString()} F CFA`, 14, 67);
+
+    // Transactions Table
+    doc.setFontSize(14);
+    doc.setTextColor(15, 23, 42);
+    doc.text("Historique des Transactions (Dernières opérations)", 14, 80);
+
+    const tableData = transactions.map(t => [
+      new Date(t.date).toLocaleString('fr-FR'),
+      t.modePaiement.toUpperCase(),
+      t.clientNom || (t.type === 'a_emporter' ? 'Emporter' : 'Sur Place'),
+      `${t.total.toLocaleString()} F`
+    ]);
+
+    autoTable(doc, {
+      startY: 85,
+      head: [['Date', 'Moyen de Pai.', 'Détail', 'Montant']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [99, 102, 241] }, // Indigo
+      alternateRowStyles: { fillColor: [248, 250, 252] }, // Slate-50
+      styles: { fontSize: 9, cellPadding: 4 }
+    });
+
+    doc.save(`Rapport_GestCave_${date.replace(/\//g, '-')}.pdf`);
+    toast.success("Rapport PDF généré !", { icon: '📄' });
+  };
+
   return (
     <div className="space-y-8 pb-20">
       <header className="flex justify-between items-end">
@@ -91,7 +146,7 @@ const GestionFinance = () => {
                 <button className="px-4 py-1.5 text-xs font-bold text-white bg-slate-800 rounded-lg shadow-lg">7 Jours</button>
                 <button className="px-4 py-1.5 text-xs font-bold text-slate-500 hover:text-slate-300">30 Jours</button>
             </div>
-            <button className="btn-primary flex items-center gap-2 text-sm py-2 px-6">
+            <button onClick={genererRapportPDF} className="btn-primary flex items-center gap-2 text-sm py-2 px-6">
                 <FileText size={16} /> Exporter Rapport
             </button>
         </div>
@@ -99,33 +154,37 @@ const GestionFinance = () => {
 
       {/* Résumé Financier Bento Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <CardFinance 
+          <StatCard 
             label="Chiffre d'Affaires" 
-            valeur={`${chiffreAffairesTotal.toLocaleString()} F`} 
-            icone={<TrendingUp className="text-emerald-400" />}
+            valeur={`${chiffreAffairesTotal.toLocaleString()}`}
+            suffix="F" 
+            icon={<TrendingUp size={20} className="text-emerald-400" />}
             tendance="+12%"
-            couleur="emerald"
+            color="emerald"
           />
-          <CardFinance 
+          <StatCard 
             label="Dettes Clients" 
-            valeur={`${totalCredits.toLocaleString()} F`} 
-            icone={<CreditCard className="text-amber-400" />}
+            valeur={`${totalCredits.toLocaleString()}`}
+            suffix="F" 
+            icon={<CreditCard size={20} className="text-amber-400" />}
             tendance="À recouvrer"
-            couleur="amber"
+            color="amber"
           />
-          <CardFinance 
+          <StatCard 
             label="TVA / Taxes Est." 
-            valeur={`${taxesEstimees.toLocaleString()} F`} 
-            icone={<Calculator className="text-indigo-400" />}
+            valeur={`${taxesEstimees.toLocaleString()}`}
+            suffix="F" 
+            icon={<Calculator size={20} className="text-indigo-400" />}
             tendance={`Taux: ${tauxTaxe}%`}
-            couleur="indigo"
+            color="indigo"
           />
-          <CardFinance 
+          <StatCard 
             label="Marge Nette (Est.)" 
-            valeur={`${(chiffreAffairesTotal * 0.4).toLocaleString()} F`} 
-            icone={<Activity className="text-rose-400" />}
+            valeur={`${(chiffreAffairesTotal * 0.4).toLocaleString()}`}
+            suffix="F" 
+            icon={<Activity size={20} className="text-rose-400" />}
             tendance="Est. 40%"
-            couleur="rose"
+            color="rose"
           />
       </div>
 
@@ -300,25 +359,16 @@ const GestionFinance = () => {
 };
 
 // Composants Internes
-const CardFinance = ({ label, valeur, icone, tendance, couleur }: any) => (
-    <motion.div 
-        whileHover={{ y: -5 }}
-        className="glass-panel p-6 relative overflow-hidden group border-white/5 hover:border-white/10 transition-colors"
-    >
-        <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-white/5 rounded-2xl border border-white/5">{icone}</div>
-            <span className={`text-[9px] font-black px-2 py-1 rounded-md bg-${couleur}-500/10 text-${couleur}-400 border border-${couleur}-500/20 uppercase tracking-tighter`}>
-                {tendance}
-            </span>
-        </div>
-        <div>
-            <p className="text-[11px] text-slate-500 font-bold uppercase tracking-[0.1em] mb-1">{label}</p>
-            <h4 className="text-3xl font-display font-black text-white drop-shadow-md">{valeur}</h4>
-        </div>
-    </motion.div>
-);
 
-const BarreProgres = ({ label, valeur, total, couleur, shadow }: any) => {
+interface BarreProgresProps {
+    label: string;
+    valeur: number;
+    total: number;
+    couleur: string;
+    shadow: string;
+}
+
+const BarreProgres = ({ label, valeur, total, couleur, shadow }: BarreProgresProps) => {
     const pourcentage = total > 0 ? (valeur / total) * 100 : 0;
     return (
         <div className="space-y-2">

@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Smartphone, ChefHat, Receipt, LayoutDashboard, LogOut, Key, ArrowRight } from 'lucide-react';
+import { 
+  Smartphone, ChefHat, Receipt, LayoutDashboard, 
+  LogOut, Key, ArrowRight, UserPlus, ShieldCheck, 
+  Gamepad2, Zap, Star
+} from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { db } from '../../lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -18,62 +22,59 @@ const SelectionMode = () => {
   const modes = [
     {
       id: 'serveur',
-      titre: 'Interface Serveur',
-      description: 'Prendre des commandes aux tables.',
-      emoji: '🛎️',
+      titre: 'INTERFACE SERVICE',
+      description: 'Prise de commande, gestion des tables et service client.',
+      icon: <Smartphone size={32} />,
       role: 'serveur',
       route: '/serveur',
-      couleur: 'from-primary/30 to-indigo-600/30',
-      badge: 'Tablette / Mobile',
+      couleur: 'indigo',
+      badge: 'FLUX SALLE',
     },
     {
       id: 'cuisine',
-      titre: 'Écran Cuisine',
-      description: 'Voir les bons de commande.',
-      emoji: '👨‍🍳',
+      titre: 'MONITEUR PRODUCTION',
+      description: 'Gestion des bons de commande, cuisine et bar.',
+      icon: <ChefHat size={32} />,
       role: 'cuisine',
       route: '/cuisine',
-      couleur: 'from-orange-500/30 to-red-600/30',
-      badge: 'Cuisine / Bar',
+      couleur: 'orange',
+      badge: 'FLUX CUISINE',
     },
     {
       id: 'caisse',
-      titre: 'Interface Caissier',
-      description: 'Encaisser les clients et clôturer.',
-      emoji: '💰',
+      titre: 'POSTE ENCAISSEMENT',
+      description: 'Gestion des paiements, clôture et ventes directes.',
+      icon: <Receipt size={32} />,
       role: 'caissier',
       route: '/caisse',
-      couleur: 'from-green-500/30 to-emerald-600/30',
-      badge: 'Poste Fixe',
+      couleur: 'emerald',
+      badge: 'FLUX FINANCE',
     },
     {
       id: 'admin',
-      titre: 'Tableau de Bord Patron',
-      description: 'Gestion complète de l\'établissement.',
-      emoji: '👑',
+      titre: 'CENTRE DE GESTION',
+      description: 'Analyses financières, stocks, RH et configuration.',
+      icon: <LayoutDashboard size={32} />,
       role: 'admin',
       route: '/tableau-de-bord',
-      couleur: 'from-yellow-500/30 to-amber-600/30',
-      badge: 'Propriétaire',
+      couleur: 'amber',
+      badge: 'FLUX MANAGER',
     },
   ];
 
   const gererSelection = (mode: any) => {
-    // Tous les accès (y compris le patron) nécessitent un PIN
     setSelectedMode(mode);
     setShowPinModal(true);
     setPin('');
   };
 
-  const validerPIN = async () => {
-    if (pin.length < 4) return;
+  const validerPIN = async (currentPin: string) => {
     setLoading(true);
-
     try {
       const q = query(
         collection(db, 'employes'), 
         where('etablissement_id', '==', profil.etablissement_id),
-        where('pin', '==', pin)
+        where('pin', '==', currentPin)
       );
       
       const snap = await getDocs(q);
@@ -82,172 +83,202 @@ const SelectionMode = () => {
         const employe = snap.docs[0].data();
         const estAdmin = employe.role === 'admin';
 
-        // L'admin peut accéder à tout. Les autres ont accès uniquement à leur poste.
         if (estAdmin || employe.role === selectedMode.role) {
-          toast.success(`Bienvenue, ${employe.nom} !`, { icon: '👋' });
+          toast.success(`Session ouverte : ${employe.nom}`, { position: 'top-center' });
           setShowPinModal(false);
-          // Si c'est un admin qui accède au Tableau de Bord Patron
           if (estAdmin && selectedMode.id === 'admin') {
             navigate('/tableau-de-bord');
           } else {
             navigate(selectedMode.route);
           }
         } else {
-          toast.error(`Accès refusé. Votre poste est "${employe.role}", pas "${selectedMode.role}".`);
+          toast.error(`Accès restreint aux ${selectedMode.role}s !`);
           setPin('');
         }
       } else {
-        toast.error('Code PIN incorrect. Réessayez.');
+        toast.error('Code PIN non reconnu');
         setPin('');
       }
     } catch (error) {
-      toast.error('Erreur de vérification.');
+      toast.error('Erreur réseau');
       setPin('');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleKeyPress = (num: string) => {
+    if (pin.length < 4 && !loading) {
+      const newPin = pin + num;
+      setPin(newPin);
+      if (newPin.length === 4) {
+        validerPIN(newPin);
+      }
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-8 relative overflow-hidden">
+    <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-6 md:p-12 relative overflow-hidden">
       
-      {/* Background Glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-500/10 blur-[150px] rounded-full -z-10" />
+      {/* Decorative Orbs */}
+      <div className="absolute top-1/4 -left-20 w-96 h-96 bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-emerald-600/10 blur-[120px] rounded-full pointer-events-none" />
 
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -40 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-14"
+        className="text-center mb-16 relative z-10"
       >
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 mb-5 text-3xl">
-          🍷
+        <div className="flex items-center justify-center gap-4 mb-8">
+            <div className="w-1 px-4 py-8 bg-gradient-to-b from-transparent via-indigo-500 to-transparent opacity-50" />
+            <div className="p-5 rounded-3xl bg-white/[0.03] border border-white/10 shadow-2xl backdrop-blur-xl">
+                 <Zap className="text-white" size={32} />
+            </div>
+            <div className="w-1 px-4 py-8 bg-gradient-to-b from-transparent via-indigo-500 to-transparent opacity-50" />
         </div>
-        <h1 className="text-4xl font-display font-bold mb-3 text-white">
-          {profil?.nom || 'GESTCAVE PRO'}
+        
+        <h1 className="text-5xl md:text-6xl font-display font-black mb-4 tracking-tighter text-white">
+          HELLO, <span className="text-indigo-500">{profil?.nom?.toUpperCase() || 'EQUIPE'}</span>
         </h1>
-        <p className="text-slate-400">Accès sécurisé pour le personnel</p>
+        <p className="text-slate-500 font-bold uppercase tracking-[0.5em] text-[10px] md:text-xs">
+          Sélectionnez votre terminal d'accès sécurisé
+        </p>
       </motion.div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl w-full">
-        {modes.map((mode, i) => (
-          <motion.button
-            key={mode.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            whileHover={{ y: -8, scale: 1.02 }}
-            onClick={() => gererSelection(mode)}
-            className={`
-              relative p-8 rounded-[2.5rem] border-2 bg-gradient-to-br transition-all duration-300
-              ${mode.couleur} border-white/5 hover:border-white/20 text-left group
-            `}
-          >
-            <div className="text-5xl mb-6 group-hover:scale-110 transition-transform">{mode.emoji}</div>
-            <div className="mb-4">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-white/5 px-2 py-1 rounded">
-                {mode.badge}
-              </span>
-            </div>
-            <h2 className="text-xl font-bold mb-2 text-white">{mode.titre}</h2>
-            <p className="text-sm text-slate-400 leading-relaxed mb-6">{mode.description}</p>
-            <div className="flex items-center gap-2 text-indigo-400 font-bold text-sm">
-              Continuer <ArrowRight size={16} />
-            </div>
-          </motion.button>
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl w-full relative z-10">
+        <AnimatePresence>
+          {modes.map((mode, i) => (
+            <motion.button
+              key={mode.id}
+              initial={{ opacity: 0, y: 30, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: i * 0.1, type: 'spring', stiffness: 100 }}
+              whileHover={{ y: -10, scale: 1.02 }}
+              onClick={() => gererSelection(mode)}
+              className="group relative h-[420px] rounded-[3.5rem] p-10 bg-white/[0.02] border border-white/5 hover:border-white/20 transition-all duration-500 flex flex-col items-start text-left overflow-hidden shadow-2xl"
+            >
+              <div className={`absolute inset-0 bg-gradient-to-br from-${mode.couleur}-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700`} />
+              
+              <div className="mb-10 p-6 rounded-[2rem] bg-white/[0.03] border border-white/5 text-white group-hover:scale-110 group-hover:bg-white/[0.08] transition-all duration-500 relative z-10">
+                {mode.icon}
+              </div>
+
+              <div className="relative z-10">
+                <span className={`inline-block px-3 py-1 rounded-full text-[9px] font-black tracking-widest bg-${mode.couleur}-500/10 text-${mode.couleur}-500 mb-4 border border-${mode.couleur}-500/20 uppercase`}>
+                  {mode.badge}
+                </span>
+                <h2 className="text-2xl font-display font-black mb-4 text-white leading-tight uppercase tracking-tight">
+                  {mode.titre.split(' ').map((word, idx) => (
+                    <span key={idx} className={idx === 1 ? `text-${mode.couleur}-500` : ''}>{word} </span>
+                  ))}
+                </h2>
+                <p className="text-slate-500 text-sm font-bold uppercase tracking-tight leading-relaxed mb-8 opacity-60 group-hover:opacity-100 transition-opacity">
+                  {mode.description}
+                </p>
+              </div>
+
+              <div className="mt-auto flex items-center gap-3 text-white/40 group-hover:text-white transition-all font-black text-[10px] tracking-widest relative z-10">
+                OUVRIR LA SESSION <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform" />
+              </div>
+            </motion.button>
+          ))}
+        </AnimatePresence>
       </div>
 
-      <button
+      <motion.button
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1 }}
         onClick={() => { deconnexion(); navigate('/connexion'); }}
-        className="mt-16 flex items-center gap-2 text-slate-500 hover:text-white transition-colors"
+        className="mt-20 px-8 py-4 rounded-full flex items-center gap-4 text-slate-500 hover:text-white transition-all bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 font-black text-[10px] tracking-widest"
       >
-        <LogOut size={18} /> Changer de compte
-      </button>
+        <LogOut size={16} /> CHANGER D'ÉTABLISSEMENT
+      </motion.button>
 
-      {/* Modal PIN — Clavier Numérique Tactile */}
+      {/* Modal PIN Premium */}
       <AnimatePresence>
         {showPinModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-950/90 backdrop-blur-md">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-2xl">
             <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              initial={{ opacity: 0, scale: 0.8, y: 40 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="w-full max-w-xs glass-panel p-8 text-center"
+              exit={{ opacity: 0, scale: 0.8, y: 40 }}
+              className="w-full max-w-sm bg-[#0a0f1d] border border-white/10 rounded-[3.5rem] p-10 text-center shadow-[0_0_100px_rgba(79,70,229,0.15)] relative overflow-hidden"
             >
-              <div className="mx-auto w-16 h-16 rounded-2xl bg-indigo-500/20 flex items-center justify-center mb-4 text-indigo-400">
-                <Key size={30} />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-1">{selectedMode?.emoji} {selectedMode?.titre}</h3>
-              <p className="text-slate-500 text-xs mb-6">Entrez votre code PIN à 4 chiffres</p>
+              <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-${selectedMode?.couleur}-500 to-transparent`} />
               
-              {/* Indicateurs de points */}
-              <div className="flex justify-center gap-4 mb-8">
+              <div className="mx-auto w-20 h-20 rounded-[2rem] bg-white/[0.03] border border-white/5 flex items-center justify-center mb-8 text-white relative">
+                 <div className="absolute inset-0 bg-white/5 animate-ping rounded-[2rem] opacity-20" />
+                 {selectedMode?.icon || <Key size={32} />}
+              </div>
+
+              <h3 className="text-2xl font-display font-black text-white mb-2 uppercase tracking-tight">{selectedMode?.titre}</h3>
+              <p className="text-slate-500 font-bold uppercase tracking-widest text-[9px] mb-10">Accès équipe : Entrez votre PIN personnalisé</p>
+              
+              {/* Dot Indicators */}
+              <div className="flex justify-center gap-5 mb-12">
                 {[0, 1, 2, 3].map(i => (
-                  <div key={i} className={`w-5 h-5 rounded-full border-2 transition-all duration-200 ${
-                    pin.length > i 
-                      ? 'bg-indigo-500 border-indigo-400 scale-110' 
-                      : 'border-white/20 bg-transparent'
-                  }`} />
+                  <motion.div 
+                    key={i}
+                    animate={pin.length > i ? { scale: [1, 1.4, 1], rotate: [0, 90, 0] } : {}}
+                    className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${
+                      pin.length > i 
+                        ? `bg-${selectedMode?.couleur}-500 border-${selectedMode?.couleur}-400 shadow-[0_0_15px_rgba(79,70,229,0.5)]` 
+                        : 'border-white/10 bg-white/5'
+                    }`} 
+                  />
                 ))}
               </div>
               
-              {/* Clavier numérique */}
-              <div className="grid grid-cols-3 gap-3 mb-4">
+              {/* Luxury Keypad */}
+              <div className="grid grid-cols-3 gap-4">
                 {[1,2,3,4,5,6,7,8,9].map(n => (
                   <button
                     key={n}
-                    onClick={() => {
-                      if (pin.length < 4) {
-                        const newPin = pin + n.toString();
-                        setPin(newPin);
-                        if (newPin.length === 4) {
-                          setTimeout(() => validerPIN(), 300);
-                        }
-                      }
-                    }}
-                    className="h-16 rounded-2xl bg-white/5 hover:bg-white/15 active:scale-95 border border-white/10 text-white text-2xl font-bold transition-all"
+                    onClick={() => handleKeyPress(n.toString())}
+                    className="h-20 rounded-[1.8rem] bg-white/[0.03] hover:bg-white/[0.08] active:scale-90 border border-white/5 text-white text-3xl font-display font-black transition-all flex items-center justify-center flex-col"
                   >
                     {n}
+                    <span className="text-[7px] text-white/20 font-bold mt-1">
+                      {n === 1 ? 'ABC' : n === 2 ? 'DEF' : n === 3 ? 'GHI' : ''}
+                    </span>
                   </button>
                 ))}
                 <button
                   onClick={() => setPin(p => p.slice(0, -1))}
-                  className="h-16 rounded-2xl bg-white/5 hover:bg-red-500/20 active:scale-95 border border-white/10 text-red-400 text-sm font-bold transition-all flex items-center justify-center"
+                  className="h-20 rounded-[1.8rem] bg-rose-500/5 hover:bg-rose-500/10 active:scale-95 border border-rose-500/10 text-rose-500 flex items-center justify-center transition-all"
                 >
-                  ⌫
+                  <X size={28} />
                 </button>
                 <button
-                  onClick={() => {
-                    if (pin.length < 4) {
-                      const newPin = pin + '0';
-                      setPin(newPin);
-                      if (newPin.length === 4) {
-                        setTimeout(() => validerPIN(), 300);
-                      }
-                    }
-                  }}
-                  className="h-16 rounded-2xl bg-white/5 hover:bg-white/15 active:scale-95 border border-white/10 text-white text-2xl font-bold transition-all"
+                  onClick={() => handleKeyPress('0')}
+                  className="h-20 rounded-[1.8rem] bg-white/[0.03] hover:bg-white/[0.08] active:scale-90 border border-white/5 text-white text-3xl font-display font-black transition-all"
                 >
                   0
                 </button>
                 <button
                   onClick={() => setShowPinModal(false)}
-                  className="h-16 rounded-2xl bg-red-500/10 hover:bg-red-500/20 active:scale-95 border border-red-500/20 text-red-400 text-sm font-bold transition-all"
+                  className="h-20 rounded-[1.8rem] bg-white/[0.01] hover:bg-white/[0.05] active:scale-95 border border-white/5 text-slate-500 font-black text-[10px] tracking-widest uppercase transition-all"
                 >
-                  Annuler
+                  EXIT
                 </button>
               </div>
 
               {loading && (
-                <div className="flex items-center justify-center gap-2 text-indigo-400 text-sm">
-                  <div className="w-4 h-4 border-2 border-indigo-400/30 border-t-indigo-400 rounded-full animate-spin" />
-                  Vérification...
+                <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center flex-col gap-4 z-50">
+                   <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
+                   <p className="text-indigo-400 font-bold uppercase tracking-[0.3em] text-[10px]">AUTH EN COURS</p>
                 </div>
               )}
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100;400;700;900&display=swap');
+        .font-display { font-family: 'Outfit', sans-serif; }
+      `}</style>
     </div>
   );
 };

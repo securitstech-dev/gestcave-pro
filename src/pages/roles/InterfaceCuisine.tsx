@@ -1,24 +1,26 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Clock, Bell, ChefHat, CheckCircle2, Wine } from 'lucide-react';
+import { 
+  Check, Clock, Bell, ChefHat, CheckCircle2, 
+  Wine, LogOut, Zap, UtensilsCrossed, 
+  Search, AlertCircle, Timer, ChevronRight
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePOSStore } from '../../store/posStore';
 import { usePosteSession } from '../../hooks/usePosteSession';
 import { useNavigate } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
 import type { Commande } from '../../store/posStore';
 
-// ============================================================
-// INTERFACE CUISINE — Optimisée grand écran ou tablette murale
-// ============================================================
 const InterfaceCuisine = () => {
   const { commandes, marquerLignePrete, marquerCommandeServie } = usePOSStore();
   const { nomEmploye } = usePosteSession();
   const navigate = useNavigate();
   const [derniereNotif, setDerniereNotif] = useState<number>(0);
   const [filtreActif, setFiltreActif] = useState<'tous' | 'cuisine' | 'bar'>('tous');
+  
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Commandes actives (envoyées ou en préparation)
+  // Commandes actives
   const commandesActives = commandes.filter(c => 
     c.statut === 'envoyee' || c.statut === 'en_preparation'
   ).sort((a, b) => new Date(a.dateOuverture).getTime() - new Date(b.dateOuverture).getTime());
@@ -26,14 +28,30 @@ const InterfaceCuisine = () => {
   const minutesEcoulees = (iso: string) => 
     Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
 
-  const urgence = (mins: number) => mins >= 20 ? 'critique' : mins >= 10 ? 'attention' : 'normal';
+  const urgence = (mins: number) => mins >= 20 ? 'critique' : mins >= 12 ? 'attention' : 'normal';
 
-  // Notification sonore simulée lors d'une nouvelle commande
+  // Alerte lors d'une nouvelle commande
   useEffect(() => {
     if (commandesActives.length > derniereNotif && derniereNotif !== 0) {
-      toast('🔔 Nouvelle commande arrivée !', { 
-        style: { background: '#7c3aed', color: 'white', fontWeight: 'bold' }
-      });
+      toast.custom((t) => (
+        <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-indigo-600 shadow-2xl rounded-2xl pointer-events-auto flex ring-1 ring-black ring-opacity-5 p-6`}>
+           <div className="flex-1 w-0">
+             <div className="flex items-start">
+               <div className="flex-shrink-0 pt-0.5">
+                 <Bell className="h-10 w-10 text-white animate-bounce" />
+               </div>
+               <div className="ml-5 flex-1">
+                 <p className="text-sm font-black text-white uppercase tracking-widest">Nouveau Bon Arrivé !</p>
+                 <p className="mt-1 text-sm text-indigo-100">Une nouvelle commande vient d'être envoyée par un serveur.</p>
+               </div>
+             </div>
+           </div>
+        </div>
+      ), { duration: 5000 });
+      
+      // Simuler son de cloche (flash visuel pour l'instant)
+      document.body.classList.add('bg-indigo-900');
+      setTimeout(() => document.body.classList.remove('bg-indigo-900'), 300);
     }
     setDerniereNotif(commandesActives.length);
   }, [commandesActives.length]);
@@ -42,54 +60,54 @@ const InterfaceCuisine = () => {
     commande.lignes.filter(l => l.statut !== 'servi').every(l => l.statut === 'pret');
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6">
-      {/* En-tête cuisine */}
-      <header className="flex justify-between items-center mb-8">
-        <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-4">
-              <div className="bg-orange-500 p-3 rounded-2xl">
-                <ChefHat size={28} className="text-white" />
+    <div className="min-h-screen bg-slate-950 text-white p-6 md:p-8 lg:p-10 transition-colors duration-300">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
+          <div className="flex items-center gap-6">
+              <div className="w-16 h-16 rounded-3xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shadow-orange-500/5 shadow-2xl overflow-hidden relative group">
+                  <div className="absolute inset-0 bg-orange-500 opacity-20 animate-pulse" />
+                  <ChefHat size={32} className="text-orange-500 relative z-10" />
               </div>
               <div>
-                <h1 className="text-3xl font-display font-bold">Cuisine & Bar</h1>
-                <p className="text-slate-400">En service : <span className="text-white font-bold">{nomEmploye}</span></p>
+                  <h1 className="text-3xl font-display font-black tracking-tight uppercase">MONITEUR <span className="text-orange-500">PRODUCTION</span></h1>
+                  <p className="text-slate-500 font-bold text-xs uppercase tracking-[0.3em] flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Posté par {nomEmploye} · {commandesActives.length} BONS ACTIFS
+                  </p>
               </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="glass-card px-5 py-3 flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
-                <span className="font-medium">{commandesActives.length} bon(s) actif(s)</span>
-              </div>
-              <div className="text-slate-400 text-sm bg-slate-800 px-4 py-3 rounded-xl hidden md:block">
-                <Clock size={14} className="inline mr-1" />
-                {new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+          </div>
+
+          <div className="flex items-center gap-4 w-full md:w-auto">
+              <div className="bg-slate-900 border border-white/5 px-6 py-3 rounded-2xl flex items-center gap-4 shadow-inner">
+                  <div className="text-right">
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Temps Réel</p>
+                      <p className="text-xl font-display font-black tracking-tighter">
+                          {new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                  </div>
+                  <Clock className="text-slate-600" size={24} />
               </div>
               <button
                 onClick={() => navigate(-1)}
-                className="text-slate-500 hover:text-white p-3 rounded-xl hover:bg-white/5 transition-colors border border-white/5 ml-2"
-                title="Quitter la session"
+                className="p-4 rounded-2xl bg-white/5 hover:bg-white/10 text-slate-500 hover:text-white transition-all border border-white/5"
               >
-                <LogOut size={20} />
+                <LogOut size={24} />
               </button>
-            </div>
-        </div>
+          </div>
       </header>
 
-      {/* Tabs de filtrage */}
-      <div className="flex gap-4 mb-8">
+      {/* Navigation entre sections de production */}
+      <div className="flex flex-wrap gap-4 mb-10">
           {[
-            { id: 'tous', label: 'Tout voir', icon: <Bell size={16} /> },
-            { id: 'cuisine', label: 'Cuisine (Plats)', icon: <ChefHat size={16} /> },
-            { id: 'bar', label: 'Bar (Boissons)', icon: <Wine size={16} /> },
+            { id: 'tous', label: 'Toutes les Commandes', icon: <UtensilsCrossed size={18} />, color: 'indigo' },
+            { id: 'cuisine', label: 'Feux & Cuisine', icon: <Zap size={18} />, color: 'orange' },
+            { id: 'bar', label: 'Comptoir & Bar', icon: <Wine size={18} />, color: 'blue' },
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setFiltreActif(tab.id as any)}
-              className={`px-6 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all ${
+              className={`px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] flex items-center gap-3 transition-all border ${
                 filtreActif === tab.id 
-                  ? 'bg-primary text-white shadow-glow-sm' 
-                  : 'bg-slate-900 text-slate-500 hover:text-white border border-white/5'
+                  ? `bg-${tab.color === 'indigo' ? 'indigo' : tab.color === 'orange' ? 'orange' : 'blue'}-600 border-transparent text-white shadow-xl shadow-${tab.color === 'indigo' ? 'indigo' : tab.color === 'orange' ? 'orange' : 'blue'}-500/20 scale-105` 
+                  : 'bg-slate-900/50 text-slate-500 border-white/5 hover:border-white/10'
               }`}
             >
               {tab.icon}
@@ -98,119 +116,135 @@ const InterfaceCuisine = () => {
           ))}
       </div>
 
-
       {commandesActives.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-[60vh] text-slate-600">
-          <ChefHat size={80} className="mb-6 opacity-20" />
-          <p className="text-2xl font-bold">Tout est calme...</p>
-          <p className="text-slate-500 mt-2">En attente de nouvelles commandes</p>
+        <div className="flex flex-col items-center justify-center h-[50vh] text-center">
+          <motion.div 
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-32 h-32 rounded-full bg-slate-900/50 flex items-center justify-center mb-10 border border-white/5"
+          >
+              <ChefHat size={64} className="opacity-10" />
+          </motion.div>
+          <h2 className="text-3xl font-display font-black text-slate-400 mb-2">ZONE DE PRODUCTION CALME</h2>
+          <p className="text-slate-600 font-bold uppercase tracking-widest text-[11px]">En attente de transmission WiFi des serveurs...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          <AnimatePresence>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-start pb-20">
+          <AnimatePresence mode="popLayout">
             {commandesActives.map(commande => {
               const mins = minutesEcoulees(commande.dateOuverture);
               const niv = urgence(mins);
+              const estPret = toutPretDansCommande(commande);
+
               return (
                 <motion.div
                   key={commande.id}
-                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
                   layout
-                  className={`rounded-2xl overflow-hidden border-2 flex flex-col ${
-                    niv === 'critique' ? 'border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.3)]' :
-                    niv === 'attention' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]' :
-                    'border-slate-700 bg-slate-900'
-                  } bg-slate-900`}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className={`bg-slate-900 rounded-[2.5rem] border-2 flex flex-col overflow-hidden transition-all duration-500 ${
+                    niv === 'critique' ? 'border-rose-600 shadow-2xl shadow-rose-600/10' :
+                    niv === 'attention' ? 'border-amber-500 shadow-2xl shadow-amber-500/10' :
+                    'border-white/5'
+                  }`}
                 >
-                  {/* En-tête de la fiche */}
-                  <div className={`p-4 flex justify-between items-start border-b border-white/5 ${
-                    niv === 'critique' ? 'bg-red-500/20' :
-                    niv === 'attention' ? 'bg-yellow-500/10' : 'bg-slate-800/50'
+                  {/* Header du Bon */}
+                  <div className={`p-6 border-b border-white/5 flex justify-between items-start ${
+                    niv === 'critique' ? 'bg-rose-600/10' :
+                    niv === 'attention' ? 'bg-amber-500/10' : 'bg-slate-800/20'
                   }`}>
                     <div>
-                      <h3 className="font-display font-bold text-2xl">{commande.tableNom}</h3>
-                      <p className="text-xs text-slate-400 mt-1">
-                        Serveur : {commande.serveurNom} • {commande.nombreCouverts} couvert(s)
-                      </p>
+                        <div className="flex items-center gap-3 mb-1">
+                            <h3 className="text-3xl font-display font-black text-white">{commande.tableNom}</h3>
+                            {estPret && <CheckCircle2 className="text-emerald-500 animate-pulse" size={24} />}
+                        </div>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                            {commande.serveurNom} · {commande.nombreCouverts} pers.
+                        </p>
                     </div>
-                    <div className={`flex items-center gap-1.5 font-bold px-3 py-2 rounded-xl text-sm ${
-                      niv === 'critique' ? 'bg-red-500 text-white' :
-                      niv === 'attention' ? 'bg-yellow-500 text-black' : 'bg-slate-700 text-slate-200'
+                    <div className={`flex flex-col items-end gap-2 px-4 py-2 rounded-2xl ${
+                        niv === 'critique' ? 'bg-rose-600 text-white' :
+                        niv === 'attention' ? 'bg-amber-500 text-black' : 'bg-white/5 text-slate-300'
                     }`}>
-                      <Clock size={14} />
-                      {mins > 60 ? `${Math.floor(mins / 60)}h${mins % 60}` : `${mins} min`}
+                        <Timer size={16} />
+                        <span className="font-mono font-black text-lg">{mins}'</span>
                     </div>
                   </div>
 
-                  {/* Articles à préparer (filtrés) */}
-                  <div className="p-4 flex-1 space-y-3">
+                  {/* Liste des items */}
+                  <div className="p-6 space-y-4 flex-1">
                     {commande.lignes
                       .filter(l => {
-                        // On assume que le produit a une catégorie 'Boisson' ou 'Plat'/'Ingrédient'
-                        // Idéalement on utilise la catégorie du produit associé
                         if (filtreActif === 'tous') return true;
-                        if (filtreActif === 'bar') return l.produitNom.toLowerCase().includes('bière') || l.produitNom.toLowerCase().includes('jus') || l.produitNom.toLowerCase().includes('eau') || l.produitNom.toLowerCase().includes('vin');
-                        return !l.produitNom.toLowerCase().includes('bière') && !l.produitNom.toLowerCase().includes('jus') && !l.produitNom.toLowerCase().includes('eau');
+                        if (filtreActif === 'bar') return l.produitNom.toLowerCase().match(/bière|jus|vdp|vin|eau|soda|boisson|primus|mutzig|doppel|heineken|canette|castel/);
+                        return !l.produitNom.toLowerCase().match(/bière|jus|vdp|vin|eau|soda|boisson|primus|mutzig|doppel|heineken|canette|castel/);
                       })
                       .map(ligne => (
-                      <div
+                      <motion.div
                         key={ligne.id}
-                        className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
+                        layout
+                        className={`flex items-start gap-4 p-4 rounded-3xl transition-all border ${
                           ligne.statut === 'pret' || ligne.statut === 'servi' 
-                            ? 'opacity-40 bg-slate-800/30' 
-                            : 'bg-slate-800'
+                            ? 'bg-emerald-500/5 border-emerald-500/20 opacity-40' 
+                            : 'bg-white/5 border-white/5'
                         }`}
                       >
-
-                        <div className="shrink-0 bg-slate-700 w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg">
+                        <div className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center font-black text-2xl shadow-inner ${
+                            ligne.statut === 'pret' ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-indigo-400'
+                        }`}>
                           {ligne.quantite}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`font-bold text-base leading-tight ${
-                            ligne.statut === 'pret' || ligne.statut === 'servi' ? 'line-through' : ''
+                        <div className="flex-1 pt-1">
+                          <p className={`font-black text-sm uppercase leading-tight tracking-tight ${
+                            ligne.statut === 'pret' || ligne.statut === 'servi' ? 'line-through text-slate-600' : 'text-white'
                           }`}>
                             {ligne.produitNom}
                           </p>
                           {ligne.note && (
-                            <p className="text-xs text-yellow-400 mt-0.5">⚠ {ligne.note}</p>
+                            <div className="mt-2 flex items-center gap-2 text-[10px] font-bold text-amber-400 bg-amber-400/10 px-2 py-1 rounded w-fit uppercase">
+                                <AlertCircle size={10} /> {ligne.note}
+                            </div>
                           )}
                         </div>
                         <button
                           onClick={() => {
                             if (ligne.statut === 'en_preparation') {
                               marquerLignePrete(commande.id, ligne.id);
-                              toast.success(`${ligne.produitNom} : Prêt !`, { icon: '✅' });
+                              toast.success(`${ligne.produitNom} : Validé !`, { position: 'top-center' });
                             }
                           }}
                           disabled={ligne.statut !== 'en_preparation'}
-                          className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                          className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
                             ligne.statut === 'pret' || ligne.statut === 'servi'
-                              ? 'bg-green-500/20 text-green-400 cursor-default'
-                              : 'bg-orange-500 hover:bg-orange-400 text-white cursor-pointer active:scale-90'
+                              ? 'bg-transparent text-emerald-500'
+                              : 'bg-indigo-600 hover:bg-orange-500 text-white shadow-lg active:scale-90 border-transparent'
                           }`}
                         >
                           {ligne.statut === 'pret' || ligne.statut === 'servi' 
-                            ? <CheckCircle2 size={20} />
-                            : <Check size={20} />
+                            ? <CheckCircle2 size={28} />
+                            : <Check size={24} />
                           }
                         </button>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
 
-                  {/* Bouton "Tout est prêt" */}
-                  <div className="p-4 pt-0">
+                  {/* Action Service */}
+                  <div className="p-6 pt-0 mt-auto">
                     <button
                       onClick={() => {
                         marquerCommandeServie(commande.id);
-                        toast.success(`${commande.tableNom} : Service terminé !`, { icon: '🎉' });
+                        toast.success(`${commande.tableNom} en route !`, { icon: '🏃' });
                       }}
-                      disabled={!toutPretDansCommande(commande)}
-                      className="w-full py-4 rounded-xl font-bold text-base transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-green-600 hover:bg-green-500 text-white flex items-center justify-center gap-2"
+                      disabled={!estPret}
+                      className={`w-full py-5 rounded-3xl font-black text-xs uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-4 border shadow-xl ${
+                          estPret 
+                          ? 'bg-emerald-600 border-emerald-500 text-white hover:bg-emerald-500' 
+                          : 'bg-slate-800 border-white/5 text-slate-500 cursor-not-allowed opacity-30'
+                      }`}
                     >
-                      <Bell size={20} /> Tout est prêt — Service !
+                      <Bell size={20} /> ALERTE SERVEUR
                     </button>
                   </div>
                 </motion.div>

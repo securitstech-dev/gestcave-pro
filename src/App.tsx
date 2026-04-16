@@ -10,7 +10,9 @@ import InterfaceServeur from './pages/roles/InterfaceServeur';
 import InterfaceCuisine from './pages/roles/InterfaceCuisine';
 import InterfaceCaissier from './pages/roles/InterfaceCaissier';
 import PageInscription from './pages/PageInscription';
+import PageActivation from './pages/PageActivation';
 import PagePoste from './pages/PagePoste';
+import RoleGuard from './components/auth/RoleGuard';
 
 function App() {
   return (
@@ -20,19 +22,20 @@ function App() {
           {/* Routes publiques */}
           <Route path="/" element={<PageAccueil />} />
           <Route path="/connexion" element={<PageConnexion />} />
+          <Route path="/activation" element={<PageActivation />} />
           
           {/* Sélection de rôle après connexion */}
           <Route path="/choisir-role" element={<SelectionMode />} />
 
           {/* Interfaces spécialisées par rôle */}
-          <Route path="/serveur" element={<InterfaceServeur />} />
-          <Route path="/cuisine" element={<InterfaceCuisine />} />
-          <Route path="/caisse" element={<InterfaceCaissier />} />
+          <Route path="/serveur" element={<RoleGuard allowedRoles={['client_admin', 'employe']}><InterfaceServeur /></RoleGuard>} />
+          <Route path="/cuisine" element={<RoleGuard allowedRoles={['client_admin', 'employe']}><InterfaceCuisine /></RoleGuard>} />
+          <Route path="/caisse" element={<RoleGuard allowedRoles={['client_admin', 'employe']}><InterfaceCaissier /></RoleGuard>} />
 
           {/* Routes Admin */}
-          <Route path="/super-admin/*" element={<TableauSuperAdmin />} />
-          <Route path="/tableau-de-bord/*" element={<TableauClient />} />
-          <Route path="/abonnement" element={<PageAbonnement />} />
+          <Route path="/super-admin/*" element={<RoleGuard allowedRoles={['super_admin']}><TableauSuperAdmin /></RoleGuard>} />
+          <Route path="/tableau-de-bord/*" element={<RoleGuard allowedRoles={['client_admin']}><TableauClient /></RoleGuard>} />
+          <Route path="/abonnement" element={<RoleGuard allowedRoles={['client_admin']}><PageAbonnement /></RoleGuard>} />
           <Route path="/inscription" element={<PageInscription />} />
           {/* Route poste : accès direct des appareils du personnel via lien unique */}
           <Route path="/poste/:etablissementId" element={<PagePoste />} />
