@@ -110,12 +110,6 @@ const PageAbonnement = () => {
     toast.success('Numéro copié !');
   };
 
-
-  const copierNumero = (texte: string) => {
-    navigator.clipboard.writeText(texte);
-    toast.success('Numéro copié !', { icon: '📋' });
-  };
-
   return (
     <div className="min-h-screen bg-[#020617] text-white py-12 md:py-20 px-6 overflow-hidden relative">
       {/* Background elements */}
