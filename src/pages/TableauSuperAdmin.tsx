@@ -31,6 +31,8 @@ const TableauSuperAdmin = () => {
   const [modalApprobation, setModalApprobation] = useState<{ demandeId: string; demande: any } | null>(null);
   const [planApprobation, setPlanApprobation] = useState<'demo' | 'mensuel' | 'premium' | 'business'>('demo');
 
+  const [modalEtabDetails, setModalEtabDetails] = useState<any | null>(null);
+
   const [modalPaiement, setModalPaiement] = useState<any | null>(null);
   const [planPaiement, setPlanPaiement] = useState<'mensuel' | 'premium' | 'business'>('mensuel');
   
@@ -396,11 +398,11 @@ const TableauSuperAdmin = () => {
                           {expire && <div className="text-[10px] text-rose-500 flex items-center gap-1 font-bold"><AlertTriangle size={10} /> Expiré</div>}
                         </td>
                         <td className="px-6 py-5 text-right flex justify-end gap-2">
-                          <a href={`/poste/${etab.id}`} target="_blank" rel="noreferrer" className="p-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-900 transition-colors border border-slate-200">
-                            <ExternalLink size={14} />
-                          </a>
+                          <button onClick={() => setModalEtabDetails(etab)} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-900 transition-colors border border-slate-200" title="Informations Clients">
+                            <Info size={14} />
+                          </button>
                           {etab.subscription_status !== 'suspendu' && (
-                            <button onClick={() => suspendreEtablissement(etab)} className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-lg border border-rose-200 transition-colors">
+                            <button onClick={() => suspendreEtablissement(etab)} className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-lg border border-rose-200 transition-colors" title="Suspendre">
                               <Ban size={14} />
                             </button>
                           )}
@@ -521,6 +523,58 @@ const TableauSuperAdmin = () => {
 
         </AnimatePresence>
       </main>
+
+      {/* ── MODAL DETAILS ETABLISSEMENT ── */}
+      <AnimatePresence>
+        {modalEtabDetails && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="w-full max-w-md bg-white rounded-3xl p-8 shadow-2xl">
+              <div className="flex justify-between items-start mb-6 border-b border-slate-100 pb-4">
+                <div><h3 className="text-xl font-bold text-slate-900">Fiche Client</h3><p className="text-slate-400 text-sm mt-1">{modalEtabDetails.nom}</p></div>
+                <button onClick={() => setModalEtabDetails(null)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-400"><XCircle size={20} /></button>
+              </div>
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">ID Établissement</label>
+                  <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl p-3">
+                     <span className="text-xs font-mono font-bold text-slate-700 truncate">{modalEtabDetails.id}</span>
+                     <button onClick={() => { navigator.clipboard.writeText(modalEtabDetails.id); toast.success('ID copié !'); }} className="text-slate-400 hover:text-slate-600"><Copy size={14} /></button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                   <div>
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Contact</label>
+                     <p className="text-sm font-bold text-slate-900">{modalEtabDetails.contact_principal || 'N/A'}</p>
+                   </div>
+                   <div>
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Téléphone</label>
+                     <p className="text-sm font-bold text-slate-900">{modalEtabDetails.telephone || 'N/A'}</p>
+                   </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Email</label>
+                  <p className="text-sm font-bold text-slate-900">{modalEtabDetails.email_contact || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Adresse</label>
+                  <p className="text-sm font-bold text-slate-900">{modalEtabDetails.adresse || 'N/A'}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                   <div>
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Plan</label>
+                     <p className="text-sm font-bold text-slate-900 capitalize">{modalEtabDetails.subscription_plan?.replace('_', ' ') || 'N/A'}</p>
+                   </div>
+                   <div>
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Expiration</label>
+                     <p className="text-sm font-bold text-slate-900">{modalEtabDetails.subscription_end_date ? new Date(modalEtabDetails.subscription_end_date).toLocaleDateString('fr-FR') : 'N/A'}</p>
+                   </div>
+                </div>
+              </div>
+              <button onClick={() => setModalEtabDetails(null)} className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold transition-all">Fermer</button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* ── MODAL REFUS ── */}
       <AnimatePresence>
