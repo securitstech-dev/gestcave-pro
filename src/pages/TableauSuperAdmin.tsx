@@ -25,406 +25,247 @@ const TableauSuperAdmin = () => {
   const navigate = useNavigate();
   const { deconnexion } = useAuthStore();
 
-  // Modals
   const [modalRefus, setModalRefus] = useState<{ id: string; nom: string } | null>(null);
   const [motifRefus, setMotifRefus] = useState('');
   const [modalPaiement, setModalPaiement] = useState<any | null>(null);
   const [lienActivation, setLienActivation] = useState<{ url: string; nom: string } | null>(null);
 
-  // ✅ FIX 1 : onSnapshot — temps réel sur toutes les collections
   useEffect(() => {
     setChargement(true);
-
     const unsubDemandes = onSnapshot(
       query(collection(db, 'demandes_acces'), orderBy('date_demande', 'desc')),
-      (snap) => {
-        setDemandes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        setChargement(false);
-      },
-      (err) => { console.error('demandes_acces error:', err); setChargement(false); }
+      (snap) => { setDemandes(snap.docs.map(d => ({ id: d.id, ...d.data() }))); setChargement(false); },
+      (err) => { console.error(err); setChargement(false); }
     );
-
-    const unsubEtabs = onSnapshot(
-      collection(db, 'etablissements'),
-      (snap) => setEtablissements(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-    );
-
-    const unsubPaiements = onSnapshot(
-      query(collection(db, 'paiements'), orderBy('date', 'desc')),
-      (snap) => setPaiements(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-    );
-
+    const unsubEtabs = onSnapshot(collection(db, 'etablissements'), (snap) => setEtablissements(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const unsubPaiements = onSnapshot(query(collection(db, 'paiements'), orderBy('date', 'desc')), (snap) => setPaiements(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     return () => { unsubDemandes(); unsubEtabs(); unsubPaiements(); };
   }, []);
 
-  // ✅ FIX 2 : MRR réel depuis les paiements validés ce mois
   const maintenant = new Date();
   const mrrReel = paiements
-    .filter(p => {
-      if (p.statut !== 'valide') return false;
-      const d = new Date(p.date_validation || p.date || '');
-      return d.getMonth() === maintenant.getMonth() && d.getFullYear() === maintenant.getFullYear();
-    })
+    .filter(p => { if (p.statut !== 'valide') return false; const d = new Date(p.date_validation || p.date || ''); return d.getMonth() === maintenant.getMonth() && d.getFullYear() === maintenant.getFullYear(); })
     .reduce((acc, p) => acc + (p.montant || 0), 0);
 
-  // ✅ FIX 3 : Noms d'établissements dans la vue Paiements (lookup)
-  const nomEtab = (etabId: string) => {
-    const etab = etablissements.find(e => e.id === etabId);
-    return etab?.nom || etab?.contact_principal || `...${etabId?.slice(-6)}`;
-  };
+  const nomEtab = (etabId: string) => { const etab = etablissements.find(e => e.id === etabId); return etab?.nom || etab?.contact_principal || `...${etabId?.slice(-6)}`; };
 
-  // Approuver une demande
   const approuverDemande = async (demandeId: string, demande: any) => {
     const toastId = toast.loading('Approbation en cours...');
     try {
       const etabRef = await addDoc(collection(db, 'etablissements'), {
-        nom: demande.nom_etablissement,
-        adresse: demande.adresse_etablissement || 'N/A',
-        telephone: demande.telephone_contact || 'N/A',
-        contact_principal: demande.nom_contact,
-        email_contact: demande.email_contact,
-        subscription_plan: 'essai_gratuit',
-        subscription_status: 'essai',
-        subscription_start_date: new Date().toISOString(),
+        nom: demande.nom_etablissement, adresse: demande.adresse_etablissement || 'N/A',
+        telephone: demande.telephone_contact || 'N/A', contact_principal: demande.nom_contact,
+        email_contact: demande.email_contact, subscription_plan: 'essai_gratuit',
+        subscription_status: 'essai', subscription_start_date: new Date().toISOString(),
         subscription_end_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
       });
-
-      await updateDoc(doc(db, 'demandes_acces', demandeId), {
-        statut: 'essai_actif',
-        etablissement_id: etabRef.id,
-      });
-
-      // 🆕 GÉNÉRATION DU LIEN D'ACTIVATION AUTOMATIQUE
+      await updateDoc(doc(db, 'demandes_acces', demandeId), { statut: 'essai_actif', etablissement_id: etabRef.id });
       const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      await addDoc(collection(db, 'invitations'), {
-        token: invitationToken,
-        email: demande.email_contact,
-        nom: demande.nom_contact,
-        etablissement_id: etabRef.id,
-        role: 'client_admin',
-        date_creation: new Date().toISOString(),
-        expire: Date.now() + (72 * 60 * 60 * 1000) // Valide 72 heures
-      });
-
+      await addDoc(collection(db, 'invitations'), { token: invitationToken, email: demande.email_contact, nom: demande.nom_contact, etablissement_id: etabRef.id, role: 'client_admin', date_creation: new Date().toISOString(), expire: Date.now() + (72 * 60 * 60 * 1000) });
       const urlComplete = `${window.location.origin}/activation?token=${invitationToken}`;
-      console.log("SUCCÈS : Lien d'activation généré ->", urlComplete);
-      
       setLienActivation({ url: urlComplete, nom: demande.nom_etablissement });
-
-      toast.dismiss(toastId);
-      toast.success(`✅ Essai activé pour ${demande.nom_etablissement} !`, { duration: 5000 });
-      
-    } catch (err: any) {
-      console.error("ERREUR CRITIQUE APPROBATION :", err);
-      toast.dismiss(toastId);
-      toast.error(`Erreur d'approbation : ${err.message}`);
-    }
+      toast.dismiss(toastId); toast.success(`Essai activé pour ${demande.nom_etablissement} !`);
+    } catch (err: any) { toast.dismiss(toastId); toast.error(`Erreur : ${err.message}`); }
   };
 
-  // ✅ FIX 4 : Refus fonctionnel avec motif
   const refuserDemande = async () => {
     if (!modalRefus) return;
     const toastId = toast.loading('Refus en cours...');
     try {
-      await updateDoc(doc(db, 'demandes_acces', modalRefus.id), {
-        statut: 'refuse',
-        motif_refus: motifRefus || 'Demande non éligible.',
-        date_refus: new Date().toISOString(),
-      });
-      toast.dismiss(toastId);
-      toast.success(`Demande de ${modalRefus.nom} refusée.`);
-      setModalRefus(null);
-      setMotifRefus('');
-    } catch (err: any) {
-      toast.dismiss(toastId);
-      toast.error(`Erreur : ${err.message}`);
-    }
+      await updateDoc(doc(db, 'demandes_acces', modalRefus.id), { statut: 'refuse', motif_refus: motifRefus || 'Non éligible.', date_refus: new Date().toISOString() });
+      toast.dismiss(toastId); toast.success(`Demande de ${modalRefus.nom} refusée.`);
+      setModalRefus(null); setMotifRefus('');
+    } catch (err: any) { toast.dismiss(toastId); toast.error(`Erreur : ${err.message}`); }
   };
 
-  // Valider un paiement
   const validerPaiement = async (paiementId: string, etabId: string, montant: number) => {
-    const toastId = toast.loading('Validation du paiement...');
+    const toastId = toast.loading('Validation...');
     try {
-      await updateDoc(doc(db, 'paiements', paiementId), {
-        statut: 'valide',
-        date_validation: new Date().toISOString(),
-      });
+      await updateDoc(doc(db, 'paiements', paiementId), { statut: 'valide', date_validation: new Date().toISOString() });
       const jours = montant >= 150000 ? 365 : montant >= 40000 ? 90 : 30;
-      await updateDoc(doc(db, 'etablissements', etabId), {
-        subscription_status: 'actif',
-        subscription_end_date: new Date(Date.now() + jours * 24 * 60 * 60 * 1000).toISOString(),
-      });
-      toast.dismiss(toastId);
-      toast.success('💳 Abonnement activé avec succès !');
-      setModalPaiement(null);
-    } catch (err: any) {
-      toast.dismiss(toastId);
-      toast.error(`Erreur : ${err.message}`);
-    }
+      await updateDoc(doc(db, 'etablissements', etabId), { subscription_status: 'actif', subscription_end_date: new Date(Date.now() + jours * 24 * 60 * 60 * 1000).toISOString() });
+      toast.dismiss(toastId); toast.success('Abonnement activé !'); setModalPaiement(null);
+    } catch (err: any) { toast.dismiss(toastId); toast.error(`Erreur : ${err.message}`); }
   };
 
-  // ✅ FIX 5 : Rejeter un paiement
   const rejeterPaiement = async (paiementId: string) => {
-    const toastId = toast.loading('Rejet du paiement...');
+    const toastId = toast.loading('Rejet...');
     try {
-      await updateDoc(doc(db, 'paiements', paiementId), {
-        statut: 'rejete',
-        date_rejet: new Date().toISOString(),
-      });
-      toast.dismiss(toastId);
-      toast.success('Paiement rejeté. Le client devra renvoyer sa preuve.');
-      setModalPaiement(null);
-    } catch (err: any) {
-      toast.dismiss(toastId);
-      toast.error(`Erreur : ${err.message}`);
-    }
+      await updateDoc(doc(db, 'paiements', paiementId), { statut: 'rejete', date_rejet: new Date().toISOString() });
+      toast.dismiss(toastId); toast.success('Paiement rejeté.'); setModalPaiement(null);
+    } catch (err: any) { toast.dismiss(toastId); toast.error(`Erreur : ${err.message}`); }
   };
 
-  // ✅ PRIORITÉ 2 : Suspendre un établissement
   const suspendreEtablissement = async (etab: any) => {
-    const confirm = window.confirm(`Voulez-vous vraiment suspendre l'accès de ${etab.nom} ? Ils perdront l'accès à la plateforme immédiatement.`);
-    if (!confirm) return;
-
-    const toastId = toast.loading('Suspension en cours...');
+    if (!window.confirm(`Suspendre ${etab.nom} ?`)) return;
+    const toastId = toast.loading('Suspension...');
     try {
-      await updateDoc(doc(db, 'etablissements', etab.id), {
-        subscription_status: 'suspendu',
-        subscription_end_date: new Date().toISOString() // Expire immédiatement
-      });
-      toast.dismiss(toastId);
-      toast.success(`L'établissement ${etab.nom} a été suspendu.`);
-    } catch (err: any) {
-      toast.dismiss(toastId);
-      toast.error(`Erreur : ${err.message}`);
-    }
+      await updateDoc(doc(db, 'etablissements', etab.id), { subscription_status: 'suspendu', subscription_end_date: new Date().toISOString() });
+      toast.dismiss(toastId); toast.success(`${etab.nom} suspendu.`);
+    } catch (err: any) { toast.dismiss(toastId); toast.error(`Erreur : ${err.message}`); }
   };
 
   const viderBase = async () => {
-    const confirmation = window.confirm("🔴 ATTENTION CRITIQUE : Vous allez supprimer TOUTES LES DONNÉES de la plateforme (Demandes, Établissements, Commandes, Stocks, Users, etc.). Seul votre profil Super Admin sera conservé. VOULEZ-VOUS VRAIMENT TOUT RÉINITIALISER ?");
-    if (!confirmation) return;
-    
-    const collectionsAVider = [
-      'demandes_acces', 'etablissements', 'invitations', 'tables', 
-      'produits', 'commandes', 'transactions_pos', 'paiements', 
-      'employes', 'achats', 'utilisateurs'
-    ];
-
-    const toastId = toast.loading("Réinitialisation globale du Cloud...");
-
+    if (!window.confirm("ATTENTION : Supprimer TOUTES LES DONNÉES ? Seul le Super Admin sera conservé.")) return;
+    const collectionsAVider = ['demandes_acces', 'etablissements', 'invitations', 'tables', 'produits', 'commandes', 'transactions_pos', 'paiements', 'employes', 'achats', 'utilisateurs'];
+    const toastId = toast.loading("Réinitialisation...");
     try {
-      let totalSupprimes = 0;
+      let total = 0;
       for (const colName of collectionsAVider) {
         const snap = await getDocs(collection(db, colName));
-        for (const d of snap.docs) {
-          // PROTECTION : Ne surtout pas supprimer le Super Admin
-          if (colName === 'utilisateurs' && d.data().role === 'super_admin') continue;
-          await deleteDoc(d.ref);
-          totalSupprimes++;
-        }
+        for (const d of snap.docs) { if (colName === 'utilisateurs' && d.data().role === 'super_admin') continue; await deleteDoc(d.ref); total++; }
       }
-      toast.success(`Plateforme remise à zéro ! (${totalSupprimes} documents nettoyés)`, { id: toastId, icon: '🧹' });
-    } catch (error: any) {
-      toast.error(`Erreur de nettoyage : ${error.message}`, { id: toastId });
-    }
+      toast.success(`${total} documents supprimés.`, { id: toastId });
+    } catch (error: any) { toast.error(error.message, { id: toastId }); }
   };
 
   const gererDeconnexion = () => { deconnexion(); navigate('/connexion'); };
+  const demandesFiltrees = demandes.filter(d => d.nom_etablissement?.toLowerCase().includes(recherche.toLowerCase()) || d.nom_contact?.toLowerCase().includes(recherche.toLowerCase()));
+  const etabsFiltres = etablissements.filter(e => e.nom?.toLowerCase().includes(recherche.toLowerCase()));
 
-  const demandesFiltrees = demandes.filter(d =>
-    d.nom_etablissement?.toLowerCase().includes(recherche.toLowerCase()) ||
-    d.nom_contact?.toLowerCase().includes(recherche.toLowerCase())
-  );
-
-  const etabsFiltres = etablissements.filter(e =>
-    e.nom?.toLowerCase().includes(recherche.toLowerCase())
-  );
+  const navItems = [
+    { key: 'demandes', icon: <Users size={18} />, label: "Demandes d'accès", badge: demandes.filter(d => d.statut === 'en_attente').length },
+    { key: 'etablissements', icon: <Building2 size={18} />, label: "Établissements", badge: etablissements.length },
+    { key: 'paiements', icon: <CreditCard size={18} />, label: "Paiements", badge: paiements.filter(p => p.statut === 'en_attente').length },
+    { key: 'comptabilite', icon: <TrendingUp size={18} />, label: "Comptabilité" },
+    { key: 'maintenance', icon: <Database size={18} />, label: "Maintenance", danger: true },
+  ];
 
   return (
-    <div className="flex min-h-screen">
-      {/* Sidebar */}
-      <aside className="w-72 glass-panel m-6 rounded-[2rem] p-6 flex flex-col fixed h-[calc(100vh-3rem)] z-20">
-        <div className="flex items-center gap-3 mb-10 px-2">
-          <div className="bg-indigo-600 p-2.5 rounded-xl">
-            <Shield size={22} className="text-white" />
+    <div className="flex min-h-screen bg-slate-50">
+      {/* ── SIDEBAR ── */}
+      <aside className="w-72 bg-white border-r border-slate-200 flex flex-col fixed h-screen z-20 shadow-sm">
+        <div className="flex items-center gap-3 px-8 py-8 border-b border-slate-100">
+          <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg shadow-slate-900/20">
+            <Shield size={20} className="text-white" />
           </div>
           <div>
-            <h2 className="font-display font-bold text-lg">SUPER ADMIN</h2>
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Securits Tech</p>
+            <h2 className="font-bold text-slate-900 text-base tracking-tight">SUPER ADMIN</h2>
+            <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Securits Tech</p>
           </div>
         </div>
 
-        <nav className="space-y-1.5 flex-1">
-          <ElementNav
-            icon={<Users size={18} />}
-            label="Demandes d'accès"
-            actif={onglet === 'demandes'}
-            badge={demandes.filter(d => d.statut === 'en_attente').length}
-            onClick={() => setOnglet('demandes')}
-          />
-          <ElementNav
-            icon={<Building2 size={18} />}
-            label="Établissements"
-            actif={onglet === 'etablissements'}
-            badge={etablissements.length}
-            onClick={() => setOnglet('etablissements')}
-          />
-          <ElementNav
-            icon={<CreditCard size={18} />}
-            label="Paiements"
-            actif={onglet === 'paiements'}
-            badge={paiements.filter(p => p.statut === 'en_attente').length}
-            onClick={() => setOnglet('paiements')}
-          />
-          <ElementNav
-            icon={<TrendingUp size={18} />}
-            label="Comptabilité"
-            actif={onglet === 'comptabilite'}
-            onClick={() => setOnglet('comptabilite')}
-          />
-          <ElementNav
-            icon={<Database size={18} />}
-            label="Maintenance"
-            actif={onglet === 'maintenance'}
-            onClick={() => setOnglet('maintenance')}
-            danger
-          />
+        <nav className="flex-1 px-4 py-6 space-y-1">
+          {navItems.map((item) => (
+            <button key={item.key} onClick={() => setOnglet(item.key as Onglet)}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all text-left ${
+                onglet === item.key
+                  ? (item.danger ? 'bg-rose-600 text-white shadow-lg' : 'bg-slate-900 text-white shadow-lg shadow-slate-900/20')
+                  : (item.danger ? 'text-rose-500 hover:bg-rose-50' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900')
+              }`}
+            >
+              <div className="flex items-center gap-3">{item.icon}<span className="font-medium text-sm">{item.label}</span></div>
+              {item.badge != null && item.badge > 0 && onglet !== item.key && (
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${item.danger ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-600'}`}>{item.badge}</span>
+              )}
+            </button>
+          ))}
         </nav>
 
-        <div className="p-4 bg-white/5 rounded-2xl border border-white/10 mb-6">
-          <p className="text-[10px] text-slate-500 uppercase font-bold text-center mb-1">Support technique</p>
-          <p className="text-white text-xs font-bold text-center italic">+242 05 302 8383</p>
-        </div>
-
-        <button
-          onClick={gererDeconnexion}
-          className="flex items-center gap-3 text-slate-400 hover:text-red-400 transition-colors px-4 py-3 rounded-xl hover:bg-red-500/10"
-        >
-          <LogOut size={18} /> Déconnexion
-        </button>
-
-        <div className="mt-4 px-4 py-2 border-t border-white/5">
-          <p className="text-[9px] text-slate-600 font-bold uppercase tracking-widest text-center">Version 1.2.0 • Onboarding Automatique</p>
+        <div className="px-6 pb-4">
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-center mb-4">
+            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Support technique</p>
+            <p className="text-slate-900 text-sm font-bold mt-1">+242 05 302 8383</p>
+          </div>
+          <button onClick={gererDeconnexion} className="w-full flex items-center gap-3 text-slate-400 hover:text-rose-500 transition-colors px-4 py-3 rounded-xl hover:bg-rose-50">
+            <LogOut size={18} /> Déconnexion
+          </button>
+          <p className="text-[9px] text-slate-300 font-bold uppercase tracking-widest text-center mt-4">Version 1.2.0 · Onboarding Auto</p>
         </div>
       </aside>
 
-      {/* Contenu principal */}
-      <main className="flex-1 ml-[21rem] p-8 pt-10 overflow-auto h-screen">
+      {/* ── MAIN CONTENT ── */}
+      <main className="flex-1 ml-72 p-8 min-h-screen">
         <header className="flex justify-between items-center mb-10">
           <div>
-            <h1 className="text-3xl font-display font-bold">
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
               {onglet === 'demandes' && "Demandes d'accès"}
               {onglet === 'paiements' && 'Validation des Paiements'}
               {onglet === 'comptabilite' && 'Gestion Comptable'}
               {onglet === 'etablissements' && 'Portefeuille Clients'}
+              {onglet === 'maintenance' && 'Maintenance Système'}
             </h1>
-            <p className="text-slate-400 mt-1 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block" />
-              Synchronisation en temps réel
+            <p className="text-slate-400 font-medium mt-1 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block" /> Synchronisation en temps réel
             </p>
           </div>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-            <input
-              type="text"
-              placeholder="Rechercher..."
-              value={recherche}
-              onChange={(e) => setRecherche(e.target.value)}
-              className="glass-input pl-10 w-64 h-10"
-            />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <input type="text" placeholder="Rechercher..." value={recherche} onChange={(e) => setRecherche(e.target.value)}
+              className="h-11 pl-11 pr-4 bg-white border border-slate-200 rounded-xl outline-none focus:border-slate-900 transition-all w-64 text-slate-900 font-medium" />
           </div>
         </header>
 
-        {/* Cartes de stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-          <CarteStats
-            label="En attente"
-            valeur={demandes.filter(r => r.statut === 'en_attente').length}
-            icone={<Users className="text-yellow-500" size={20} />}
-            couleur="yellow"
-          />
-          <CarteStats
-            label="Établissements"
-            valeur={etablissements.length}
-            icone={<Building2 className="text-indigo-400" size={20} />}
-            couleur="indigo"
-          />
-          <CarteStats
-            label="Abonnés actifs"
-            valeur={etablissements.filter(e => e.subscription_status === 'actif').length}
-            icone={<CheckCircle className="text-emerald-400" size={20} />}
-            couleur="emerald"
-          />
-          {/* ✅ FIX 2 : MRR réel */}
-          <CarteStats
-            label="MRR réel (ce mois)"
-            valeur={`${mrrReel.toLocaleString()} F`}
-            icone={<TrendingUp className="text-purple-400" size={20} />}
-            couleur="purple"
-          />
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10">
+          {[
+            { label: 'En attente', val: demandes.filter(r => r.statut === 'en_attente').length, color: 'text-amber-600 bg-amber-50' },
+            { label: 'Établissements', val: etablissements.length, color: 'text-blue-600 bg-blue-50' },
+            { label: 'Abonnés actifs', val: etablissements.filter(e => e.subscription_status === 'actif').length, color: 'text-emerald-600 bg-emerald-50' },
+            { label: 'MRR (ce mois)', val: `${mrrReel.toLocaleString()} F`, color: 'text-slate-700 bg-slate-100' },
+          ].map(s => (
+            <div key={s.label} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{s.label}</p>
+              <p className={`text-2xl font-bold ${s.color.split(' ')[0]}`}>{s.val}</p>
+            </div>
+          ))}
         </div>
 
-        {/* Vues */}
         <AnimatePresence mode="wait">
 
           {/* ── DEMANDES ── */}
           {onglet === 'demandes' && (
-            <motion.div key="demandes" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="bento-item overflow-hidden">
-              <div className="p-6 border-b border-white/5 flex justify-between items-center">
-                <h3 className="text-xl font-bold">Demandes en attente</h3>
-                <span className="text-xs text-slate-500">{demandesFiltrees.filter(d => d.statut === 'en_attente').length} en attente · {demandesFiltrees.filter(d => d.statut === 'essai_actif').length} approuvées · {demandesFiltrees.filter(d => d.statut === 'refuse').length} refusées</span>
+            <motion.div key="demandes" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+              className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+              <div className="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                <h3 className="font-bold text-slate-900">Demandes en attente</h3>
+                <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
+                  {demandesFiltrees.filter(d => d.statut === 'en_attente').length} en attente · {demandesFiltrees.filter(d => d.statut === 'essai_actif').length} approuvées · {demandesFiltrees.filter(d => d.statut === 'refuse').length} refusées
+                </span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
-                  <thead className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider">
+                  <thead className="text-[10px] text-slate-400 font-black uppercase tracking-widest border-b border-slate-50">
                     <tr>
-                      <th className="px-6 py-4">Établissement</th>
-                      <th className="px-6 py-4">Contact</th>
-                      <th className="px-6 py-4">Téléphone</th>
-                      <th className="px-6 py-4">Statut</th>
-                      <th className="px-6 py-4 text-right">Actions</th>
+                      <th className="px-6 py-5">Établissement</th>
+                      <th className="px-6 py-5">Contact</th>
+                      <th className="px-6 py-5">Téléphone</th>
+                      <th className="px-6 py-5">Statut</th>
+                      <th className="px-6 py-5 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/5">
+                  <tbody className="divide-y divide-slate-50">
                     {chargement ? (
-                      <tr><td colSpan={5} className="p-10 text-center"><Loader2 className="animate-spin mx-auto text-slate-500" /></td></tr>
+                      <tr><td colSpan={5} className="p-10 text-center"><Loader2 className="animate-spin mx-auto text-slate-400" /></td></tr>
                     ) : demandesFiltrees.length === 0 ? (
-                      <tr><td colSpan={5} className="p-10 text-center text-slate-500 italic">Aucune demande.</td></tr>
+                      <tr><td colSpan={5} className="p-10 text-center text-slate-400 italic text-sm">Aucune demande.</td></tr>
                     ) : demandesFiltrees.map((dem) => (
-                      <tr key={dem.id} className="hover:bg-white/5 transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="font-medium text-white">{dem.nom_etablissement}</div>
-                          <div className="text-xs text-slate-500 truncate max-w-[180px]">{dem.adresse_etablissement}</div>
+                      <tr key={dem.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-5">
+                          <div className="font-bold text-slate-900">{dem.nom_etablissement}</div>
+                          <div className="text-[11px] text-slate-400 truncate max-w-[180px]">{dem.adresse_etablissement}</div>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-slate-300">{dem.nom_contact}</div>
-                          <div className="text-xs text-slate-500 italic">{dem.email_contact}</div>
+                        <td className="px-6 py-5">
+                          <div className="text-sm font-medium text-slate-700">{dem.nom_contact}</div>
+                          <div className="text-[11px] text-slate-400 italic">{dem.email_contact}</div>
                         </td>
-                        <td className="px-6 py-4 text-sm text-indigo-400 font-bold">{dem.telephone_contact}</td>
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-5 text-sm font-bold text-slate-900">{dem.telephone_contact}</td>
+                        <td className="px-6 py-5">
                           <BadgeStatut statut={dem.statut} />
-                          {dem.motif_refus && <div className="text-[10px] text-red-400/70 mt-1 italic max-w-[150px]">{dem.motif_refus}</div>}
+                          {dem.motif_refus && <div className="text-[10px] text-rose-400 mt-1 italic">{dem.motif_refus}</div>}
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-6 py-5 text-right">
                           {dem.statut === 'en_attente' && (
                             <div className="flex justify-end gap-2">
-                              <button
-                                onClick={() => approuverDemande(dem.id, dem)}
-                                className="p-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 rounded-lg border border-emerald-500/20 transition-all"
-                                title="Approuver l'essai"
-                              >
+                              <button onClick={() => approuverDemande(dem.id, dem)} className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg border border-emerald-200 transition-all" title="Approuver">
                                 <CheckCircle size={18} />
                               </button>
-                              {/* ✅ FIX 4 : Refus fonctionnel */}
-                              <button
-                                onClick={() => setModalRefus({ id: dem.id, nom: dem.nom_etablissement })}
-                                className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg border border-red-500/20 transition-all"
-                                title="Refuser la demande"
-                              >
+                              <button onClick={() => setModalRefus({ id: dem.id, nom: dem.nom_etablissement })} className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-lg border border-rose-200 transition-all" title="Refuser">
                                 <XCircle size={18} />
                               </button>
                             </div>
                           )}
-                          {dem.statut !== 'en_attente' && <span className="text-slate-600 text-xs italic">Traité</span>}
+                          {dem.statut !== 'en_attente' && <span className="text-slate-400 text-xs italic font-medium">Traité</span>}
                         </td>
                       </tr>
                     ))}
@@ -436,130 +277,107 @@ const TableauSuperAdmin = () => {
 
           {/* ── PAIEMENTS ── */}
           {onglet === 'paiements' && (
-            <motion.div key="paiements" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="bento-item overflow-hidden">
-              <div className="p-6 border-b border-white/5">
-                <h3 className="text-xl font-bold">Paiements à vérifier</h3>
+            <motion.div key="paiements" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+              className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+              <div className="p-6 border-b border-slate-100 bg-slate-50">
+                <h3 className="font-bold text-slate-900">Paiements à vérifier</h3>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider">
-                    <tr>
-                      <th className="px-6 py-4">Date</th>
-                      {/* ✅ FIX 3 : Nom de l'établissement */}
-                      <th className="px-6 py-4">Établissement</th>
-                      <th className="px-6 py-4">Montant</th>
-                      <th className="px-6 py-4">Statut</th>
-                      <th className="px-6 py-4 text-right">Action</th>
+              <table className="w-full text-left">
+                <thead className="text-[10px] text-slate-400 font-black uppercase tracking-widest border-b border-slate-50">
+                  <tr>
+                    <th className="px-6 py-5">Date</th>
+                    <th className="px-6 py-5">Établissement</th>
+                    <th className="px-6 py-5">Montant</th>
+                    <th className="px-6 py-5">Statut</th>
+                    <th className="px-6 py-5 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {paiements.length === 0 && <tr><td colSpan={5} className="p-10 text-center text-slate-400 italic text-sm">Aucun paiement.</td></tr>}
+                  {paiements.map((p) => (
+                    <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-5">
+                        <p className="text-sm font-bold text-slate-900">{new Date(p.date).toLocaleDateString('fr-FR')}</p>
+                        <p className="text-[11px] text-slate-400">{new Date(p.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
+                      </td>
+                      <td className="px-6 py-5 font-bold text-slate-900">{nomEtab(p.etablissement_id)}</td>
+                      <td className="px-6 py-5 font-bold text-emerald-600 text-lg">{(p.montant || 0).toLocaleString()} F</td>
+                      <td className="px-6 py-5"><BadgeStatut statut={p.statut} /></td>
+                      <td className="px-6 py-5 text-right">
+                        {p.statut === 'en_attente' && (
+                          <button onClick={() => setModalPaiement(p)} className="flex items-center gap-2 ml-auto bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all hover:bg-slate-700">
+                            Examiner <ArrowUpRight size={14} />
+                          </button>
+                        )}
+                        {p.preuve_url && p.statut !== 'en_attente' && (
+                          <a href={p.preuve_url} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-slate-900 text-xs underline flex items-center justify-end gap-1">
+                            Voir preuve <ExternalLink size={11} />
+                          </a>
+                        )}
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {paiements.length === 0 && (
-                      <tr><td colSpan={5} className="p-10 text-center text-slate-500 italic">Aucun paiement.</td></tr>
-                    )}
-                    {paiements.map((p) => (
-                      <tr key={p.id} className="hover:bg-white/5 transition-colors">
-                        <td className="px-6 py-4 text-xs text-slate-400">
-                          {new Date(p.date).toLocaleDateString('fr-FR')}<br />
-                          <span className="text-slate-600">{new Date(p.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
-                        </td>
-                        {/* ✅ Nom de l'établissement lisible */}
-                        <td className="px-6 py-4 font-bold text-white">{nomEtab(p.etablissement_id)}</td>
-                        <td className="px-6 py-4 font-black text-emerald-400 text-lg">{(p.montant || 0).toLocaleString()} F</td>
-                        <td className="px-6 py-4">
-                          <BadgeStatut statut={p.statut} />
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          {p.statut === 'en_attente' && (
-                            <button
-                              onClick={() => setModalPaiement(p)}
-                              className="flex items-center gap-2 ml-auto bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 px-3 py-2 rounded-lg text-xs font-bold border border-indigo-500/20 transition-all"
-                            >
-                              Examiner <ArrowUpRight size={14} />
-                            </button>
-                          )}
-                          {p.preuve_url && p.statut !== 'en_attente' && (
-                            <a href={p.preuve_url} target="_blank" rel="noreferrer" className="text-slate-500 hover:text-slate-300 text-xs underline flex items-center justify-end gap-1">
-                              Voir preuve <ExternalLink size={11} />
-                            </a>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </motion.div>
           )}
 
           {/* ── ÉTABLISSEMENTS ── */}
           {onglet === 'etablissements' && (
-            <motion.div key="etabs" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="bento-item overflow-hidden">
-              <div className="p-6 border-b border-white/5">
-                <h3 className="text-xl font-bold">Parc Clients GESTCAVE PRO</h3>
+            <motion.div key="etabs" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+              className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+              <div className="p-6 border-b border-slate-100 bg-slate-50">
+                <h3 className="font-bold text-slate-900">Parc Clients GESTCAVE PRO</h3>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider">
-                    <tr>
-                      <th className="px-6 py-4">Structure</th>
-                      <th className="px-6 py-4">Contact</th>
-                      <th className="px-6 py-4">Statut</th>
-                      <th className="px-6 py-4">Expiration</th>
-                      <th className="px-6 py-4"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {etabsFiltres.map((etab) => {
-                      const expiration = new Date(etab.subscription_end_date);
-                      const joursRestants = Math.ceil((expiration.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-                      const expirationImminente = joursRestants <= 7 && joursRestants > 0;
-                      const expire = joursRestants <= 0;
-                      return (
-                        <tr key={etab.id} className="hover:bg-white/5 transition-colors text-sm">
-                          <td className="px-6 py-4">
-                            <div className="font-bold text-white uppercase tracking-tighter">{etab.nom}</div>
-                            <div className="text-[10px] text-slate-500">{etab.adresse}</div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="text-slate-300">{etab.contact_principal}</div>
-                            <div className="text-[10px] text-slate-500">{etab.email_contact}</div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <BadgeStatut statut={etab.subscription_status} />
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className={`font-mono text-sm ${expire ? 'text-red-500' : expirationImminente ? 'text-yellow-500' : 'text-slate-400'}`}>
-                              {expiration.toLocaleDateString('fr-FR')}
-                            </div>
-                            {expirationImminente && <div className="text-[10px] text-yellow-500 flex items-center gap-1"><AlertTriangle size={10} /> {joursRestants}j restants</div>}
-                            {expire && <div className="text-[10px] text-red-500 flex items-center gap-1"><AlertTriangle size={10} /> Expiré</div>}
-                          </td>
-                          <td className="px-6 py-4 text-right flex justify-end gap-2">
-                             <a
-                              href={`/poste/${etab.id}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              title="Voir le lien de poste"
-                              className="p-1.5 inline-flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors border border-white/5"
-                            >
-                              <ExternalLink size={14} />
-                            </a>
-                            {etab.subscription_status !== 'suspendu' && (
-                              <button
-                                onClick={() => suspendreEtablissement(etab)}
-                                title="Suspendre l'établissement"
-                                className="p-1.5 inline-flex items-center justify-center bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg border border-red-500/20 transition-colors"
-                              >
-                                <Ban size={14} />
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <table className="w-full text-left">
+                <thead className="text-[10px] text-slate-400 font-black uppercase tracking-widest border-b border-slate-50">
+                  <tr>
+                    <th className="px-6 py-5">Structure</th>
+                    <th className="px-6 py-5">Contact</th>
+                    <th className="px-6 py-5">Statut</th>
+                    <th className="px-6 py-5">Expiration</th>
+                    <th className="px-6 py-5"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {etabsFiltres.map((etab) => {
+                    const expiration = new Date(etab.subscription_end_date);
+                    const joursRestants = Math.ceil((expiration.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                    const expirationImminente = joursRestants <= 7 && joursRestants > 0;
+                    const expire = joursRestants <= 0;
+                    return (
+                      <tr key={etab.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-5">
+                          <div className="font-bold text-slate-900 uppercase tracking-tight">{etab.nom}</div>
+                          <div className="text-[11px] text-slate-400">{etab.adresse}</div>
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="text-sm text-slate-700 font-medium">{etab.contact_principal}</div>
+                          <div className="text-[11px] text-slate-400">{etab.email_contact}</div>
+                        </td>
+                        <td className="px-6 py-5"><BadgeStatut statut={etab.subscription_status} /></td>
+                        <td className="px-6 py-5">
+                          <div className={`font-mono text-sm font-bold ${expire ? 'text-rose-500' : expirationImminente ? 'text-amber-500' : 'text-slate-500'}`}>
+                            {expiration.toLocaleDateString('fr-FR')}
+                          </div>
+                          {expirationImminente && <div className="text-[10px] text-amber-500 flex items-center gap-1 font-bold"><AlertTriangle size={10} /> {joursRestants}j restants</div>}
+                          {expire && <div className="text-[10px] text-rose-500 flex items-center gap-1 font-bold"><AlertTriangle size={10} /> Expiré</div>}
+                        </td>
+                        <td className="px-6 py-5 text-right flex justify-end gap-2">
+                          <a href={`/poste/${etab.id}`} target="_blank" rel="noreferrer" className="p-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-900 transition-colors border border-slate-200">
+                            <ExternalLink size={14} />
+                          </a>
+                          {etab.subscription_status !== 'suspendu' && (
+                            <button onClick={() => suspendreEtablissement(etab)} className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-lg border border-rose-200 transition-colors">
+                              <Ban size={14} />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </motion.div>
           )}
 
@@ -567,117 +385,63 @@ const TableauSuperAdmin = () => {
           {onglet === 'comptabilite' && (
             <motion.div key="compta" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bento-item p-8 bg-gradient-to-br from-indigo-600/10 to-transparent">
-                  <h3 className="text-sm font-bold text-indigo-400 uppercase mb-6 tracking-widest">Récapitulatif de Facturation</h3>
+                <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Récapitulatif Facturation</h3>
                   <div className="space-y-4">
-                    <div className="flex justify-between py-3 border-b border-white/5">
-                      <span className="text-slate-400">Abonnements actifs</span>
-                      <span className="text-white font-bold">{etablissements.filter(e => e.subscription_status === 'actif').length}</span>
-                    </div>
-                    <div className="flex justify-between py-3 border-b border-white/5">
-                      <span className="text-slate-400">Essais gratuits</span>
-                      <span className="text-white font-bold">{etablissements.filter(e => e.subscription_status === 'essai').length}</span>
-                    </div>
-                    <div className="flex justify-between py-3 border-b border-white/5">
-                      <span className="text-slate-400">Total paiements validés</span>
-                      <span className="text-white font-bold">{paiements.filter(p => p.statut === 'valide').length}</span>
-                    </div>
-                    <div className="flex justify-between py-3">
-                      <span className="text-slate-400">MRR réel (ce mois)</span>
-                      <span className="text-emerald-400 font-black text-xl">{mrrReel.toLocaleString()} F CFA</span>
+                    {[
+                      { label: 'Abonnements actifs', val: etablissements.filter(e => e.subscription_status === 'actif').length },
+                      { label: 'Essais gratuits', val: etablissements.filter(e => e.subscription_status === 'essai').length },
+                      { label: 'Paiements validés', val: paiements.filter(p => p.statut === 'valide').length },
+                    ].map(row => (
+                      <div key={row.label} className="flex justify-between py-3 border-b border-slate-100">
+                        <span className="text-slate-500 font-medium">{row.label}</span>
+                        <span className="font-bold text-slate-900">{row.val}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between pt-3">
+                      <span className="text-slate-500 font-medium">MRR réel (ce mois)</span>
+                      <span className="text-emerald-600 font-black text-xl">{mrrReel.toLocaleString()} F</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="bento-item p-8">
-                  <h3 className="text-sm font-bold text-white uppercase mb-6 tracking-widest">Derniers paiements validés</h3>
-                  <div className="space-y-3 max-h-[250px] overflow-y-auto pr-2">
-                    {paiements.filter(p => p.statut === 'valide').slice(0, 5).length === 0 && (
-                      <p className="text-slate-500 italic text-sm">Aucun paiement validé pour l'instant.</p>
-                    )}
+                <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Derniers paiements validés</h3>
+                  <div className="space-y-3 max-h-[250px] overflow-y-auto">
+                    {paiements.filter(p => p.statut === 'valide').slice(0, 5).length === 0 && <p className="text-slate-400 italic text-sm">Aucun paiement validé.</p>}
                     {paiements.filter(p => p.statut === 'valide').slice(0, 5).map(p => (
-                      <div key={p.id} className="flex justify-between items-center py-2 border-b border-white/5">
+                      <div key={p.id} className="flex justify-between items-center py-3 border-b border-slate-50">
                         <div>
-                          <div className="text-white text-sm font-medium">{nomEtab(p.etablissement_id)}</div>
-                          <div className="text-xs text-slate-500">{new Date(p.date_validation || p.date).toLocaleDateString('fr-FR')}</div>
+                          <div className="text-sm font-bold text-slate-900">{nomEtab(p.etablissement_id)}</div>
+                          <div className="text-[11px] text-slate-400">{new Date(p.date_validation || p.date).toLocaleDateString('fr-FR')}</div>
                         </div>
-                        <span className="text-emerald-400 font-bold">{(p.montant || 0).toLocaleString()} F</span>
+                        <span className="text-emerald-600 font-bold">{(p.montant || 0).toLocaleString()} F</span>
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
 
-              {/* ✅ PRIORITÉ 3 : Graphique des revenus (MRR) */}
-              <div className="bento-item p-8">
-                <div className="flex items-center justify-between mb-8">
-                    <div>
-                        <h3 className="text-xl font-bold flex items-center gap-2">
-                            <Activity className="text-primary" /> Évolution du Volume Mensuel
-                        </h3>
-                        <p className="text-slate-400 text-sm mt-1">
-                            Calculé sur les paiements validés (CFA)
-                        </p>
-                    </div>
-                </div>
-                
-                <div className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={(() => {
-                            // Agrégation des paiements validés par mois
-                            const statsMap: Record<string, number> = {};
-                            const validePaiements = paiements.filter(p => p.statut === 'valide');
-                            
-                            validePaiements.forEach(p => {
-                                const d = new Date(p.date_validation || p.date);
-                                const mois = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                                statsMap[mois] = (statsMap[mois] || 0) + (p.montant || 0);
-                            });
-
-                            // Générer les 6 derniers mois pour avoir un graphe lisible
-                            const result = [];
-                            for(let i=5; i>=0; i--) {
-                                const d = new Date();
-                                d.setMonth(d.getMonth() - i);
-                                const moisNum = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                                const moisLabel = d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
-                                result.push({
-                                    name: moisLabel,
-                                    Revenus: statsMap[moisNum] || 0
-                                });
-                            }
-                            return result;
-                        })()}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                            <XAxis 
-                                dataKey="name" 
-                                stroke="#94a3b8" 
-                                fontSize={12} 
-                                tickLine={false} 
-                                axisLine={false}
-                            />
-                            <YAxis 
-                                stroke="#94a3b8" 
-                                fontSize={12} 
-                                tickLine={false} 
-                                axisLine={false}
-                                tickFormatter={(value) => `${value / 1000}k`}
-                            />
-                            <Tooltip 
-                                contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px' }}
-                                itemStyle={{ color: '#10b981', fontWeight: 'bold' }}
-                                formatter={(value: number) => [`${value.toLocaleString()} F`, 'Revenus']}
-                            />
-                            <Line 
-                                type="monotone" 
-                                dataKey="Revenus" 
-                                stroke="#10b981" 
-                                strokeWidth={3} 
-                                dot={{ fill: '#0f172a', stroke: '#10b981', strokeWidth: 2, r: 4 }} 
-                                activeDot={{ r: 6, fill: '#10b981' }}
-                            />
-                        </LineChart>
-                    </ResponsiveContainer>
+              <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                <h3 className="font-bold text-slate-900 mb-6 flex items-center gap-2"><Activity size={20} className="text-slate-400" /> Évolution Volume Mensuel</h3>
+                <div className="h-72 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={(() => {
+                      const statsMap: Record<string, number> = {};
+                      paiements.filter(p => p.statut === 'valide').forEach(p => {
+                        const d = new Date(p.date_validation || p.date);
+                        const mois = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                        statsMap[mois] = (statsMap[mois] || 0) + (p.montant || 0);
+                      });
+                      return Array.from({length: 6}, (_, i) => { const d = new Date(); d.setMonth(d.getMonth() - (5-i)); const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; return { name: d.toLocaleDateString('fr-FR', {month:'short', year:'2-digit'}), Revenus: statsMap[k] || 0 }; });
+                    })()}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                      <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `${v/1000}k`} />
+                      <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} formatter={(v: number) => [`${v.toLocaleString()} F`, 'Revenus']} />
+                      <Line type="monotone" dataKey="Revenus" stroke="#0f172a" strokeWidth={3} dot={{ fill: '#fff', stroke: '#0f172a', strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             </motion.div>
@@ -685,57 +449,40 @@ const TableauSuperAdmin = () => {
 
           {/* ── MAINTENANCE ── */}
           {onglet === 'maintenance' && (
-            <motion.div key="maintenance" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="flex flex-col gap-6">
-              <div className="glass-panel p-10 border-red-500/20 bg-red-500/5 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-10 text-red-500/10">
-                   <AlertCircle size={120} />
-                </div>
-                
+            <motion.div key="maintenance" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="space-y-6">
+              <div className="bg-white border-2 border-rose-100 rounded-3xl p-10 relative overflow-hidden shadow-sm">
+                <div className="absolute top-0 right-0 p-10 text-rose-50"><AlertCircle size={120} /></div>
                 <div className="relative z-10">
-                  <h3 className="text-3xl font-display font-black text-white mb-4 flex items-center gap-3">
-                    <Database className="text-red-500" /> ZONE DE MAINTENANCE
-                  </h3>
-                  <p className="text-slate-400 text-lg max-w-2xl mb-8 leading-relaxed">
-                    Vous êtes sur le point d'accéder aux commandes de réinitialisation critique. 
-                    Utilisez cet outil uniquement pour nettoyer la plateforme avant une nouvelle simulation ou en cas de corruption majeure des données.
-                  </p>
-                  
-                  <div className="bg-slate-950/50 rounded-2xl p-6 border border-white/5 mb-10 flex items-start gap-4">
-                    <AlertTriangle className="text-amber-500 shrink-0 mt-1" size={20} />
-                    <div className="text-sm text-slate-300">
-                      <p className="font-bold text-amber-500 uppercase tracking-widest text-[10px] mb-2">Avertissement</p>
-                      La réinitialisation supprimera tous les documents dans : 
-                      <code className="text-indigo-300 ml-2 italic">etablissements, demandes, invitations, tables, produits, commandes, transactions, paiements, employes, achats...</code>
-                      <br />Seul votre compte Super Admin et cette console resteront actifs.
+                  <h3 className="text-2xl font-bold text-slate-900 mb-3 flex items-center gap-3"><Database className="text-rose-500" size={24} /> Zone de Maintenance</h3>
+                  <p className="text-slate-500 font-medium max-w-xl mb-8">Accès aux commandes de réinitialisation critique. Utilisez cet outil uniquement pour nettoyer la plateforme avant une simulation.</p>
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-8 flex items-start gap-4">
+                    <AlertTriangle className="text-amber-500 shrink-0 mt-0.5" size={18} />
+                    <div className="text-sm text-slate-600">
+                      <p className="font-bold text-amber-600 uppercase text-[10px] tracking-widest mb-1">Avertissement</p>
+                      Supprimera tous les documents dans : <code className="text-slate-900 font-mono font-bold ml-1">etablissements, demandes, tables, produits, commandes, transactions, paiements...</code>
                     </div>
                   </div>
-
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <button 
-                      onClick={viderBase}
-                      className="px-10 py-5 bg-red-600 hover:bg-red-500 text-white rounded-2xl font-black shadow-[0_0_30px_rgba(220,38,38,0.3)] transition-all flex items-center justify-center gap-3"
-                    >
-                      <Trash2 size={24} /> RÉINITIALISER TOUTE LA PLATEFORME
-                    </button>
-                  </div>
+                  <button onClick={viderBase} className="px-8 py-4 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl font-bold flex items-center gap-3 transition-all active:scale-95 shadow-xl shadow-rose-600/25">
+                    <Trash2 size={20} /> Réinitialiser la Plateforme
+                  </button>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <div className="glass-panel p-8 border-white/5 bg-white/2">
-                    <h4 className="text-white font-bold mb-2 uppercase text-xs tracking-widest text-slate-500">Statut Système</h4>
-                    <div className="flex items-center gap-3 mt-4">
-                       <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]" />
-                       <span className="text-white font-medium text-sm">Services Firebase Opérationnels</span>
-                    </div>
-                 </div>
-                 <div className="glass-panel p-8 border-white/5 bg-white/2">
-                    <h4 className="text-white font-bold mb-2 uppercase text-xs tracking-widest text-slate-500">Protection Admin</h4>
-                    <div className="flex items-center gap-3 mt-4 text-indigo-400">
-                       <Shield size={20} />
-                       <span className="text-sm font-medium">Bypass de suppression activé pour le Super Admin</span>
-                    </div>
-                 </div>
+                <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Statut Système</h4>
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-slate-900 font-bold text-sm">Services Firebase Opérationnels</span>
+                  </div>
+                </div>
+                <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Protection Admin</h4>
+                  <div className="flex items-center gap-3 text-slate-900">
+                    <Shield size={18} />
+                    <span className="text-sm font-bold">Bypass de suppression Super Admin actif</span>
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
@@ -743,87 +490,53 @@ const TableauSuperAdmin = () => {
         </AnimatePresence>
       </main>
 
-      {/* ── MODAL REFUS DEMANDE ── */}
+      {/* ── MODAL REFUS ── */}
       <AnimatePresence>
         {modalRefus && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-md">
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="w-full max-w-md glass-panel p-8">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="w-full max-w-md bg-white rounded-3xl p-8 shadow-2xl">
               <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h3 className="text-xl font-bold text-white">Refuser la demande</h3>
-                  <p className="text-slate-400 text-sm mt-1">{modalRefus.nom}</p>
-                </div>
-                <button onClick={() => setModalRefus(null)} className="p-2 hover:bg-white/10 rounded-lg text-slate-400"><X size={18} /></button>
+                <div><h3 className="text-xl font-bold text-slate-900">Refuser la demande</h3><p className="text-slate-400 text-sm mt-1">{modalRefus.nom}</p></div>
+                <button onClick={() => setModalRefus(null)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-400"><X size={18} /></button>
               </div>
               <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-400 mb-2">Motif du refus (optionnel)</label>
-                <textarea
-                  value={motifRefus}
-                  onChange={e => setMotifRefus(e.target.value)}
-                  rows={3}
-                  placeholder="Ex: Informations incomplètes, zone non couverte..."
-                  className="glass-input w-full resize-none"
-                />
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Motif du refus</label>
+                <textarea value={motifRefus} onChange={e => setMotifRefus(e.target.value)} rows={3} placeholder="Ex: Informations incomplètes..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none font-medium text-slate-700 resize-none" />
               </div>
               <div className="flex gap-4">
-                <button onClick={() => setModalRefus(null)} className="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-slate-300 font-medium transition-all">Annuler</button>
-                <button onClick={refuserDemande} className="flex-1 py-3 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded-xl font-bold border border-red-500/30 transition-all">Confirmer le refus</button>
+                <button onClick={() => setModalRefus(null)} className="flex-1 py-3 bg-slate-50 hover:bg-slate-100 rounded-xl text-slate-600 font-bold transition-all">Annuler</button>
+                <button onClick={refuserDemande} className="flex-1 py-3 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl font-bold border border-rose-200 transition-all">Confirmer le refus</button>
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* ── MODAL EXAMEN PAIEMENT ── */}
+      {/* ── MODAL PAIEMENT ── */}
       <AnimatePresence>
         {modalPaiement && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-md">
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="w-full max-w-lg glass-panel p-8">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="w-full max-w-lg bg-white rounded-3xl p-8 shadow-2xl">
               <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h3 className="text-xl font-bold text-white">Examen du paiement</h3>
-                  <p className="text-slate-400 text-sm">{nomEtab(modalPaiement.etablissement_id)}</p>
-                </div>
-                <button onClick={() => setModalPaiement(null)} className="p-2 hover:bg-white/10 rounded-lg text-slate-400"><X size={18} /></button>
+                <div><h3 className="text-xl font-bold text-slate-900">Examen du paiement</h3><p className="text-slate-400 text-sm">{nomEtab(modalPaiement.etablissement_id)}</p></div>
+                <button onClick={() => setModalPaiement(null)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-400"><X size={18} /></button>
               </div>
-
-              <div className="mb-6 p-4 bg-white/5 rounded-xl space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-slate-500">Montant</span><span className="text-emerald-400 font-black text-lg">{(modalPaiement.montant || 0).toLocaleString()} F CFA</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">Date</span><span className="text-white">{new Date(modalPaiement.date).toLocaleString('fr-FR')}</span></div>
+              <div className="mb-6 p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3 text-sm">
+                <div className="flex justify-between"><span className="text-slate-500">Montant</span><span className="text-emerald-600 font-black text-xl">{(modalPaiement.montant || 0).toLocaleString()} F CFA</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Date</span><span className="font-bold text-slate-900">{new Date(modalPaiement.date).toLocaleString('fr-FR')}</span></div>
               </div>
-
-              {/* Aperçu de la preuve */}
               {modalPaiement.preuve_url && (
                 <div className="mb-6">
-                  <p className="text-sm font-medium text-slate-400 mb-2">Capture d'écran de paiement :</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Preuve de paiement</p>
                   <a href={modalPaiement.preuve_url} target="_blank" rel="noreferrer">
-                    <img
-                      src={modalPaiement.preuve_url}
-                      alt="Preuve de paiement"
-                      className="w-full rounded-xl border border-white/10 max-h-56 object-cover hover:opacity-90 transition-opacity cursor-pointer"
-                      onError={(e: any) => { e.target.style.display = 'none'; }}
-                    />
-                  </a>
-                  <a href={modalPaiement.preuve_url} target="_blank" rel="noreferrer" className="text-xs text-indigo-400 hover:underline flex items-center gap-1 mt-2">
-                    Ouvrir en plein écran <ExternalLink size={11} />
+                    <img src={modalPaiement.preuve_url} alt="Preuve" className="w-full rounded-2xl border border-slate-200 max-h-56 object-cover hover:opacity-90 transition-opacity cursor-pointer" onError={(e: any) => { e.target.style.display = 'none'; }} />
                   </a>
                 </div>
               )}
-
               <div className="flex gap-4">
-                {/* ✅ FIX 5 : Rejeter paiement */}
-                <button
-                  onClick={() => rejeterPaiement(modalPaiement.id)}
-                  className="flex-1 py-3 bg-red-600/10 hover:bg-red-600/20 text-red-400 rounded-xl font-bold border border-red-500/20 transition-all"
-                >
-                  Rejeter
-                </button>
-                <button
-                  onClick={() => validerPaiement(modalPaiement.id, modalPaiement.etablissement_id, modalPaiement.montant)}
-                  className="flex-1 py-3 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 rounded-xl font-bold border border-emerald-500/30 transition-all"
-                >
-                  ✅ Valider & Activer
-                </button>
+                <button onClick={() => rejeterPaiement(modalPaiement.id)} className="flex-1 py-3 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl font-bold border border-rose-200 transition-all">Rejeter</button>
+                <button onClick={() => validerPaiement(modalPaiement.id, modalPaiement.etablissement_id, modalPaiement.montant)} className="flex-1 py-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-bold border border-emerald-200 transition-all">✅ Valider & Activer</button>
               </div>
             </motion.div>
           </div>
@@ -833,33 +546,16 @@ const TableauSuperAdmin = () => {
       {/* ── MODAL LIEN ACTIVATION ── */}
       <AnimatePresence>
         {lienActivation && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-slate-950/90 backdrop-blur-xl">
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="w-full max-w-md glass-panel p-10 text-center border-indigo-500/30">
-              <div className="w-20 h-20 bg-indigo-600/20 rounded-full flex items-center justify-center mx-auto mb-6 text-indigo-400">
-                <CheckCircle size={40} />
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="w-full max-w-md bg-white rounded-3xl p-10 text-center shadow-2xl">
+              <div className="w-20 h-20 bg-emerald-50 border-2 border-emerald-200 rounded-full flex items-center justify-center mx-auto mb-6 text-emerald-600"><CheckCircle size={40} /></div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">Accès activé !</h3>
+              <p className="text-slate-400 text-sm mb-8">Copiez ce lien et envoyez-le à <span className="font-bold text-slate-900">{lienActivation.nom}</span>.</p>
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 mb-6 flex items-center gap-3">
+                <input readOnly value={lienActivation.url} className="bg-transparent border-none text-xs text-slate-600 w-full outline-none font-mono" />
+                <button onClick={() => { navigator.clipboard.writeText(lienActivation.url); toast.success("Lien copié !"); }} className="p-2 hover:bg-slate-200 rounded-lg text-slate-600 transition-all"><ExternalLink size={18} /></button>
               </div>
-              <h3 className="text-2xl font-bold text-white mb-2">Accès automatique prêt !</h3>
-              <p className="text-slate-400 text-sm mb-8">Copiez ce lien et envoyez-le au patron de <span className="text-white font-bold">{lienActivation.nom}</span> pour qu'il active son compte.</p>
-              
-              <div className="bg-white/5 p-4 rounded-xl border border-white/10 mb-8 flex items-center gap-3">
-                <input readOnly value={lienActivation.url} className="bg-transparent border-none text-xs text-indigo-300 w-full outline-none" />
-                <button 
-                  onClick={() => {
-                    navigator.clipboard.writeText(lienActivation.url);
-                    toast.success("Lien copié !");
-                  }}
-                  className="p-2 hover:bg-white/10 rounded-lg text-white"
-                >
-                  <ExternalLink size={18} />
-                </button>
-              </div>
-
-              <button 
-                onClick={() => setLienActivation(null)}
-                className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl shadow-glow transition-all hover:bg-indigo-500"
-              >
-                Terminé
-              </button>
+              <button onClick={() => setLienActivation(null)} className="w-full py-4 bg-slate-900 text-white font-bold rounded-2xl shadow-xl active:scale-95 transition-all">Terminé</button>
             </motion.div>
           </div>
         )}
@@ -868,55 +564,20 @@ const TableauSuperAdmin = () => {
   );
 };
 
-// ── Composants utilitaires ──
-const ElementNav = ({ icon, label, actif = false, badge, onClick, danger = false }: any) => (
-  <button
-    onClick={onClick}
-    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all ${
-      actif 
-        ? (danger ? 'bg-red-600 text-white shadow-[0_0_20px_rgba(220,38,38,0.4)]' : 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.4)]') 
-        : (danger ? 'text-red-400 hover:bg-red-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-white')
-    }`}
-  >
-    <div className="flex items-center gap-3">{icon}<span className="font-medium text-sm">{label}</span></div>
-    {badge > 0 && !actif && (
-      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${danger ? 'bg-red-500/20 text-red-400' : 'bg-indigo-500/20 text-indigo-400'}`}>
-        {badge}
-      </span>
-    )}
-  </button>
-);
-
-const CarteStats = ({ label, valeur, icone, couleur }: any) => {
-  const colors: Record<string, string> = {
-    yellow: 'from-yellow-500/5 to-transparent border-yellow-500/10',
-    indigo: 'from-indigo-500/5 to-transparent border-indigo-500/10',
-    emerald: 'from-emerald-500/5 to-transparent border-emerald-500/10',
-    purple: 'from-purple-500/5 to-transparent border-purple-500/10',
-  };
-  return (
-    <div className={`bento-item p-6 bg-gradient-to-br ${colors[couleur] || ''}`}>
-      <div className="flex items-center gap-3 mb-3">
-        <div className="p-2 rounded-lg bg-white/5">{icone}</div>
-      </div>
-      <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1">{label}</p>
-      <h4 className="text-2xl font-black text-white">{valeur}</h4>
-    </div>
-  );
-};
-
+// Composant Badge
 const BadgeStatut = ({ statut }: { statut: string }) => {
   const map: Record<string, { cls: string; label: string }> = {
-    en_attente:  { cls: 'bg-yellow-500/20 text-yellow-400', label: 'En attente' },
-    essai_actif: { cls: 'bg-blue-500/20 text-blue-400',   label: 'Essai actif' },
-    essai:       { cls: 'bg-blue-500/20 text-blue-400',   label: 'Essai' },
-    actif:       { cls: 'bg-emerald-500/20 text-emerald-400', label: 'Actif' },
-    refuse:      { cls: 'bg-red-500/20 text-red-400',     label: 'Refusé' },
-    valide:      { cls: 'bg-emerald-500/20 text-emerald-400', label: 'Validé' },
-    rejete:      { cls: 'bg-red-500/20 text-red-400',     label: 'Rejeté' },
+    en_attente:  { cls: 'bg-amber-50 text-amber-700 border border-amber-200',    label: 'En attente' },
+    essai_actif: { cls: 'bg-blue-50 text-blue-700 border border-blue-200',       label: 'Essai actif' },
+    essai:       { cls: 'bg-blue-50 text-blue-700 border border-blue-200',       label: 'Essai' },
+    actif:       { cls: 'bg-emerald-50 text-emerald-700 border border-emerald-200', label: 'Actif' },
+    refuse:      { cls: 'bg-rose-50 text-rose-700 border border-rose-200',       label: 'Refusé' },
+    valide:      { cls: 'bg-emerald-50 text-emerald-700 border border-emerald-200', label: 'Validé' },
+    rejete:      { cls: 'bg-rose-50 text-rose-700 border border-rose-200',       label: 'Rejeté' },
+    suspendu:    { cls: 'bg-slate-100 text-slate-600 border border-slate-200',   label: 'Suspendu' },
   };
-  const s = map[statut] || { cls: 'bg-slate-500/20 text-slate-400', label: statut };
-  return <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${s.cls}`}>{s.label}</span>;
+  const s = map[statut] || { cls: 'bg-slate-100 text-slate-500 border border-slate-200', label: statut };
+  return <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide ${s.cls}`}>{s.label}</span>;
 };
 
 export default TableauSuperAdmin;

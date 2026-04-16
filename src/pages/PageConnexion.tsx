@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, ShieldCheck, Store, ArrowRight, Shield } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Shield, ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
 
@@ -17,21 +17,11 @@ const PageConnexion = () => {
   const gererConnexion = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
       if (!email || !password) throw new Error("Veuillez remplir tous les champs");
       await connexion(email, password);
-      
-      toast.success(
-        <div className="flex flex-col">
-          <span className="font-bold">Connexion réussie</span>
-          <span className="text-sm">Bienvenue dans GESTCAVE PRO</span>
-        </div>,
-        { icon: '🔓', duration: 3000 }
-      );
-      
+      toast.success('Connexion réussie — Bienvenue !');
       if (email.toLowerCase() === 'securitstech@gmail.com') {
-        console.log("ACCÈS SUPER ADMIN DÉTECTÉ via EMAIL");
         navigate('/super-admin');
       } else {
         navigate('/choisir-role');
@@ -44,86 +34,80 @@ const PageConnexion = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between overflow-hidden">
-      
-      {/* HEADER DE CONNEXION */}
-      <header className="w-full z-50 bg-slate-950/20 backdrop-blur-md border-b border-white/5">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+
+      {/* Header */}
+      <header className="bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
-              <span className="text-xl">🍷</span>
+            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-xl shadow-lg shadow-slate-900/20">
+              🍷
             </div>
-            <span className="font-display font-bold text-xl tracking-tight text-white drop-shadow-md">GESTCAVE PRO</span>
+            <span className="font-bold text-xl tracking-tight text-slate-900">GESTCAVE PRO</span>
           </div>
-          <button onClick={() => navigate('/')} className="text-slate-400 hover:text-white transition-colors text-sm font-medium">
-            ← Retour au site public
+          <button onClick={() => navigate('/')} className="text-slate-400 hover:text-slate-900 transition-colors text-sm font-medium">
+            ← Retour au site
           </button>
         </div>
       </header>
 
-      {/* ZONE CENTRALE (CONTENEUR CONNEXION) */}
-      <main className="flex-grow flex items-center justify-center p-6 relative z-10 w-full">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full max-w-[450px]"
+      {/* Main */}
+      <main className="flex-grow flex items-center justify-center p-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="w-full max-w-[440px]"
         >
-          {/* Le panneau Glassmorphism Bento */}
-          <div className="glass-panel p-8 sm:p-10 text-center relative overflow-hidden">
-            
-            <div className={`mx-auto w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-2xl ${typeCompte === 'admin' ? 'bg-gradient-to-br from-indigo-500 to-purple-600' : 'bg-slate-800 border border-white/10'}`}>
-              {typeCompte === 'admin' ? <ShieldCheck size={32} className="text-white" /> : <span className="text-3xl">🍷</span>}
+          <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl shadow-slate-900/10 p-10 text-center">
+
+            {/* Logo */}
+            <div className="w-20 h-20 rounded-[1.5rem] bg-slate-900 flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-slate-900/30 text-4xl">
+              🍷
             </div>
 
-            <div className="mb-6">
-              <h1 className="text-3xl font-display font-bold text-white tracking-tight">GESTCAVE PRO</h1>
-              <div className="inline-block mt-2 px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full">
-                <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest">Version Alpha 1.5 - Onboarding Auto</p>
-              </div>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">GESTCAVE PRO</h1>
+            <div className="inline-block mt-3 mb-2 px-4 py-1 bg-slate-100 border border-slate-200 rounded-full">
+              <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Version Alpha 1.5 · Onboarding Auto</p>
             </div>
 
-            <h2 className="text-xl font-display font-bold text-white mb-2">
-              {typeCompte === 'admin' ? 'Accès Privé' : 'Espace de Gestion'}
+            <h2 className="text-xl font-bold text-slate-900 mt-6 mb-1">
+              {typeCompte === 'admin' ? 'Accès Administrateur' : 'Espace de Gestion'}
             </h2>
-            <p className="text-slate-400 text-sm mb-8">
-              {typeCompte === 'admin' 
-                ? 'Connexion sécurisée pour la gestion globale de la plateforme SaaS.'
+            <p className="text-slate-400 text-sm font-medium mb-8">
+              {typeCompte === 'admin'
+                ? 'Connexion sécurisée — Plateforme SaaS Global.'
                 : 'Connectez-vous pour piloter votre POS et votre ERP.'}
             </p>
 
             <form onSubmit={gererConnexion} className="space-y-5 text-left">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Adresse Email</label>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Adresse Email</label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
-                    <Mail size={18} />
-                  </div>
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="glass-input w-full pl-11 h-12"
-                    placeholder={typeCompte === 'admin' ? "securitstech@gmail.com" : "contact@monbar.com"}
+                    className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 outline-none focus:border-slate-900 transition-all font-medium text-slate-900"
+                    placeholder="contact@monbar.com"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2 flex justify-between">
-                  <span>Mot de passe</span>
-                  {typeCompte === 'client' && <a href="#" className="text-indigo-400 hover:text-indigo-300 text-xs">Oublié ?</a>}
-                </label>
+                <div className="flex justify-between items-center mb-2 px-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mot de passe</label>
+                  <a href="#" className="text-[10px] font-bold text-slate-400 hover:text-slate-900 transition-colors">Oublié ?</a>
+                </div>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
-                    <Lock size={18} />
-                  </div>
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="glass-input w-full pl-11 h-12"
+                    className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 outline-none focus:border-slate-900 transition-all font-medium text-slate-900"
                     placeholder="••••••••"
                     required
                   />
@@ -133,15 +117,15 @@ const PageConnexion = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className={`w-full mt-4 h-12 ${typeCompte === 'admin' ? 'btn-primary accent' : 'btn-primary'}`}
+                className="w-full h-14 mt-4 bg-slate-900 text-white rounded-2xl font-bold text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-slate-900/25 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-3"
               >
                 {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <div className="w-5 h-5 border-2 border-slate-900/30 border-t-slate-900 rounded-full animate-spin"></div>
-                    Analyse des accès...
+                  <span className="flex items-center gap-2">
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Vérification...
                   </span>
                 ) : (
-                  <span className="flex items-center justify-center gap-2">
+                  <span className="flex items-center gap-2">
                     Déverrouiller l'accès <ArrowRight size={18} />
                   </span>
                 )}
@@ -151,15 +135,14 @@ const PageConnexion = () => {
         </motion.div>
       </main>
 
-      {/* FOOTER DE CONNEXION */}
-      <footer className="w-full z-50 bg-slate-950/20 backdrop-blur-md border-t border-white/5 py-6">
+      {/* Footer */}
+      <footer className="bg-white border-t border-slate-100 py-6">
         <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p className="text-slate-500 text-sm">© 2026 GESTCAVE PRO. Protégé par un chiffrement de bout en bout.</p>
-          {/* Bouton indiscret pour basculer en mode Super Admin (Double-clic) */}
-          <div 
-            className="flex items-center gap-2 text-indigo-400/30 hover:text-indigo-400/60 transition-colors text-sm font-medium cursor-default select-none"
+          <p className="text-slate-400 text-sm">© 2026 GESTCAVE PRO · Données chiffrées de bout en bout.</p>
+          <div
+            className="flex items-center gap-2 text-slate-200 hover:text-slate-400 transition-colors text-sm cursor-default select-none"
             onDoubleClick={() => setTypeCompte(prev => prev === 'admin' ? 'client' : 'admin')}
-            title="S..."
+            title="..."
           >
             <Shield size={16} /> Serveur Sécurisé
           </div>
@@ -170,4 +153,3 @@ const PageConnexion = () => {
 };
 
 export default PageConnexion;
-
