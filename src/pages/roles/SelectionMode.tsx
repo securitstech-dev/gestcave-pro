@@ -60,6 +60,17 @@ const SelectionMode = () => {
       couleur: 'amber',
       badge: 'FLUX MANAGER',
     },
+    // Ajout dynamique pour le Super Admin
+    ...(profil?.role === 'super_admin' ? [{
+      id: 'super-admin',
+      titre: 'CONSOLE STRATÉGIQUE',
+      description: 'Administration globale du SaaS et gestion des clients.',
+      icon: <ShieldCheck size={32} />,
+      role: 'super_admin',
+      route: '/super-admin',
+      couleur: 'rose',
+      badge: 'SUPER ADMIN',
+    }] : []),
   ];
 
   const gererSelection = (mode: any) => {
@@ -88,6 +99,8 @@ const SelectionMode = () => {
           setShowPinModal(false);
           if (estAdmin && selectedMode.id === 'admin') {
             navigate('/tableau-de-bord');
+          } else if (selectedMode.id === 'super-admin') {
+            navigate('/super-admin');
           } else {
             navigate(selectedMode.route);
           }
