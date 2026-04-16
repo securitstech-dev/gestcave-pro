@@ -9,10 +9,11 @@ import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { db } from '../lib/firebase';
-import { collection, onSnapshot, doc, updateDoc, addDoc, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, addDoc, query, orderBy, getDocs, deleteDoc } from 'firebase/firestore';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Trash2, Database, AlertCircle } from 'lucide-react';
 
-type Onglet = 'demandes' | 'paiements' | 'etablissements' | 'comptabilite';
+type Onglet = 'demandes' | 'paiements' | 'etablissements' | 'comptabilite' | 'maintenance';
 
 const TableauSuperAdmin = () => {
   const [demandes, setDemandes] = useState<any[]>([]);
@@ -198,6 +199,35 @@ const TableauSuperAdmin = () => {
     }
   };
 
+  const viderBase = async () => {
+    const confirmation = window.confirm("🔴 ATTENTION CRITIQUE : Vous allez supprimer TOUTES LES DONNÉES de la plateforme (Demandes, Établissements, Commandes, Stocks, Users, etc.). Seul votre profil Super Admin sera conservé. VOULEZ-VOUS VRAIMENT TOUT RÉINITIALISER ?");
+    if (!confirmation) return;
+    
+    const collectionsAVider = [
+      'demandes_acces', 'etablissements', 'invitations', 'tables', 
+      'produits', 'commandes', 'transactions_pos', 'paiements', 
+      'employes', 'achats', 'utilisateurs'
+    ];
+
+    const toastId = toast.loading("Réinitialisation globale du Cloud...");
+
+    try {
+      let totalSupprimes = 0;
+      for (const colName of collectionsAVider) {
+        const snap = await getDocs(collection(db, colName));
+        for (const d of snap.docs) {
+          // PROTECTION : Ne surtout pas supprimer le Super Admin
+          if (colName === 'utilisateurs' && d.data().role === 'super_admin') continue;
+          await deleteDoc(d.ref);
+          totalSupprimes++;
+        }
+      }
+      toast.success(`Plateforme remise à zéro ! (${totalSupprimes} documents nettoyés)`, { id: toastId, icon: '🧹' });
+    } catch (error: any) {
+      toast.error(`Erreur de nettoyage : ${error.message}`, { id: toastId });
+    }
+  };
+
   const gererDeconnexion = () => { deconnexion(); navigate('/connexion'); };
 
   const demandesFiltrees = demandes.filter(d =>
@@ -250,6 +280,13 @@ const TableauSuperAdmin = () => {
             label="Comptabilité"
             actif={onglet === 'comptabilite'}
             onClick={() => setOnglet('comptabilite')}
+          />
+          <ElementNav
+            icon={<Database size={18} />}
+            label="Maintenance"
+            actif={onglet === 'maintenance'}
+            onClick={() => setOnglet('maintenance')}
+            danger
           />
         </nav>
 
@@ -646,6 +683,63 @@ const TableauSuperAdmin = () => {
             </motion.div>
           )}
 
+          {/* ── MAINTENANCE ── */}
+          {onglet === 'maintenance' && (
+            <motion.div key="maintenance" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="flex flex-col gap-6">
+              <div className="glass-panel p-10 border-red-500/20 bg-red-500/5 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-10 text-red-500/10">
+                   <AlertCircle size={120} />
+                </div>
+                
+                <div className="relative z-10">
+                  <h3 className="text-3xl font-display font-black text-white mb-4 flex items-center gap-3">
+                    <Database className="text-red-500" /> ZONE DE MAINTENANCE
+                  </h3>
+                  <p className="text-slate-400 text-lg max-w-2xl mb-8 leading-relaxed">
+                    Vous êtes sur le point d'accéder aux commandes de réinitialisation critique. 
+                    Utilisez cet outil uniquement pour nettoyer la plateforme avant une nouvelle simulation ou en cas de corruption majeure des données.
+                  </p>
+                  
+                  <div className="bg-slate-950/50 rounded-2xl p-6 border border-white/5 mb-10 flex items-start gap-4">
+                    <AlertTriangle className="text-amber-500 shrink-0 mt-1" size={20} />
+                    <div className="text-sm text-slate-300">
+                      <p className="font-bold text-amber-500 uppercase tracking-widest text-[10px] mb-2">Avertissement</p>
+                      La réinitialisation supprimera tous les documents dans : 
+                      <code className="text-indigo-300 ml-2 italic">etablissements, demandes, invitations, tables, produits, commandes, transactions, paiements, employes, achats...</code>
+                      <br />Seul votre compte Super Admin et cette console resteront actifs.
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <button 
+                      onClick={viderBase}
+                      className="px-10 py-5 bg-red-600 hover:bg-red-500 text-white rounded-2xl font-black shadow-[0_0_30px_rgba(220,38,38,0.3)] transition-all flex items-center justify-center gap-3"
+                    >
+                      <Trash2 size={24} /> RÉINITIALISER TOUTE LA PLATEFORME
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <div className="glass-panel p-8 border-white/5 bg-white/2">
+                    <h4 className="text-white font-bold mb-2 uppercase text-xs tracking-widest text-slate-500">Statut Système</h4>
+                    <div className="flex items-center gap-3 mt-4">
+                       <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]" />
+                       <span className="text-white font-medium text-sm">Services Firebase Opérationnels</span>
+                    </div>
+                 </div>
+                 <div className="glass-panel p-8 border-white/5 bg-white/2">
+                    <h4 className="text-white font-bold mb-2 uppercase text-xs tracking-widest text-slate-500">Protection Admin</h4>
+                    <div className="flex items-center gap-3 mt-4 text-indigo-400">
+                       <Shield size={20} />
+                       <span className="text-sm font-medium">Bypass de suppression activé pour le Super Admin</span>
+                    </div>
+                 </div>
+              </div>
+            </motion.div>
+          )}
+
         </AnimatePresence>
       </main>
 
@@ -775,16 +869,20 @@ const TableauSuperAdmin = () => {
 };
 
 // ── Composants utilitaires ──
-const ElementNav = ({ icon, label, actif = false, badge, onClick }: any) => (
+const ElementNav = ({ icon, label, actif = false, badge, onClick, danger = false }: any) => (
   <button
     onClick={onClick}
     className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all ${
-      actif ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.4)]' : 'text-slate-400 hover:bg-white/5 hover:text-white'
+      actif 
+        ? (danger ? 'bg-red-600 text-white shadow-[0_0_20px_rgba(220,38,38,0.4)]' : 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.4)]') 
+        : (danger ? 'text-red-400 hover:bg-red-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-white')
     }`}
   >
     <div className="flex items-center gap-3">{icon}<span className="font-medium text-sm">{label}</span></div>
     {badge > 0 && !actif && (
-      <span className="text-[10px] font-black bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full">{badge}</span>
+      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${danger ? 'bg-red-500/20 text-red-400' : 'bg-indigo-500/20 text-indigo-400'}`}>
+        {badge}
+      </span>
     )}
   </button>
 );
