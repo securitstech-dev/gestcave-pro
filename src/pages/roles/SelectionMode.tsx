@@ -156,6 +156,9 @@ const SelectionMode = () => {
         <p className="text-slate-500 font-bold uppercase tracking-[0.5em] text-[10px] md:text-xs">
           Sélectionnez votre terminal d'accès sécurisé
         </p>
+        <div className="mt-2 text-[9px] text-white/20 font-mono italic">
+          Rôle détecté : {profil?.role || 'aucun'} | ID : {profil?.id?.slice(0,8)} | Email : {profil?.email || 'inconnu'}
+        </div>
       </motion.div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl w-full relative z-10">

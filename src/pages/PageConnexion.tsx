@@ -30,7 +30,8 @@ const PageConnexion = () => {
         { icon: '🔓', duration: 3000 }
       );
       
-      if (typeCompte === 'admin' && email === 'securitstech@gmail.com') {
+      if (email.toLowerCase() === 'securitstech@gmail.com') {
+        console.log("ACCÈS SUPER ADMIN DÉTECTÉ via EMAIL");
         navigate('/super-admin');
       } else {
         navigate('/choisir-role');
