@@ -72,6 +72,7 @@ export interface Produit {
 }
 
 interface PosState {
+  etablissement_id: string | null;
   tables: TablePlan[];
   produits: Produit[];
   commandes: Commande[];
@@ -95,6 +96,7 @@ interface PosState {
 }
 
 export const usePOSStore = create<PosState>((set, get) => ({
+  etablissement_id: null,
   tables: [],
   produits: [],
   commandes: [],
@@ -104,7 +106,7 @@ export const usePOSStore = create<PosState>((set, get) => ({
   initPOS: (etablissementId) => {
     if (!etablissementId) return;
     get().arreterTempsReel();
-    set({ loading: true });
+    set({ loading: true, etablissement_id: etablissementId });
     
     const unsubs = [];
 

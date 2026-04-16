@@ -248,7 +248,7 @@ const DashboardAccueil = ({ profil, navigate }: any) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard label="Recettes (F)" valeur={`${ventesDuJour.toLocaleString()}`} icon={<TrendingUp size={22} />} color="emerald" tendance="+8.4%" />
         <StatCard label="Commandes Actives" valeur={commandes.filter(c => c.statut !== 'payee').length} icon={<Zap size={22} />} color="blue" subtext="En salle" />
-        <StatCard label="Dettes Clients" valeur={`${commandes.filter(c => c.statut === 'credit').reduce((acc, c) => acc + (c.total - (c.montantRecu || 0)), 0).toLocaleString()}`} suffix="F" icon={<Users size={22} />} color="blue" subtext="À recouvrir" />
+        <StatCard label="Dettes Clients" valeur={`${commandes.filter(c => c.statut === 'payee' && c.methodePaiement === 'credit').reduce((acc, c) => acc + (c.total - (c.montantPaye || 0)), 0).toLocaleString()}`} suffix="F" icon={<Users size={22} />} color="blue" subtext="À recouvrir" />
         <StatCard label="Items Critiques" valeur={produits.filter(p => p.stockTotal <= p.stockAlerte).length} icon={<AlertTriangle size={22} />} color="red" important={produits.filter(p => p.stockTotal <= p.stockAlerte).length > 0} />
       </div>
 

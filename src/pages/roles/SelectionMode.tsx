@@ -50,6 +50,13 @@ const SelectionMode = () => {
       couleur: 'emerald',
       badge: 'FLUX FINANCE',
     },
+    {
+      id: 'admin',
+      titre: 'CENTRE DE GESTION',
+      description: 'Analyses financières, stocks, RH et configuration.',
+      icon: <LayoutDashboard size={32} />,
+      role: 'admin',
+      route: '/tableau-de-bord',
       couleur: 'amber',
       badge: 'FLUX MANAGER',
     },

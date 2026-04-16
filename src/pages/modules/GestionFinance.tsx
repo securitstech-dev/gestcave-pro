@@ -5,7 +5,7 @@ import {
   FileText, Calendar, Filter, ArrowUpRight, 
   ArrowDownRight, PieChart as PieChartIcon, 
   ShieldCheck, Calculator, Activity, ArrowRight, X, Download,
-  Wallet, ShoppingCart, Users, AlertCircle, History, Receipt, Trash2
+  Wallet, ShoppingCart, Users, AlertCircle, History, Receipt, Trash2, Search
 } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
