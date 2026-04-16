@@ -39,9 +39,9 @@ const PageActivation = () => {
                 const data = snap.docs[0].data();
                 setInvitation({ id: snap.docs[0].id, ...data });
                 setEtape('formulaire');
-            } catch (err) {
-                console.error(err);
-                toast.error("Erreur de vérification");
+            } catch (err: any) {
+                console.error("DEBUG ACTIVATION:", err);
+                toast.error(`Erreur de vérification: ${err.message || 'Inconnue'}`);
             } finally {
                 setChargement(false);
             }
