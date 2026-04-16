@@ -20,12 +20,22 @@ const InterfaceCaissier = () => {
   
   const [commandeSelectionnee, setCommandeSelectionnee] = useState<string | null>(null);
   const [modePaiement, setModePaiement] = useState<'especes' | 'mobile' | 'carte' | 'credit' | null>(null);
-  const [montantSaisi, setMontantSaisi] = useState(''); // Montant réellement reçu (acompte ou total)
+  const [montantSaisi, setMontantSaisi] = useState('');
   const [nomClient, setNomClient] = useState('');
   const [contactClient, setContactClient] = useState('');
   const [remise, setRemise] = useState(0);
 
-  const commandesActives = commandes.filter(c => c.statut !== 'payee');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const commandesActives = useMemo(() => {
+    return commandes
+      .filter(c => c.statut !== 'payee')
+      .filter(c => 
+        (c.tableNom || 'DIRECTE').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (c.serveurNom || '').toLowerCase().includes(searchQuery.toLowerCase())
+      );
+  }, [commandes, searchQuery]);
+
   const commandeActive = commandes.find(c => c.id === commandeSelectionnee);
   
   const totalNet = Math.max(0, (commandeActive?.total || 0) - remise);
@@ -36,7 +46,6 @@ const InterfaceCaissier = () => {
     ? montantRecu - totalNet 
     : 0;
 
-  // Groupement par tournées pour le résumé de caisse
   const tournees = useMemo(() => {
     if (!commandeActive) return [];
     const groups: { [key: string]: LigneCommande[] } = {};
@@ -50,7 +59,7 @@ const InterfaceCaissier = () => {
     return Object.entries(groups).map(([time, items]) => ({
       time: time === 'en_attente' ? null : time,
       items,
-      total: items.reduce((sum, item) => sum + item.sousTotal, 0)
+      total: items.reduce((sum, item) => sum + (Number(item.sousTotal) || 0), 0)
     })).sort((a, b) => {
       if (!a.time) return -1;
       if (!b.time) return 1;
@@ -61,20 +70,17 @@ const InterfaceCaissier = () => {
   const finaliserPaiement = () => {
     if (!commandeSelectionnee || !modePaiement) return;
     
-    // Validation spécifique
-    if (modePaiement === 'credit' || resteAPayer > 0) {
-      if (!nomClient || !contactClient) {
-        toast.error('Nom et Contact requis pour une dette ou un acompte !');
-        return;
-      }
+    if ((modePaiement === 'credit' || resteAPayer > 0) && (!nomClient || !contactClient)) {
+      toast.error('Nom et Contact requis pour une dette !');
+      return;
     }
 
     if (modePaiement === 'especes' && montantRecu === 0) {
-        toast.error('Veuillez saisir le montant reçu');
-        return;
+      toast.error('Veuillez saisir le montant reçu');
+      return;
     }
 
-    const toastId = toast.loading("Enregistrement de la transaction...");
+    const toastId = toast.loading("Enregistrement...");
     try {
       encaisserCommande(
         commandeSelectionnee, 
@@ -85,7 +91,7 @@ const InterfaceCaissier = () => {
         contactClient
       );
       
-      toast.success(`Encaissement réussi ! ${resteAPayer > 0 ? '(Dette enregistrée)' : ''}`, { id: toastId, icon: '💰' });
+      toast.success("Transaction validée !", { id: toastId, icon: '💰' });
       
       setCommandeSelectionnee(null);
       setModePaiement(null);
@@ -105,267 +111,311 @@ const InterfaceCaissier = () => {
   };
 
   return (
-    <div className="h-screen w-full flex flex-col md:flex-row bg-white overflow-hidden">
-      {/* Liste des Tickets en attente */}
-      <aside className={`${commandeSelectionnee ? 'hidden md:flex' : 'flex'} w-full md:w-[400px] bg-slate-50/50 border-r border-slate-100 flex-col`}>
-        <header className="p-8 bg-white border-b border-slate-100">
-            <div className="flex items-center gap-4 mb-8">
-                <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-[0_8px_16px_rgba(0,0,0,0.1)]">
-                    <Wallet size={24} />
-                </div>
-                <div>
-                    <h1 className="text-xl font-display font-black text-slate-900 tracking-tight leading-none uppercase">CONTOIR CAISSE</h1>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1.5 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> {nomEmploye}
-                    </p>
-                </div>
-                <button 
-                  onClick={quitterPoste}
-                  className="ml-auto w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all shadow-sm"
-                  title="Changer d'utilisateur"
-                >
-                  <LogOut size={18} />
-                </button>
-            </div>
+    <div className="h-screen w-screen flex flex-col md:flex-row bg-slate-50 font-display overflow-hidden text-slate-900">
+      
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap');
+        .font-display { font-family: 'Outfit', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+      `}</style>
 
+      {/* Sidebar : Liste des tickets */}
+      <aside className={`${commandeSelectionnee ? 'hidden md:flex' : 'flex'} w-full md:w-[450px] bg-white border-r border-slate-200 flex-col shadow-2xl z-20`}>
+        <header className="p-8 space-y-8 bg-white/80 backdrop-blur-md sticky top-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-slate-950 flex items-center justify-center text-white shadow-xl shadow-slate-950/20">
+                <Banknote size={28} />
+              </div>
+              <div>
+                <h1 className="text-xl font-black tracking-tight uppercase">Caisse Centrale</h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{nomEmploye}</p>
+                </div>
+              </div>
+            </div>
+            <button 
+              onClick={quitterPoste}
+              className="p-4 rounded-xl hover:bg-red-50 text-slate-300 hover:text-red-500 transition-all border border-transparent hover:border-red-100"
+            >
+              <LogOut size={20} />
+            </button>
+          </div>
+
+          <div className="space-y-4">
             <button 
               onClick={demarrerVenteEmporter}
-              className="w-full py-4 rounded-2xl bg-slate-900 text-white font-bold text-[10px] uppercase tracking-widest shadow-xl shadow-slate-900/10 hover:bg-slate-800 transition-all flex items-center justify-center gap-3"
+              className="w-full h-16 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-indigo-600/20 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
             >
-              <ShoppingBag size={18} /> Vente Directe (Comptoir)
+              <ShoppingBag size={20} /> Nouveau Comptoir
             </button>
+            <div className="relative">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+              <input 
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="RECHERCHER TICKET..."
+                className="w-full h-14 pl-14 pr-6 rounded-2xl bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white outline-none font-black text-[10px] tracking-widest transition-all"
+              />
+            </div>
+          </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-3 no-scrollbar">
-            <div className="flex items-center justify-between mb-4 px-2">
-                <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">En attente ({commandesActives.length})</h2>
-            </div>
+        <div className="flex-1 overflow-y-auto px-6 pb-10 space-y-4 no-scrollbar">
+          <div className="px-4 py-2 flex items-center justify-between">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Tickets en attente</span>
+            <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-500 font-bold text-[10px]">{commandesActives.length}</span>
+          </div>
 
-            {commandesActives.map(commande => {
-                const estSelectionnee = commandeSelectionnee === commande.id;
-                return (
-                  <button
-                    key={commande.id}
-                    onClick={() => {
-                        setCommandeSelectionnee(commande.id);
-                        setModePaiement(null);
-                        setMontantSaisi('');
-                        setNomClient('');
-                        setContactClient('');
-                        setRemise(0);
-                    }}
-                    className={`w-full p-6 rounded-3xl text-left transition-all border-2 flex justify-between items-center ${
-                      estSelectionnee 
-                        ? 'border-slate-900 bg-white shadow-xl shadow-slate-900/5' 
-                        : 'border-transparent bg-white hover:border-slate-100'
-                    }`}
-                  >
-                    <div className="flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                             estSelectionnee ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-400'
-                        }`}>
-                            {commande.type === 'a_emporter' ? <ShoppingBag size={20} /> : <Receipt size={20} />}
-                        </div>
-                        <div>
-                            <span className="font-black text-slate-900 text-lg block leading-none uppercase">{commande.tableNom || 'DIRECTE'}</span>
-                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Serveur: {commande.serveurNom}</span>
-                        </div>
-                    </div>
-                    <div className="text-right">
-                        <div className="text-xl font-display font-black text-slate-900 tracking-tighter">{commande.total.toLocaleString()} F</div>
-                    </div>
-                  </button>
-                );
-            })}
+          {commandesActives.length === 0 ? (
+            <div className="text-center py-20">
+               <div className="w-20 h-20 bg-slate-50 rounded-full mx-auto flex items-center justify-center mb-4">
+                 <Receipt size={32} className="text-slate-200" />
+               </div>
+               <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Aucun ticket actif</p>
+            </div>
+          ) : (
+            commandesActives.map(c => (
+              <motion.button
+                key={c.id}
+                layout
+                onClick={() => setCommandeSelectionnee(c.id)}
+                className={`w-full p-8 rounded-[2.5rem] border-2 text-left transition-all ${
+                  commandeSelectionnee === c.id 
+                    ? 'bg-slate-950 border-slate-950 text-white shadow-2xl shadow-slate-950/20' 
+                    : 'bg-white border-transparent hover:border-slate-100 shadow-sm'
+                }`}
+              >
+                <div className="flex justify-between items-start mb-6">
+                   <div className={`px-4 py-1.5 rounded-xl text-[9px] font-black tracking-[0.2em] uppercase ${
+                     commandeSelectionnee === c.id ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-500'
+                   }`}>
+                     {c.type === 'a_emporter' ? '⚡ Comptoir' : '🏠 Salle'}
+                   </div>
+                   <span className={`text-2xl font-black tracking-tighter ${commandeSelectionnee === c.id ? 'text-white' : 'text-slate-900'}`}>
+                     {(c.total || 0).toLocaleString()} <span className="text-xs opacity-50">F</span>
+                   </span>
+                </div>
+                <h3 className="text-2xl font-black uppercase tracking-tight leading-none mb-1">
+                  {c.tableNom || 'Directe'}
+                </h3>
+                <div className="flex items-center justify-between items-center gap-2 mt-4">
+                   <p className={`text-[10px] font-black uppercase tracking-widest ${commandeSelectionnee === c.id ? 'text-white/40' : 'text-slate-400'}`}>
+                     {c.serveurNom}
+                   </p>
+                   <div className="flex items-center gap-1.5 text-[10px] font-bold opacity-60">
+                     <Clock size={12} /> {new Date(c.dateOuverture).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                   </div>
+                </div>
+              </motion.button>
+            ))
+          )}
         </div>
       </aside>
 
-      {/* Règlement et Détails */}
-      <main className={`${!commandeSelectionnee ? 'hidden md:flex' : 'flex'} flex-1 bg-white flex-col overflow-hidden`}>
+      {/* Main Panel : Encaissement */}
+      <main className="flex-1 flex flex-col bg-slate-50 relative overflow-hidden">
         <AnimatePresence mode="wait">
           {!commandeActive ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-10">
-              <div className="w-32 h-32 rounded-[3rem] bg-slate-50 border border-slate-100 flex items-center justify-center mb-8">
-                  <Calculator size={48} className="text-slate-200" />
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="flex-1 flex flex-col items-center justify-center p-20 text-center"
+            >
+              <div className="w-40 h-40 bg-white rounded-[3.5rem] shadow-2xl border border-slate-100 flex items-center justify-center mb-10 text-slate-200">
+                <Calculator size={64} />
               </div>
-              <h2 className="text-2xl font-display font-black text-slate-300 uppercase tracking-[0.2em] max-w-sm">Prêt pour l'encaissement</h2>
-            </div>
+              <h2 className="text-3xl font-black text-slate-300 uppercase tracking-[0.4em] max-w-md">Selectionnez un ticket pour l'encaissement</h2>
+            </motion.div>
           ) : (
-            <div className="flex-1 flex flex-col lg:flex-row h-full">
-                {/* Sommaire détaillé */}
-                <div className="flex-1 p-8 lg:p-14 overflow-y-auto no-scrollbar border-r border-slate-100">
-                    <button onClick={() => setCommandeSelectionnee(null)} className="md:hidden flex items-center gap-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest mb-10 border border-slate-100 p-3 rounded-xl">
-                        <ChevronLeft size={16} /> Retour
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
+              <header className="h-24 bg-white/80 backdrop-blur-md border-b border-slate-100 px-10 flex items-center justify-between flex-shrink-0 z-10">
+                 <div className="flex items-center gap-6">
+                    <button onClick={() => setCommandeSelectionnee(null)} className="p-4 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-all">
+                       <ArrowLeft size={24} />
                     </button>
-
-                    <div className="flex justify-between items-start mb-16">
-                        <div>
-                            <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em] mb-2">Ticket prêt à solder</p>
-                            <h2 className="text-5xl font-display font-black text-slate-900 tracking-tight uppercase">{commandeActive.tableNom || 'COMPTOIR'}</h2>
-                        </div>
-                        <div className="text-right">
-                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Résumé Commande</p>
-                             <p className="font-black text-slate-900">N° {commandeActive.id.slice(-6).toUpperCase()}</p>
-                        </div>
+                    <div>
+                       <h2 className="text-2xl font-black uppercase tracking-tight">{commandeActive.tableNom || 'Comptoir'}</h2>
+                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Ticket #...{commandeActive.id.slice(-6)}</p>
                     </div>
+                 </div>
+                 <div className="lg:hidden text-right">
+                    <p className="text-2xl font-black tracking-tighter text-indigo-600">{(commandeActive.total || 0).toLocaleString()} F</p>
+                 </div>
+              </header>
 
-                    <div className="space-y-14">
-                        {tournees.map((tournee, idx) => (
-                            <div key={idx} className="relative pl-12">
-                                <div className="absolute left-[21px] top-2 bottom-0 w-px bg-slate-100" />
-                                <div className={`absolute left-0 top-0 w-11 h-11 rounded-[15px] border-2 flex items-center justify-center z-10 bg-white ${tournee.time ? 'border-slate-50 text-slate-300' : 'border-slate-900 text-slate-900'}`}>
-                                    {tournee.time ? <Clock size={16} /> : <Zap size={16} />}
-                                </div>
-                                <div className="flex justify-between items-baseline mb-6">
-                                    <h4 className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">
-                                        {tournee.time ? `TOURNÉE DU ${new Date(tournee.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : 'SÉLECTION ACTUELLE'}
-                                    </h4>
-                                    <span className="font-display font-black text-slate-300 text-base">{tournee.total.toLocaleString()} F</span>
-                                </div>
-                                <div className="space-y-4">
-                                    {tournee.items.map(ligne => (
-                                        <div key={ligne.id} className="flex justify-between items-center group">
-                                            <div className="flex items-center gap-5">
-                                                <span className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center font-black text-slate-900 text-[11px]">x{ligne.quantite}</span>
-                                                <span className="font-bold text-slate-600 text-sm uppercase tracking-tight">{ligne.produitNom}</span>
-                                            </div>
-                                            <span className="font-black text-slate-900 text-sm">{ligne.sousTotal.toLocaleString()} F</span>
-                                        </div>
-                                    ))}
-                                </div>
+              <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+                {/* Details Items */}
+                <div className="flex-1 overflow-y-auto p-10 space-y-12 no-scrollbar border-r border-slate-100">
+                  {tournees.map((tournee, tidx) => (
+                    <div key={tidx} className="relative pl-12">
+                      <div className="absolute left-4 top-4 bottom-[-30px] w-px bg-slate-200 last:bg-transparent" />
+                      <div className={`absolute left-0 top-0 w-8 h-8 rounded-xl border-2 flex items-center justify-center z-10 bg-white ${tournee.time ? 'border-slate-100 text-slate-300' : 'border-indigo-600 text-indigo-600'}`}>
+                        {tournee.time ? <History size={14} /> : <Zap size={14} />}
+                      </div>
+                      
+                      <div className="flex justify-between items-center mb-6">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                          {tournee.time ? `Tournée ${new Date(tournee.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : 'Tournée en cours'}
+                        </span>
+                        <span className="font-bold text-slate-400 text-sm">{tournee.total.toLocaleString()} F</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4">
+                        {tournee.items.map(ligne => (
+                          <div key={ligne.id} className="flex items-center justify-between p-5 bg-white rounded-2xl border border-slate-100 shadow-sm group">
+                            <div className="flex items-center gap-5">
+                               <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center font-black text-slate-900 text-xs">x{ligne.quantite}</div>
+                               <div>
+                                  <p className="font-bold text-sm uppercase tracking-tight">{ligne.produitNom}</p>
+                                  <p className="text-[10px] font-bold text-slate-300 mt-0.5 tracking-widest">{ligne.prixUnitaire.toLocaleString()} F / unité</p>
+                               </div>
                             </div>
+                            <span className="font-black text-slate-900">{ligne.sousTotal.toLocaleString()} F</span>
+                          </div>
                         ))}
+                      </div>
                     </div>
-
-                    <div className="mt-20 p-12 bg-slate-950 rounded-[3rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] text-white">
-                        <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-6">
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">MONTANT TOTAL DU TICKET</span>
-                            <span className="font-display font-bold text-slate-400 text-2xl">{commandeActive.total.toLocaleString()} F</span>
+                  ))}
+                  
+                  {/* Total Card */}
+                  <div className="mt-20 p-12 bg-slate-950 rounded-[3rem] text-white shadow-2xl relative overflow-hidden group">
+                     <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-[80px] rounded-full" />
+                     <div className="relative z-10">
+                        <div className="flex justify-between items-center mb-8 pb-8 border-b border-white/10">
+                           <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Total Commande</span>
+                           <span className="text-3xl font-black tracking-tighter opacity-50">{(commandeActive.total || 0).toLocaleString()} F</span>
                         </div>
-                        <div className="flex justify-between items-center">
-                            <span className="text-2xl font-display font-black uppercase tracking-tight">À ENCAISSER</span>
-                            <span className="text-6xl font-display font-black text-white tracking-tighter">{totalNet.toLocaleString()} <span className="text-sm">F</span></span>
+                        <div className="flex justify-between items-end">
+                           <div>
+                              <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] mb-3">Montant Net à Payer</p>
+                              <p className="text-7xl font-black tracking-tighter leading-none">
+                                 {totalNet.toLocaleString()} <span className="text-xl">F</span>
+                              </p>
+                           </div>
+                           <Receipt size={48} className="text-white/5 mb-2" />
                         </div>
-                    </div>
+                     </div>
+                  </div>
                 </div>
 
-                {/* Panneau de Règlement (Sidebar Droite) */}
-                <aside className="w-full lg:w-[500px] p-8 lg:p-14 bg-slate-50/50 flex flex-col">
-                    <div className="mb-14">
-                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-10 text-center">MODE DE RÈGLEMENT</h3>
-                        <div className="grid grid-cols-2 gap-4">
+                {/* Bloc Paiement */}
+                <div className="w-full lg:w-[500px] bg-white border-l border-slate-200 p-10 flex flex-col shadow-2xl z-10">
+                   <div className="flex-1 space-y-12 overflow-y-auto no-scrollbar pb-10">
+                      <section>
+                         <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8 text-center">Mode de règlement</h3>
+                         <div className="grid grid-cols-2 gap-4">
                             {[
-                                { id: 'especes', label: 'ESPÈCES / CASH', icon: <Banknote size={24} /> },
-                                { id: 'mobile', label: 'M-MONEY', icon: <Smartphone size={24} /> },
-                                { id: 'carte', label: 'CARTE BANC.', icon: <CreditCard size={24} /> },
-                                { id: 'credit', label: 'CRÉDIT / DETTE', icon: <HistoryIcon size={24} /> },
+                                { id: 'especes', label: 'Espèces', icon: <Banknote size={24} /> },
+                                { id: 'mobile', label: 'Mobile', icon: <Smartphone size={24} /> },
+                                { id: 'carte', label: 'Carte', icon: <CreditCard size={24} /> },
+                                { id: 'credit', label: 'Note / Dette', icon: <HistoryIcon size={24} /> },
                             ].map(m => (
-                                <button
-                                    key={m.id}
-                                    onClick={() => {
-                                        setModePaiement(m.id as any);
-                                        if (m.id !== 'credit') setMontantSaisi(totalNet.toString());
-                                        else setMontantSaisi('0');
-                                    }}
-                                    className={`p-10 rounded-[2rem] flex flex-col items-center gap-4 transition-all border-2 ${
-                                        modePaiement === m.id 
-                                        ? 'bg-slate-900 border-slate-900 text-white shadow-2xl' 
-                                        : 'bg-white border-transparent text-slate-400 hover:border-slate-200'
-                                    }`}
-                                >
+                              <button
+                                 key={m.id}
+                                 onClick={() => {
+                                   setModePaiement(m.id as any);
+                                   if (m.id !== 'credit') setMontantSaisi(totalNet.toString());
+                                   else setMontantSaisi('0');
+                                 }}
+                                 className={`h-36 rounded-3xl flex flex-col items-center justify-center gap-4 transition-all border-2 ${
+                                   modePaiement === m.id 
+                                     ? 'bg-slate-950 border-slate-950 text-white shadow-xl scale-[1.02]' 
+                                     : 'bg-slate-50 border-transparent text-slate-400 hover:border-slate-200'
+                                 }`}
+                              >
+                                 <div className={`p-3 rounded-2xl ${modePaiement === m.id ? 'bg-white/10' : 'bg-white'}`}>
                                     {m.icon}
-                                    <span className="text-[10px] font-black uppercase tracking-widest">{m.label}</span>
-                                </button>
+                                 </div>
+                                 <span className="text-[10px] font-black uppercase tracking-widest">{m.label}</span>
+                              </button>
                             ))}
-                        </div>
-                    </div>
+                         </div>
+                      </section>
 
-                    <div className="flex-1 space-y-8">
-                        <AnimatePresence mode="wait">
-                            {(modePaiement && modePaiement !== 'credit') && (
-                                <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6">
-                                    <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 text-center">MONTANT REÇU (Paiement Partiel Possible)</p>
+                      <AnimatePresence mode="wait">
+                         {modePaiement && (
+                            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+                               {modePaiement !== 'credit' && (
+                                  <div className="space-y-4">
+                                     <div className="bg-slate-50 p-10 rounded-[3rem] text-center border border-slate-100">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Montant du versement</p>
                                         <div className="flex items-center justify-center gap-4">
-                                            <input 
-                                                type="number" 
-                                                value={montantSaisi} 
-                                                onChange={e => setMontantSaisi(e.target.value)}
-                                                className="w-full text-center text-6xl font-display font-black text-slate-900 outline-none bg-transparent"
-                                                autoFocus
-                                            />
-                                            <span className="text-2xl font-display font-black text-slate-300">F</span>
+                                           <input 
+                                              type="number" 
+                                              value={montantSaisi} 
+                                              onChange={e => setMontantSaisi(e.target.value)}
+                                              className="w-full text-center text-6xl font-black text-slate-950 bg-transparent outline-none tracking-tighter"
+                                              autoFocus
+                                           />
+                                           <span className="text-3xl font-black text-slate-200">F</span>
                                         </div>
-                                    </div>
-                                    {resteAPayer > 0 && (
-                                         <div className="p-8 bg-amber-50 rounded-[2rem] border border-amber-100 flex justify-between items-center px-10">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center">
-                                                    <AlertCircle size={20} />
-                                                </div>
-                                                <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest leading-tight">RESTE À PAYER<br/>(Dette Client)</p>
-                                            </div>
-                                            <p className="text-3xl font-display font-black text-amber-800">{resteAPayer.toLocaleString()} F</p>
-                                         </div>
-                                    )}
-                                    {monnaieRendue > 0 && (
-                                         <div className="p-8 bg-emerald-50 rounded-[2rem] border border-emerald-100 flex justify-between items-center px-10">
-                                            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">MONNAIE À RENDRE</p>
-                                            <p className="text-3xl font-display font-black text-emerald-800">{monnaieRendue.toLocaleString()} F</p>
-                                         </div>
-                                    )}
-                                </motion.div>
-                            )}
+                                     </div>
+                                     
+                                     <div className="grid grid-cols-2 gap-4">
+                                        {monnaieRendue > 0 && (
+                                           <div className="p-6 bg-emerald-50 rounded-[2rem] border border-emerald-100 text-center">
+                                              <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1">Monnaie à rendre</p>
+                                              <p className="text-2xl font-black text-emerald-800 tracking-tighter">{monnaieRendue.toLocaleString()} F</p>
+                                           </div>
+                                        )}
+                                        {resteAPayer > 0 && (
+                                           <div className="p-6 bg-amber-50 rounded-[2rem] border border-amber-100 text-center">
+                                              <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest mb-1">Dette client</p>
+                                              <p className="text-2xl font-black text-amber-800 tracking-tighter">{resteAPayer.toLocaleString()} F</p>
+                                           </div>
+                                        )}
+                                     </div>
+                                  </div>
+                               )}
 
-                            {(modePaiement === 'credit' || resteAPayer > 0) && (
-                                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Informations Débiteur obligatoire</h4>
-                                    <div className="bg-white p-8 rounded-[2rem] border border-red-100 shadow-xl shadow-red-500/5 space-y-6">
-                                        <div className="flex items-center gap-5 border-b border-slate-50 pb-4">
-                                            <UserPlus size={24} className="text-slate-300" />
-                                            <input 
-                                                type="text" 
-                                                value={nomClient} 
-                                                onChange={e => setNomClient(e.target.value)}
-                                                placeholder="Nom complet du client..."
-                                                className="w-full text-lg font-bold text-slate-900 outline-none bg-transparent placeholder:text-slate-200"
-                                            />
+                               {(modePaiement === 'credit' || resteAPayer > 0) && (
+                                  <div className="space-y-4">
+                                     <div className="flex items-center gap-3 ml-4 mb-2">
+                                        <ShieldCheck size={16} className="text-red-500" />
+                                        <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Identification Débiteur</span>
+                                     </div>
+                                     <div className="bg-white p-8 rounded-[2.5rem] border-2 border-red-100 space-y-6 shadow-xl shadow-red-500/5">
+                                        <div className="flex items-center gap-6 border-b border-slate-50 pb-4">
+                                           <User size={24} className="text-slate-200" />
+                                           <input 
+                                              value={nomClient} onChange={e => setNomClient(e.target.value)}
+                                              placeholder="NOM DU DÉBITEUR..."
+                                              className="w-full font-black text-sm uppercase outline-none placeholder:text-slate-200"
+                                           />
                                         </div>
-                                        <div className="flex items-center gap-5">
-                                            <Phone size={24} className="text-slate-300" />
-                                            <input 
-                                                type="text" 
-                                                value={contactClient} 
-                                                onChange={e => setContactClient(e.target.value)}
-                                                placeholder="Contact (Tél, Adresse...)"
-                                                className="w-full text-lg font-bold text-slate-900 outline-none bg-transparent placeholder:text-slate-200"
-                                            />
+                                        <div className="flex items-center gap-6">
+                                           <Phone size={24} className="text-slate-200" />
+                                           <input 
+                                              value={contactClient} onChange={e => setContactClient(e.target.value)}
+                                              placeholder="CONTACT / TÉL..."
+                                              className="w-full font-black text-sm uppercase outline-none placeholder:text-slate-200"
+                                           />
                                         </div>
-                                    </div>
-                                    <p className="text-[10px] text-slate-400 italic text-center px-10 font-medium">Les coordonnées sont enregistrées dans le grand livre des dettes du patron.</p>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
+                                     </div>
+                                  </div>
+                               )}
+                            </motion.div>
+                         )}
+                      </AnimatePresence>
+                   </div>
 
-                    <button
-                        onClick={finaliserPaiement}
-                        disabled={!modePaiement}
-                        className="w-full h-24 rounded-[2.5rem] bg-slate-900 text-white font-black uppercase tracking-[0.4em] text-[12px] shadow-2xl disabled:opacity-20 hover:bg-emerald-600 transition-all active:scale-[0.98] flex items-center justify-center gap-5 mt-10"
-                    >
-                        {modePaiement ? 'Finaliser & Clôturer' : 'Sélectionner Mode'} <ArrowRight size={24} />
-                    </button>
-                </aside>
+                   <button
+                      onClick={finaliserPaiement}
+                      disabled={!modePaiement}
+                      className="h-24 w-full rounded-[2.5rem] bg-slate-950 hover:bg-emerald-600 text-white font-black uppercase tracking-[0.4em] text-xs shadow-2xl transition-all active:scale-[0.98] disabled:opacity-10 flex items-center justify-center gap-4"
+                   >
+                     {modePaiement ? 'Valider le Paiement' : 'Attente Règlement'} <ArrowRight size={20} />
+                   </button>
+                </div>
+              </div>
             </div>
           )}
         </AnimatePresence>
       </main>
-
-      <style>{`
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-      `}</style>
     </div>
   );
 };
+
 
 export default InterfaceCaissier;
