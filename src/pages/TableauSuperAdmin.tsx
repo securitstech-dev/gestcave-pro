@@ -196,10 +196,9 @@ const TableauSuperAdmin = () => {
       {/* ── SIDEBAR ── */}
       <aside className="w-72 bg-white border-r border-slate-200 flex flex-col fixed h-screen z-20 shadow-sm">
         <div className="flex items-center gap-3 px-8 py-8 border-b border-slate-100">
-          <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg shadow-slate-900/20">
-            <Shield size={20} className="text-white" />
-          </div>
+          <img src="/logo_gestcave.png" alt="Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-slate-900/10" />
           <div>
+
             <h2 className="font-bold text-slate-900 text-base tracking-tight">SUPER ADMIN</h2>
             <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Securits Tech</p>
           </div>

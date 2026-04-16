@@ -40,9 +40,7 @@ const PageConnexion = () => {
       <header className="bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-xl shadow-lg shadow-slate-900/20">
-              🍷
-            </div>
+            <img src="/logo_gestcave.png" alt="Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-slate-900/10" />
             <span className="font-bold text-xl tracking-tight text-slate-900">GESTCAVE PRO</span>
           </div>
           <button onClick={() => navigate('/')} className="text-slate-400 hover:text-slate-900 transition-colors text-sm font-medium">
@@ -61,9 +59,8 @@ const PageConnexion = () => {
         >
           <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl shadow-slate-900/10 p-10 text-center">
 
-            {/* Logo */}
-            <div className="w-20 h-20 rounded-[1.5rem] bg-slate-900 flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-slate-900/30 text-4xl">
-              🍷
+            <div className="w-20 h-20 mx-auto mb-8 shadow-2xl shadow-slate-900/10">
+              <img src="/logo_gestcave.png" alt="Logo" className="w-full h-full rounded-[1.5rem]" />
             </div>
 
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">GESTCAVE PRO</h1>

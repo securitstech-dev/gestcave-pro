@@ -9,6 +9,8 @@ import toast from 'react-hot-toast';
 const PageAccueil = () => {
   const navigate = useNavigate();
 
+  const [annuel, setAnnuel] = React.useState(false);
+
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
@@ -22,9 +24,7 @@ const PageAccueil = () => {
       <header className="fixed top-0 inset-x-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
-            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center shadow-lg shadow-slate-900/20">
-              <span className="text-xl">🍷</span>
-            </div>
+            <img src="/logo_gestcave.png" alt="GestCave Pro Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-slate-900/20" />
             <span className="font-display font-bold text-2xl tracking-tight text-slate-900">GESTCAVE PRO</span>
           </div>
           <nav className="hidden md:flex gap-8 text-sm font-bold text-slate-500 uppercase tracking-wider">
@@ -128,31 +128,45 @@ const PageAccueil = () => {
           <div id="tarifs" className="mt-40 mb-32 scroll-mt-24">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-5xl font-display font-black text-slate-900 mb-4">Plans Flexibles</h2>
-              <p className="text-slate-500 font-medium max-w-xl mx-auto">Choisissez le plan adapté à la taille de votre établissement.</p>
+              <p className="text-slate-500 font-medium max-w-xl mx-auto mb-10">Choisissez le plan adapté à la taille de votre établissement.</p>
+              
+              <div className="flex items-center justify-center gap-4 mb-10">
+                <span className={`text-sm font-bold ${!annuel ? 'text-slate-900' : 'text-slate-400'}`}>Mensuel</span>
+                <button 
+                  onClick={() => setAnnuel(!annuel)}
+                  className="w-14 h-8 bg-slate-200 rounded-full relative p-1 transition-colors"
+                >
+                  <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-transform ${annuel ? 'translate-x-6' : 'translate-x-0'}`} />
+                </button>
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm font-bold ${annuel ? 'text-slate-900' : 'text-slate-400'}`}>Annuel</span>
+                  <span className="bg-emerald-100 text-emerald-600 text-[10px] font-black px-2 py-0.5 rounded-full uppercase"> -20% </span>
+                </div>
+              </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <PriceCard 
                 name="Starter" 
-                price="15.000 F" 
-                duration="/ mois" 
+                price={annuel ? "144.000 F" : "15.000 F"} 
+                duration={annuel ? "/ an" : "/ mois"} 
                 features={["1 Poste (Caisse/Serveur)", "Gestion inventaire simple", "Rapports journaliers"]} 
-                onClick={() => scrollToSection('inscription-section')}
+                onClick={() => navigate(`/inscription?plan=starter&period=${annuel ? 'annuel' : 'mensuel'}`)}
               />
               <PriceCard 
                 name="Premium" 
-                price="30.000 F" 
+                price={annuel ? "288.000 F" : "30.000 F"} 
                 isRecommended={true}
-                duration="/ mois" 
+                duration={annuel ? "/ an" : "/ mois"} 
                 features={["Multi-postes (Cuisine/Salle)", "Gestion Casiers/Unités", "Commissions Serveurs"]} 
-                onClick={() => scrollToSection('inscription-section')}
+                onClick={() => navigate(`/inscription?plan=premium&period=${annuel ? 'annuel' : 'mensuel'}`)}
               />
               <PriceCard 
                 name="Business" 
-                price="60.000 F" 
-                duration="/ mois" 
+                price={annuel ? "576.000 F" : "60.000 F"} 
+                duration={annuel ? "/ an" : "/ mois"} 
                 features={["Postes illimités", "Consolidation multi-sites", "Support Prioritaire 24/7"]} 
-                onClick={() => scrollToSection('inscription-section')}
+                onClick={() => navigate(`/inscription?plan=business&period=${annuel ? 'annuel' : 'mensuel'}`)}
               />
             </div>
           </div>
@@ -196,7 +210,7 @@ const PageAccueil = () => {
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-12">
           <div className="space-y-6">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center font-bold text-white shadow-md">G</div>
+              <img src="/logo_gestcave.png" alt="Logo" className="w-8 h-8 rounded-lg shadow-md" />
               <span className="font-display font-black text-slate-900 text-xl uppercase tracking-wider">GESTCAVE PRO</span>
             </div>
             <p className="text-slate-500 font-medium text-sm leading-relaxed max-w-sm">

@@ -12,21 +12,28 @@ import { useNavigate } from 'react-router-dom';
 import { db, storage } from '../lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useSearchParams } from 'react-router-dom';
+
 
 const PageAbonnement = () => {
   const { profil } = useAuthStore();
   const navigate = useNavigate();
-  const [etape, setEtape] = useState(1);
+  const [searchParams] = useSearchParams();
+  const [annuel, setAnnuel] = useState(searchParams.get('period') === 'annuel');
   const [chargement, setChargement] = useState(false);
   const [forfaitChoisi, setForfaitChoisi] = useState<any>(null);
   const [fichier, setFichier] = useState<File | null>(null);
+  const [methodePaiement, setMethodePaiement] = useState<'mobile' | 'direction' | null>(null);
+
 
   const forfaits = [
     { 
       id: 'starter', 
       nom: 'SaaS STARTER', 
-      prix: '15 000 FCFA', 
-      montant: 15000,
+      prix_mensuel: '15 000 FCFA',
+      prix_annuel: '144 000 FCFA',
+      montant_mensuel: 15000,
+      montant_annuel: 144000,
       desc: 'Idéal pour les petites caves & débits de boisson.',
       features: ['1 Poste (Caisse/Serveur)', 'Gestion inventaire simple', 'Rapports journaliers'],
       color: 'slate'
@@ -34,8 +41,10 @@ const PageAbonnement = () => {
     { 
       id: 'premium', 
       nom: 'SaaS PREMIUM', 
-      prix: '30 000 FCFA', 
-      montant: 30000,
+      prix_mensuel: '30 000 FCFA',
+      prix_annuel: '288 000 FCFA',
+      montant_mensuel: 30000,
+      montant_annuel: 288000,
       desc: 'Pour les restaurants & lounges à fort débit.',
       features: ['Multi-postes (Cuisine/Salle)', 'Gestion Casiers/Unités', 'Commissions Serveurs'],
       populaire: true,
@@ -44,13 +53,16 @@ const PageAbonnement = () => {
     { 
       id: 'business', 
       nom: 'SaaS BUSINESS', 
-      prix: '60 000 FCFA', 
-      montant: 60000,
+      prix_mensuel: '60 000 FCFA',
+      prix_annuel: '576 000 FCFA',
+      montant_mensuel: 60000,
+      montant_annuel: 576000,
       desc: 'Gestion multi-sites & chaines d\'établissements.',
       features: ['Postes illimités', 'Consolidation multi-sites', 'Support Prioritaire'],
       color: 'amber'
     },
   ];
+
 
   const gererFichier = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -59,26 +71,30 @@ const PageAbonnement = () => {
   };
 
   const envoyerPaiement = async () => {
-    if (!fichier || !forfaitChoisi) return;
+    if (!forfaitChoisi) return;
     setChargement(true);
     
     try {
-      const extension = fichier.name.split('.').pop();
-      const nomFichier = `preuves/${Date.now()}-${Math.random().toString(36).substring(7)}.${extension}`;
-      const imageRef = ref(storage, nomFichier);
-      
-      const snapshot = await uploadBytes(imageRef, fichier);
-      const urlPreuve = await getDownloadURL(snapshot.ref);
+      let urlPreuve = "";
+      if (fichier) {
+        const extension = fichier.name.split('.').pop();
+        const nomFichier = `preuves/${Date.now()}-${Math.random().toString(36).substring(7)}.${extension}`;
+        const imageRef = ref(storage, nomFichier);
+        const snapshot = await uploadBytes(imageRef, fichier);
+        urlPreuve = await getDownloadURL(snapshot.ref);
+      }
 
       await addDoc(collection(db, 'paiements'), {
         etablissement_id: profil?.etablissement_id || '',
-        montant: forfaitChoisi.montant,
+        montant: annuel ? forfaitChoisi.montant_annuel : forfaitChoisi.montant_mensuel,
         statut: 'en_attente',
         preuve_url: urlPreuve,
+        methode: methodePaiement,
+        periode: annuel ? 'annuel' : 'mensuel',
         date: new Date().toISOString()
       });
       
-      toast.success('Paiement enregistré ! Activation imminente.', { position: 'top-center' });
+      toast.success('Demande enregistrée ! Notre équipe va vérifier.');
       setEtape(4);
     } catch (erreur: any) {
       toast.error(erreur.message || 'Erreur lors de l\'envoi');
@@ -113,12 +129,24 @@ const PageAbonnement = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-5xl md:text-7xl font-display font-black mb-6 tracking-tighter"
           >
-            ACTIVEZ VOTRE <span className="text-indigo-500">POTENTIEL</span>
+            VOTRE <span className="text-indigo-500">LICENCE</span> PRO
           </motion.h1>
-          <p className="text-slate-500 text-lg md:text-xl font-bold uppercase tracking-widest max-w-2xl mx-auto opacity-60">
-            Choisissez la durée de votre licence et boostez votre établissement
-          </p>
+
+          <div className="flex items-center justify-center gap-4 mb-10">
+            <span className={`text-sm font-bold ${!annuel ? 'text-white' : 'text-slate-500'}`}>Mensuel</span>
+            <button 
+              onClick={() => setAnnuel(!annuel)}
+              className="w-14 h-8 bg-white/10 rounded-full relative p-1 transition-colors"
+            >
+              <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-transform ${annuel ? 'translate-x-6' : 'translate-x-0'}`} />
+            </button>
+            <div className="flex items-center gap-2">
+              <span className={`text-sm font-bold ${annuel ? 'text-white' : 'text-slate-500'}`}>Annuel</span>
+              <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-black px-2 py-0.5 rounded-full uppercase"> -20% </span>
+            </div>
+          </div>
         </header>
+
 
         {/* Stepper Premium */}
         <div className="flex justify-center flex-wrap items-center gap-4 md:gap-8 mb-20">
@@ -168,8 +196,9 @@ const PageAbonnement = () => {
                   
                   <h3 className="text-2xl font-display font-black mb-2 text-white italic">{f.nom}</h3>
                   <div className="text-4xl font-display font-black text-white mb-6 tracking-tighter">
-                     {f.prix}
+                     {annuel ? f.prix_annuel : f.prix_mensuel}
                   </div>
+
                   
                   <p className="text-slate-500 text-sm font-bold uppercase tracking-tight mb-10 leading-relaxed italic">
                     {f.desc}
@@ -199,17 +228,57 @@ const PageAbonnement = () => {
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -50 }}
+              className="max-w-4xl mx-auto space-y-8"
+            >
+              <h3 className="text-3xl font-display font-black text-center mb-10 uppercase italic">Choisir le mode de règlement</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div 
+                  onClick={() => { setMethodePaiement('mobile'); setEtape(3); }}
+                  className="bg-white/[0.02] border border-white/10 rounded-[3rem] p-10 cursor-pointer hover:border-indigo-500 group transition-all"
+                >
+                  <Smartphone className="text-indigo-500 mb-6 group-hover:scale-110 transition-transform" size={48} />
+                  <h4 className="text-2xl font-black mb-2">Mobile Money</h4>
+                  <p className="text-slate-500 text-sm font-bold uppercase tracking-widest">Airtel Money ou MTN MoMo</p>
+                </div>
+
+                <div 
+                  onClick={() => { setMethodePaiement('direction'); setEtape(3); }}
+                  className="bg-white/[0.02] border border-white/10 rounded-[3rem] p-10 cursor-pointer hover:border-amber-500 group transition-all"
+                >
+                  <Building2 className="text-amber-500 mb-6 group-hover:scale-110 transition-transform" size={48} />
+                  <h4 className="text-2xl font-black mb-2">À la Direction</h4>
+                  <p className="text-slate-500 text-sm font-bold uppercase tracking-widest">Paiement en espèces au bureau</p>
+                </div>
+
+                <div className="bg-white/[0.01] border border-white/5 rounded-[3rem] p-10 opacity-30 cursor-not-allowed">
+                  <CreditCard className="text-slate-500 mb-6" size={48} />
+                  <h4 className="text-2xl font-black mb-2">Carte Bancaire</h4>
+                  <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Bientôt disponible</p>
+                </div>
+
+                <div className="bg-white/[0.01] border border-white/5 rounded-[3rem] p-10 opacity-30 cursor-not-allowed text-center flex flex-col items-center justify-center">
+                   <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em]">Autres modes de paiement <br/> en cours d'intégration...</p>
+                </div>
+              </div>
+
+              <div className="text-center pt-10">
+                <button onClick={() => setEtape(1)} className="text-slate-500 font-black text-[10px] tracking-widest uppercase hover:text-white transition-all">← Retour aux forfaits</button>
+              </div>
+            </motion.div>
+          )}
+
+          {etape === 3 && methodePaiement === 'mobile' && (
+            <motion.div 
+              key="stage3_mobile"
               className="max-w-3xl mx-auto bg-white/[0.02] border border-white/10 rounded-[4rem] p-10 md:p-16 relative overflow-hidden"
             >
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-600 to-transparent" />
-              
               <div className="flex items-center gap-6 mb-12">
                   <div className="w-16 h-16 rounded-[1.8rem] bg-indigo-600/10 flex items-center justify-center text-indigo-500">
                       <Smartphone size={32} />
                   </div>
                   <div>
-                      <h3 className="text-3xl font-display font-black tracking-tight italic uppercase">Paiement Mobile</h3>
-                      <p className="text-slate-500 text-xs font-bold uppercase tracking-[0.2em]">{forfaitChoisi?.nom} — {forfaitChoisi?.prix}</p>
+                      <h3 className="text-3xl font-display font-black tracking-tight italic uppercase">Règlement Mobile</h3>
+                      <p className="text-slate-500 text-xs font-bold uppercase tracking-[0.2em]">{forfaitChoisi?.nom} — {annuel ? forfaitChoisi.prix_annuel : forfaitChoisi.prix_mensuel}</p>
                   </div>
               </div>
 
@@ -231,22 +300,44 @@ const PageAbonnement = () => {
               <div className="bg-indigo-600/10 border border-indigo-500/20 rounded-[2rem] p-8 mb-12 flex gap-6">
                   <Info className="text-indigo-400 shrink-0" size={24} />
                   <div className="text-xs font-bold uppercase tracking-widest leading-relaxed text-indigo-300">
-                      Envoyez le montant exact au numéro désiré, puis capturez l'écran du SMS de confirmation reçu. Vous devrez l'envoyer à l'étape suivante.
+                      Envoyez le montant exact, capturez le SMS de confirmation, puis chargez-le à l'étape suivante.
                   </div>
               </div>
 
               <div className="flex gap-4">
-                  <button onClick={() => setEtape(1)} className="flex-1 py-5 rounded-2xl bg-white/5 text-slate-500 font-black text-[10px] tracking-widest uppercase hover:text-white transition-all">ANNULER</button>
-                  <button onClick={() => setEtape(3)} className="flex-[2] py-5 rounded-2xl bg-indigo-600 text-white font-black text-[10px] tracking-widest uppercase shadow-xl hover:bg-indigo-500 transition-all flex items-center justify-center gap-3">
+                  <button onClick={() => setEtape(2)} className="flex-1 py-5 rounded-2xl bg-white/5 text-slate-500 font-black text-[10px] tracking-widest uppercase hover:text-white transition-all">RETOUR</button>
+                  <button onClick={() => setEtape(35)} className="flex-[2] py-5 rounded-2xl bg-indigo-600 text-white font-black text-[10px] tracking-widest uppercase shadow-xl hover:bg-indigo-500 transition-all flex items-center justify-center gap-3">
                     J'AI EFFECTUÉ LE TRANSFERT <ChevronRight size={16} />
                   </button>
               </div>
             </motion.div>
           )}
 
-          {etape === 3 && (
+          {etape === 3 && methodePaiement === 'direction' && (
             <motion.div 
-              key="stage3"
+              key="stage3_direction"
+              className="max-w-xl mx-auto text-center bg-white/[0.02] border border-white/10 rounded-[4rem] p-16"
+            >
+              <div className="w-24 h-24 rounded-[2.5rem] bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto mb-10 text-amber-500">
+                <Building2 size={40} />
+              </div>
+              <h3 className="text-4xl font-display font-black mb-4 uppercase tracking-tighter italic">Paiement Physique</h3>
+              <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-12 opacity-60 italic leading-relaxed">
+                Vous avez choisi de régler à notre siège social. Cliquez sur le bouton ci-dessous pour nous notifier de votre visite. Notre équipe vous attendra avec votre licence prête.
+              </p>
+              
+              <div className="flex gap-4">
+                  <button onClick={() => setEtape(2)} className="flex-1 py-5 rounded-2xl bg-white/5 text-slate-500 font-black text-[10px] tracking-widest uppercase hover:text-white transition-all">RETOUR</button>
+                  <button onClick={envoyerPaiement} className="flex-[2] py-5 rounded-2xl bg-amber-600 text-white font-black text-[10px] tracking-widest uppercase shadow-2xl hover:bg-amber-500 transition-all">
+                    NOTIFIER MA VENUE
+                  </button>
+              </div>
+            </motion.div>
+          )}
+
+          {etape === 35 && (
+            <motion.div 
+              key="stage35"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               className="max-w-xl mx-auto text-center"
@@ -255,7 +346,7 @@ const PageAbonnement = () => {
                 <Upload size={40} className="animate-bounce" />
               </div>
               <h3 className="text-4xl font-display font-black mb-4 uppercase tracking-tighter">Transmission Preuve</h3>
-              <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mb-12 opacity-60 italic">Chargez la capture du SMS de transfert Airtel ou MTN</p>
+              <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mb-12 opacity-60 italic">Chargez la capture du SMS de transfert</p>
               
               <div className="mb-12 group">
                 <input 
@@ -289,19 +380,20 @@ const PageAbonnement = () => {
               </div>
 
               <div className="flex gap-4">
-                <button onClick={() => setEtape(2)} className="flex-1 py-5 rounded-2xl bg-white/5 text-slate-500 font-black text-[10px] tracking-widest uppercase hover:text-white transition-all">RETOUR</button>
+                <button onClick={() => setEtape(3)} className="flex-1 py-5 rounded-2xl bg-white/5 text-slate-500 font-black text-[10px] tracking-widest uppercase hover:text-white transition-all">RETOUR</button>
                 <button 
                   onClick={envoyerPaiement}
                   disabled={!fichier || chargement}
                   className="flex-[2] py-5 rounded-2xl bg-indigo-600 text-white font-black text-[10px] tracking-widest uppercase shadow-2xl disabled:opacity-30 disabled:grayscale transition-all flex items-center justify-center gap-3"
                 >
                   {chargement ? (
-                      <> <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> ENVOI EN COURS...</>
-                  ) : 'VALIDER MON ACCÈS'}
+                      <> <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> ENVOI...</>
+                  ) : 'VALIDER LE PAIEMENT'}
                 </button>
               </div>
             </motion.div>
           )}
+
 
           {etape === 4 && (
             <motion.div 

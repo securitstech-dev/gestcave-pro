@@ -4,10 +4,15 @@ import { Building2, MapPin, Phone, User, Mail, Send, CheckCircle2, ArrowLeft } f
 import { useNavigate } from 'react-router-dom';
 import { db } from '../lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
+import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 const PageInscription = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const planChoisi = searchParams.get('plan') || 'essai_gratuit';
+  const periodeChoisie = searchParams.get('period') || 'mensuel';
+
   const [loading, setLoading] = useState(false);
   const [envoye, setEnvoye] = useState(false);
 
@@ -28,8 +33,10 @@ const PageInscription = () => {
         ...formData,
         statut: 'en_attente',
         date_demande: new Date().toISOString(),
-        plan: 'essai_gratuit'
+        plan: planChoisi,
+        periode: periodeChoisie
       });
+
 
       setEnvoye(true);
       toast.success('Votre demande a été envoyée avec succès !');
@@ -72,14 +79,16 @@ const PageInscription = () => {
       <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-emerald-500/5 blur-[120px] rounded-full pointer-events-none" />
 
-      <header className="max-w-7xl mx-auto px-6 h-24 flex items-center">
+       <header className="max-w-7xl mx-auto px-6 h-24 flex items-center justify-between">
           <button onClick={() => navigate('/')} className="flex items-center gap-3 text-slate-400 hover:text-slate-900 font-bold text-sm transition-all group">
               <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center group-hover:bg-slate-50 transition-all">
                   <ArrowLeft size={18} />
               </div>
               <span className="uppercase tracking-widest text-[10px] font-black">Retour Accueil</span>
           </button>
+          <img src="/logo_gestcave.png" alt="Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-slate-900/10" />
       </header>
+
       
       <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-20 items-center py-10 pb-32">
         

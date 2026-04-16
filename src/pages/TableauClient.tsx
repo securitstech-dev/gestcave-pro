@@ -67,10 +67,9 @@ const TableauClient = () => {
   const Sidebar = () => (
     <div className="flex flex-col h-full bg-white border-r border-slate-200">
       <div className="p-8 flex items-center gap-4 border-b border-slate-100">
-        <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg shadow-slate-950/20">
-          <Wine size={20} />
-        </div>
+        <img src="/logo_gestcave.png" alt="Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-slate-950/20" />
         <div>
+
           <h2 className="font-bold text-slate-900 text-sm tracking-tight leading-tight uppercase">
             {profil?.etablissement_id?.slice(0, 8) || 'GESTCAVE'}
           </h2>
