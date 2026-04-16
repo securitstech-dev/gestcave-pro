@@ -105,7 +105,7 @@ const InterfaceCaissier = () => {
   };
 
   return (
-    <div className="h-[calc(100vh-140px)] flex flex-col md:flex-row bg-white rounded-[2.5rem] overflow-hidden border border-slate-100 shadow-2xl">
+    <div className="h-screen w-full flex flex-col md:flex-row bg-white overflow-hidden">
       {/* Liste des Tickets en attente */}
       <aside className={`${commandeSelectionnee ? 'hidden md:flex' : 'flex'} w-full md:w-[400px] bg-slate-50/50 border-r border-slate-100 flex-col`}>
         <header className="p-8 bg-white border-b border-slate-100">
@@ -363,9 +363,6 @@ const InterfaceCaissier = () => {
 
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        @media (max-width: 1024px) {
-            .h-[calc(100vh-140px)] { height: auto; min-height: 100vh; }
-        }
       `}</style>
     </div>
   );
