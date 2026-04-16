@@ -15,7 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import type { Produit, TablePlan, Commande, LigneCommande } from '../../store/posStore';
 
 const InterfaceServeur = () => {
-  const { tables, produits, commandes, ouvrirTable, ajouterLigne, modifierQuantite, supprimerLigne, envoyerCuisine } = usePOSStore();
+  const { tables, produits, commandes, ouvrirTable, ajouterLigne, modifierQuantite, supprimerLigne, envoyerCuisine, annulerCommande } = usePOSStore();
   const { nomEmploye, etablissementId, quitterPoste } = usePosteSession();
   const navigate = useNavigate();
   
@@ -226,6 +226,24 @@ const InterfaceServeur = () => {
           </div>
 
           <div className="flex items-center gap-6">
+              {commandeActive && (
+                 <button 
+                   onClick={async () => {
+                     if (window.confirm("Êtes-vous sûr de vouloir annuler cette commande et libérer la table ?")) {
+                       if (commandeId) {
+                         await annulerCommande(commandeId);
+                         toast.success("Table libérée");
+                         setCommandeId(null);
+                         setTableSelectionnee(null);
+                         setEtape('tables');
+                       }
+                     }
+                   }}
+                   className="hidden md:flex text-rose-500 bg-rose-50 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-rose-100 transition-colors"
+                 >
+                   Fermer la Table
+                 </button>
+              )}
               <div className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 text-right">
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Addition en cours</p>
                   <p className="font-display font-black text-slate-900 text-xl leading-none">{(commandeActive?.total || 0).toLocaleString()} F</p>

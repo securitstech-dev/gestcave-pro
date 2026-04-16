@@ -9,7 +9,8 @@ import {
   where,
   increment,
   writeBatch,
-  getDoc
+  getDoc,
+  deleteDoc
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuthStore } from './authStore';
@@ -93,6 +94,7 @@ interface PosState {
   marquerLignePrete: (commandeId: string, ligneId: string) => Promise<void>;
   marquerCommandeServie: (commandeId: string) => Promise<void>;
   encaisserCommande: (commandeId: string, modePaiement: 'comptant' | 'credit', clientNom: string, montantRemise?: number, montantPaye?: number, clientContact?: string) => Promise<void>;
+  annulerCommande: (commandeId: string) => Promise<void>;
 }
 
 export const usePOSStore = create<PosState>((set, get) => ({
@@ -334,5 +336,35 @@ export const usePOSStore = create<PosState>((set, get) => ({
 
     await batch.commit();
     await get().refreshCommande(commandeId);
+  },
+
+  annulerCommande: async (commandeId) => {
+    if (!commandeId) return;
+    const commandeRef = doc(db, 'commandes', commandeId);
+    const snap = await getDoc(commandeRef);
+    if (!snap.exists()) return;
+    
+    const data = snap.data();
+    const batch = writeBatch(db);
+    
+    // Libération de la table
+    if (data.tableId) {
+        batch.update(doc(db, 'tables', data.tableId), { statut: 'libre', commandeActiveId: null });
+    }
+    
+    // Restitution des stocks pour les lignes validées
+    const lignes = (data.lignes || []) as LigneCommande[];
+    lignes.forEach(l => {
+        if (l.statut !== 'en_attente') {
+            batch.update(doc(db, 'produits', l.produitId), { stockTotal: increment(l.quantite) });
+        }
+    });
+
+    // Suppression définitive pour éviter de laisser une commande fantôme
+    batch.delete(commandeRef);
+    await batch.commit();
+    
+    // Nettoyage de l'état local
+    set(state => ({ commandes: state.commandes.filter(c => c.id !== commandeId) }));
   }
 }));
