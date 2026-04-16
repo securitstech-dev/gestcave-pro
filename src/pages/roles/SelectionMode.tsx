@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
   Smartphone, ChefHat, Receipt, LayoutDashboard, 
-  LogOut, Key, ArrowRight, UserPlus, ShieldCheck, 
-  Gamepad2, Zap, Star, X
+  LogOut, Key, ArrowRight, ShieldCheck, 
+  Zap, X
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { db } from '../../lib/firebase';
@@ -61,26 +61,25 @@ const SelectionMode = () => {
       badge: 'FLUX MANAGER',
     },
     {
-      id: 'livraison',
-      titre: 'FLUX LIVRAISON',
-      description: 'Gestion des courses, livraisons et suivi des colis.',
-      icon: <Smartphone size={32} />,
-      role: 'livreur',
-      route: '/serveur', // Pour l'instant on utilise l'interface serveur ou on créera une dédiée
-      couleur: 'blue',
-      badge: 'LOGISTIQUE',
+        id: 'livraison',
+        titre: 'FLUX LIVRAISON',
+        description: 'Gestion des courses, livraisons et suivi des colis.',
+        icon: <Smartphone size={32} />,
+        role: 'livreur',
+        route: '/serveur',
+        couleur: 'blue',
+        badge: 'LOGISTIQUE',
     },
     {
-      id: 'securite',
-      titre: 'POSTE SÉCURITÉ',
-      description: 'Contrôle des flux entrées/sorties et surveillance.',
-      icon: <ShieldCheck size={32} />,
-      role: 'securite',
-      route: '/tableau-de-bord',
-      couleur: 'slate',
-      badge: 'VIGILANCE',
+        id: 'securite',
+        titre: 'POSTE SÉCURITÉ',
+        description: 'Contrôle des flux entrées/sorties et surveillance.',
+        icon: <ShieldCheck size={32} />,
+        role: 'securite',
+        route: '/tableau-de-bord',
+        couleur: 'slate',
+        badge: 'VIGILANCE',
     },
-    // Ajout dynamique pour le Super Admin
     ...(profil?.role === 'super_admin' ? [{
       id: 'super-admin',
       titre: 'CONSOLE STRATÉGIQUE',
@@ -129,7 +128,6 @@ const SelectionMode = () => {
           setPin('');
         }
       } else if (currentPin === '0000') {
-        // Bypass total pour la phase de simulation
         toast.success("Mode Démonstration : Accès autorisé", { position: 'top-center' });
         setShowPinModal(false);
         navigate(selectedMode.id === 'admin' ? '/tableau-de-bord' : selectedMode.route);
@@ -156,34 +154,31 @@ const SelectionMode = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-6 md:p-12 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 md:p-12 relative overflow-hidden">
       
-      {/* Decorative Orbs */}
-      <div className="absolute top-1/4 -left-20 w-96 h-96 bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-emerald-600/10 blur-[120px] rounded-full pointer-events-none" />
+      {/* Background Decor */}
+      <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-emerald-500/5 blur-[120px] rounded-full pointer-events-none" />
 
       <motion.div
-        initial={{ opacity: 0, y: -40 }}
+        initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="text-center mb-16 relative z-10"
       >
         <div className="flex items-center justify-center gap-4 mb-8">
-            <div className="w-1 px-4 py-8 bg-gradient-to-b from-transparent via-indigo-500 to-transparent opacity-50" />
-            <div className="p-5 rounded-3xl bg-white/[0.03] border border-white/10 shadow-2xl backdrop-blur-xl">
-                 <Zap className="text-white" size={32} />
+            <div className="w-1 px-4 py-8 bg-gradient-to-b from-transparent via-slate-200 to-transparent" />
+            <div className="p-5 rounded-3xl bg-white border border-slate-200 shadow-xl shadow-slate-200/50">
+                 <Zap className="text-slate-900" size={32} />
             </div>
-            <div className="w-1 px-4 py-8 bg-gradient-to-b from-transparent via-indigo-500 to-transparent opacity-50" />
+            <div className="w-1 px-4 py-8 bg-gradient-to-b from-transparent via-slate-200 to-transparent" />
         </div>
         
-        <h1 className="text-5xl md:text-6xl font-display font-black mb-4 tracking-tighter text-white">
-          HELLO, <span className="text-indigo-500">{profil?.nom?.toUpperCase() || 'EQUIPE'}</span>
+        <h1 className="text-5xl md:text-6xl font-display font-black mb-4 tracking-tighter text-slate-900 uppercase">
+          Hello, <span className="text-indigo-600">{profil?.nom || 'Équipe'}</span>
         </h1>
-        <p className="text-slate-500 font-bold uppercase tracking-[0.5em] text-[10px] md:text-xs">
+        <p className="text-slate-400 font-black uppercase tracking-[0.5em] text-[10px] md:text-xs">
           Sélectionnez votre terminal d'accès sécurisé
         </p>
-        <div className="mt-2 text-[9px] text-white/20 font-mono italic">
-          Rôle détecté : {profil?.role || 'aucun'} | ID : {profil?.id?.slice(0,8)} | Email : {profil?.email || 'inconnu'}
-        </div>
       </motion.div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 max-w-[1600px] w-full relative z-10">
@@ -194,32 +189,30 @@ const SelectionMode = () => {
               initial={{ opacity: 0, y: 30, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ delay: i * 0.1, type: 'spring', stiffness: 100 }}
-              whileHover={{ y: -10, scale: 1.02 }}
+              whileHover={{ y: -10 }}
               onClick={() => gererSelection(mode)}
-              className="group relative h-[380px] rounded-[3rem] p-8 bg-white/[0.02] border border-white/5 hover:border-white/20 transition-all duration-500 flex flex-col items-start text-left overflow-hidden shadow-2xl"
+              className="group relative h-[380px] rounded-[3rem] p-8 bg-white border border-slate-200 hover:border-indigo-200 transition-all duration-500 flex flex-col items-start text-left overflow-hidden shadow-xl shadow-slate-200/20 hover:shadow-2xl hover:shadow-indigo-500/10"
             >
-              <div className={`absolute inset-0 bg-gradient-to-br from-${mode.couleur}-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700`} />
+              <div className={`absolute top-0 inset-x-0 h-1.5 bg-${mode.couleur}-500 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500`} />
               
-              <div className="mb-10 p-6 rounded-[2rem] bg-white/[0.03] border border-white/5 text-white group-hover:scale-110 group-hover:bg-white/[0.08] transition-all duration-500 relative z-10">
+              <div className={`mb-10 p-6 rounded-[2rem] bg-white border border-slate-100 text-slate-900 group-hover:bg-${mode.couleur}-500 group-hover:text-white transition-all duration-500 shadow-sm relative z-10`}>
                 {mode.icon}
               </div>
 
               <div className="relative z-10">
-                <span className={`inline-block px-3 py-1 rounded-full text-[9px] font-black tracking-widest bg-${mode.couleur}-500/10 text-${mode.couleur}-500 mb-4 border border-${mode.couleur}-500/20 uppercase`}>
+                <span className={`inline-block px-3 py-1 rounded-full text-[9px] font-black tracking-widest bg-${mode.couleur}-50 text-${mode.couleur}-600 mb-4 border border-${mode.couleur}-100 uppercase`}>
                   {mode.badge}
                 </span>
-                <h2 className="text-2xl font-display font-black mb-4 text-white leading-tight uppercase tracking-tight">
-                  {mode.titre.split(' ').map((word, idx) => (
-                    <span key={idx} className={idx === 1 ? `text-${mode.couleur}-500` : ''}>{word} </span>
-                  ))}
+                <h2 className="text-2xl font-display font-black mb-4 text-slate-900 leading-tight uppercase tracking-tight">
+                  {mode.titre}
                 </h2>
-                <p className="text-slate-500 text-sm font-bold uppercase tracking-tight leading-relaxed mb-8 opacity-60 group-hover:opacity-100 transition-opacity">
+                <p className="text-slate-400 text-sm font-medium leading-relaxed mb-8 opacity-80 group-hover:opacity-100 transition-opacity">
                   {mode.description}
                 </p>
               </div>
 
-              <div className="mt-auto flex items-center gap-3 text-white/40 group-hover:text-white transition-all font-black text-[10px] tracking-widest relative z-10">
-                OUVRIR LA SESSION <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform" />
+              <div className="mt-auto flex items-center gap-3 text-slate-300 group-hover:text-indigo-600 transition-all font-black text-[10px] tracking-widest relative z-10 uppercase">
+                Ouvrir la session <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform" />
               </div>
             </motion.button>
           ))}
@@ -231,84 +224,78 @@ const SelectionMode = () => {
         animate={{ opacity: 1 }}
         transition={{ delay: 1 }}
         onClick={() => { deconnexion(); navigate('/connexion'); }}
-        className="mt-20 px-8 py-4 rounded-full flex items-center gap-4 text-slate-500 hover:text-white transition-all bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 font-black text-[10px] tracking-widest"
+        className="mt-20 px-8 py-4 rounded-full flex items-center gap-4 text-slate-400 hover:text-slate-900 hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all bg-white/50 border border-slate-200 font-black text-[10px] tracking-widest uppercase"
       >
-        <LogOut size={16} /> CHANGER D'ÉTABLISSEMENT
+        <LogOut size={16} /> Changer d'établissement
       </motion.button>
 
-      {/* Modal PIN Premium */}
+      {/* Modal PIN - Version Claire */}
       <AnimatePresence>
         {showPinModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-2xl">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xl">
             <motion.div 
-              initial={{ opacity: 0, scale: 0.8, y: 40 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.8, y: 40 }}
-              className="w-full max-w-sm bg-[#0a0f1d] border border-white/10 rounded-[3.5rem] p-10 text-center shadow-[0_0_100px_rgba(79,70,229,0.15)] relative overflow-hidden"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="w-full max-w-sm bg-white border border-slate-200 rounded-[3.5rem] p-10 text-center shadow-2xl relative overflow-hidden"
             >
-              <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-${selectedMode?.couleur}-500 to-transparent`} />
+              <div className={`absolute top-0 inset-x-0 h-1.5 bg-${selectedMode?.couleur}-500`} />
               
-              <div className="mx-auto w-20 h-20 rounded-[2rem] bg-white/[0.03] border border-white/5 flex items-center justify-center mb-8 text-white relative">
-                 <div className="absolute inset-0 bg-white/5 animate-ping rounded-[2rem] opacity-20" />
+              <div className="mx-auto w-20 h-20 rounded-[2rem] bg-slate-50 border border-slate-100 flex items-center justify-center mb-8 text-slate-900 shadow-inner">
                  {selectedMode?.icon || <Key size={32} />}
               </div>
 
-              <h3 className="text-2xl font-display font-black text-white mb-2 uppercase tracking-tight">{selectedMode?.titre}</h3>
-              <p className="text-slate-500 font-bold uppercase tracking-widest text-[9px] mb-10">Accès équipe : Entrez votre PIN personnalisé</p>
+              <h3 className="text-2xl font-display font-black text-slate-900 mb-2 uppercase tracking-tight">{selectedMode?.titre}</h3>
+              <p className="text-slate-400 font-black uppercase tracking-widest text-[9px] mb-10">Entrez votre PIN personnalisé</p>
               
-              {/* Dot Indicators */}
               <div className="flex justify-center gap-5 mb-12">
                 {[0, 1, 2, 3].map(i => (
                   <motion.div 
                     key={i}
-                    animate={pin.length > i ? { scale: [1, 1.4, 1], rotate: [0, 90, 0] } : {}}
+                    animate={pin.length > i ? { scale: [1, 1.3, 1] } : {}}
                     className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${
                       pin.length > i 
-                        ? `bg-${selectedMode?.couleur}-500 border-${selectedMode?.couleur}-400 shadow-[0_0_15px_rgba(79,70,229,0.5)]` 
-                        : 'border-white/10 bg-white/5'
+                        ? `bg-${selectedMode?.couleur}-500 border-${selectedMode?.couleur}-600 shadow-lg` 
+                        : 'border-slate-200 bg-slate-100'
                     }`} 
                   />
                 ))}
               </div>
               
-              {/* Luxury Keypad */}
               <div className="grid grid-cols-3 gap-4">
                 {[1,2,3,4,5,6,7,8,9].map(n => (
                   <button
                     key={n}
                     onClick={() => handleKeyPress(n.toString())}
-                    className="h-20 rounded-[1.8rem] bg-white/[0.03] hover:bg-white/[0.08] active:scale-90 border border-white/5 text-white text-3xl font-display font-black transition-all flex items-center justify-center flex-col"
+                    className="h-20 rounded-[1.8rem] bg-slate-50 hover:bg-slate-100 active:scale-95 border border-slate-100 text-slate-900 text-3xl font-display font-black transition-all flex items-center justify-center"
                   >
                     {n}
-                    <span className="text-[7px] text-white/20 font-bold mt-1">
-                      {n === 1 ? 'ABC' : n === 2 ? 'DEF' : n === 3 ? 'GHI' : ''}
-                    </span>
                   </button>
                 ))}
                 <button
                   onClick={() => setPin(p => p.slice(0, -1))}
-                  className="h-20 rounded-[1.8rem] bg-rose-500/5 hover:bg-rose-500/10 active:scale-95 border border-rose-500/10 text-rose-500 flex items-center justify-center transition-all"
+                  className="h-20 rounded-[1.8rem] bg-rose-50 text-rose-500 hover:bg-rose-100 active:scale-95 border border-rose-100 flex items-center justify-center transition-all"
                 >
                   <X size={28} />
                 </button>
                 <button
                   onClick={() => handleKeyPress('0')}
-                  className="h-20 rounded-[1.8rem] bg-white/[0.03] hover:bg-white/[0.08] active:scale-90 border border-white/5 text-white text-3xl font-display font-black transition-all"
+                  className="h-20 rounded-[1.8rem] bg-slate-50 hover:bg-slate-100 active:scale-95 border border-slate-100 text-slate-900 text-3xl font-display font-black transition-all flex items-center justify-center"
                 >
                   0
                 </button>
                 <button
                   onClick={() => setShowPinModal(false)}
-                  className="h-20 rounded-[1.8rem] bg-white/[0.01] hover:bg-white/[0.05] active:scale-95 border border-white/5 text-slate-500 font-black text-[10px] tracking-widest uppercase transition-all"
+                  className="h-20 rounded-[1.8rem] bg-white hover:bg-slate-50 active:scale-95 border border-slate-200 text-slate-400 font-black text-[10px] tracking-widest uppercase transition-all"
                 >
-                  EXIT
+                  Annuler
                 </button>
               </div>
 
               {loading && (
-                <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center flex-col gap-4 z-50">
-                   <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
-                   <p className="text-indigo-400 font-bold uppercase tracking-[0.3em] text-[10px]">AUTH EN COURS</p>
+                <div className="absolute inset-0 bg-white/90 backdrop-blur-sm flex items-center justify-center flex-col gap-4 z-50">
+                   <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
+                   <p className="text-indigo-600 font-black uppercase tracking-[0.3em] text-[10px]">Vérification...</p>
                 </div>
               )}
             </motion.div>
