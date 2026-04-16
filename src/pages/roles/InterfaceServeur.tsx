@@ -213,50 +213,49 @@ const InterfaceServeur = () => {
             animate={{ y: 0, opacity: 1, scale: 1 }}
             className="max-w-xl w-full"
         >
-          <div className="relative mb-12 inline-block">
+          <div className="relative mb-8 md:mb-12 inline-block">
             <div className="absolute -inset-4 bg-indigo-500/20 blur-2xl rounded-full animate-pulse" />
-            <div className="relative w-28 h-28 rounded-[2.5rem] bg-slate-900 border border-indigo-500/30 flex items-center justify-center shadow-indigo-500/10 shadow-3xl">
-                <Users size={56} className="text-indigo-400" />
+            <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-[2rem] md:rounded-[2.5rem] bg-slate-900 border border-indigo-500/30 flex items-center justify-center shadow-indigo-500/10 shadow-3xl">
+                <Users size={40} className="text-indigo-400" />
             </div>
           </div>
           
-          <h2 className="text-5xl font-display font-black mb-3 tracking-tighter text-white uppercase">{tableSelectionnee?.nom}</h2>
-          <p className="text-slate-500 font-bold uppercase tracking-[0.4em] text-[10px] mb-16">Composition de la tablée</p>
+          <h2 className="text-3xl md:text-5xl font-display font-black mb-2 md:mb-3 tracking-tighter text-white uppercase">{tableSelectionnee?.nom}</h2>
+          <p className="text-slate-500 font-bold uppercase tracking-[0.4em] text-[8px] md:text-[10px] mb-8 md:mb-16">Composition de la tablée</p>
 
-          <div className="bg-slate-900/40 border border-white/5 rounded-[3.5rem] p-12 mb-16 shadow-2xl backdrop-blur-xl group transition-all hover:bg-slate-900/60 hover:border-white/10">
-            <div className="flex items-center justify-around gap-12">
+          <div className="bg-slate-900/40 border border-white/5 rounded-[2.5rem] md:rounded-[3.5rem] p-6 md:p-12 mb-8 md:mb-16 shadow-2xl backdrop-blur-xl group transition-all">
+            <div className="flex items-center justify-around gap-4 md:gap-12">
                 <motion.button 
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.8 }}
                   onClick={() => setNombreCouverts(Math.max(1, nombreCouverts - 1))}
-                  className="w-24 h-24 rounded-3xl bg-slate-950 border border-white/10 flex items-center justify-center text-slate-500 hover:text-white hover:border-white/30 transition-all duration-300 shadow-inner"
+                  className="w-16 h-16 md:w-24 md:h-24 rounded-2xl md:rounded-3xl bg-slate-950 border border-white/10 flex items-center justify-center text-slate-500 shadow-inner"
                 >
-                  <Minus size={40} strokeWidth={2.5} />
+                  <Minus size={30} md:size={40} strokeWidth={2.5} />
                 </motion.button>
 
-                <div className="flex flex-col items-center px-8 relative">
-                    <div className="absolute -top-12 -right-4 w-12 h-12 bg-indigo-500/10 blur-xl rounded-full" />
+                <div className="flex flex-col items-center px-4 md:px-8 relative">
                     <AnimatePresence mode="wait">
                         <motion.span 
                             key={nombreCouverts}
                             initial={{ y: 20, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             exit={{ y: -20, opacity: 0 }}
-                            className="text-[160px] font-display font-black text-white leading-none tracking-tighter"
+                            className="text-[100px] md:text-[160px] font-display font-black text-white leading-none tracking-tighter"
                         >
                             {nombreCouverts}
                         </motion.span>
                     </AnimatePresence>
-                    <span className="text-xs font-black text-indigo-400 tracking-[0.6em] uppercase mt-2">Convives</span>
+                    <span className="text-[8px] md:text-xs font-black text-indigo-400 tracking-[0.6em] uppercase mt-2">Convives</span>
                 </div>
 
                 <motion.button 
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.8 }}
                   onClick={() => setNombreCouverts(Math.min(tableSelectionnee?.capacite || 12, nombreCouverts + 1))}
-                  className="w-24 h-24 rounded-3xl bg-indigo-600 shadow-indigo-500/30 shadow-2xl flex items-center justify-center text-white hover:bg-indigo-500 transition-all duration-300"
+                  className="w-16 h-16 md:w-24 md:h-24 rounded-2xl md:rounded-3xl bg-indigo-600 shadow-indigo-500/30 shadow-2xl flex items-center justify-center text-white"
                 >
-                  <Plus size={40} strokeWidth={2.5} />
+                  <Plus size={30} md:size={40} strokeWidth={2.5} />
                 </motion.button>
             </div>
           </div>
@@ -268,14 +267,14 @@ const InterfaceServeur = () => {
                 const id = await ouvrirTable(tableSelectionnee.id, etablissementId || 'srv', nomEmploye, nombreCouverts);
                 setCommandeId(id);
                 setEtape('commande');
-                toast.success('Session ouverte : Bon appétit ! 🍽️✨');
+                toast.success('Session ouverte ! 🍽️✨');
               } catch (err) {
-                toast.error("Échec d'ouverture de session");
+                toast.error("Échec d'ouverture");
               }
             }}
-            className="group w-full max-w-md mx-auto py-7 rounded-[2rem] bg-white text-slate-950 text-xl font-black uppercase tracking-[0.2em] shadow-3xl hover:scale-[1.03] active:scale-[0.97] transition-all flex items-center justify-center gap-5 ring-offset-4 ring-offset-slate-950 hover:ring-2 ring-white"
+            className="group w-full max-w-md mx-auto py-5 md:py-7 rounded-2xl md:rounded-[2rem] bg-white text-slate-950 text-base md:text-xl font-black uppercase tracking-[0.2em] shadow-3xl active:scale-[0.97] transition-all flex items-center justify-center gap-3 md:gap-5"
           >
-            Lancer la commande <ChevronRight size={28} className="group-hover:translate-x-2 transition-transform" />
+            Lancer la commande <ChevronRight size={24} className="group-hover:translate-x-2 transition-transform" />
           </button>
         </motion.div>
       </div>
@@ -286,85 +285,71 @@ const InterfaceServeur = () => {
   return (
     <div className="min-h-screen bg-[#020617] flex flex-col text-white selection:bg-indigo-500/30 overflow-hidden">
       {/* Header Ultra-Premium */}
-      <header className="sticky top-0 z-[60] bg-slate-950/60 backdrop-blur-3xl border-b border-white/5 p-5 lg:px-12 safe-top">
-        <div className="max-w-7xl mx-auto flex justify-between items-center gap-6">
-          <div className="flex items-center gap-6">
+      <header className="sticky top-0 z-[60] bg-slate-950/60 backdrop-blur-3xl border-b border-white/5 p-4 lg:px-12 safe-top">
+        <div className="max-w-7xl mx-auto flex justify-between items-center gap-4">
+          <div className="flex items-center gap-3 md:gap-6">
               <motion.button 
-                whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setEtape('tables')} 
-                className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+                className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400"
               >
-                <ArrowLeft size={20} />
+                <ArrowLeft size={18} />
               </motion.button>
               <div>
-                <h2 className="font-display font-black text-3xl flex items-center gap-3 tracking-tighter uppercase">
+                <h2 className="font-display font-black text-xl md:text-3xl flex items-center gap-2 tracking-tighter uppercase whitespace-nowrap">
                     {tableSelectionnee?.nom}
-                    <div className="w-3 h-3 rounded-full bg-indigo-500 shadow-indigo-500 shadow-sm animate-pulse" />
                 </h2>
-                <div className="flex items-center gap-3 text-[10px] text-slate-500 font-black tracking-widest uppercase">
-                    <span className="flex items-center gap-1.5"><Users size={12} className="text-indigo-400" /> {commandeActive?.nombreCouverts} CLIENTS</span>
+                <div className="flex items-center gap-2 text-[8px] md:text-[10px] text-slate-500 font-black tracking-widest uppercase">
+                    <span className="flex items-center gap-1"><Users size={10} className="text-indigo-400" /> {commandeActive?.nombreCouverts}</span>
                     <span className="w-1 h-1 rounded-full bg-slate-800" />
-                    <span>REF: #{commandeId?.slice(-4)}</span>
+                    <span>#{commandeId?.slice(-4)}</span>
                 </div>
               </div>
           </div>
           
           <div className="flex flex-col items-end">
-              <span className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.3em] mb-1">TOTAL TABLE</span>
+              <span className="text-[8px] text-indigo-400 font-black uppercase tracking-[0.2em] mb-0.5">TOTAL</span>
               <motion.div 
                 key={commandeActive?.total}
-                initial={{ scale: 1.1, color: '#818cf8' }}
-                animate={{ scale: 1, color: '#fff' }}
-                className="text-4xl font-display font-black text-white flex items-baseline gap-2"
+                className="text-2xl md:text-4xl font-display font-black text-white"
               >
                  {commandeActive?.total.toLocaleString()} 
-                 <span className="text-sm text-slate-500 font-bold">F</span>
+                 <span className="text-[10px] md:text-sm text-slate-500 ml-1">F</span>
               </motion.div>
           </div>
         </div>
 
         {/* Categories Bar */}
-        <div className="max-w-7xl mx-auto mt-8 flex items-center gap-4 relative">
-            <div className="flex-1 flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x no-scrollbar">
+        <div className="max-w-7xl mx-auto mt-6 md:mt-8 flex items-center gap-4 relative">
+            <div className="flex-1 flex gap-2 md:gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x no-scrollbar">
                 {categories.map(cat => (
                     <button
-                    key={cat}
-                    onClick={() => setCategorieActive(cat as string)}
-                    className={`px-8 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest whitespace-nowrap snap-start transition-all duration-500 border-2 ${
-                        categorieActive === cat 
-                        ? 'bg-indigo-600 text-white border-indigo-500 shadow-indigo-600/20 shadow-xl' 
-                        : 'bg-white/[0.03] text-slate-500 border-transparent hover:border-white/10 hover:bg-white/[0.05]'
-                    }`}
+                        key={cat}
+                        onClick={() => setCategorieActive(cat as string)}
+                        className={`px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl text-[9px] md:text-[11px] font-black uppercase tracking-widest whitespace-nowrap snap-start transition-all border-2 ${
+                            categorieActive === cat 
+                            ? 'bg-indigo-600 text-white border-indigo-500 shadow-xl shadow-indigo-600/20' 
+                            : 'bg-white/[0.03] text-slate-500 border-transparent'
+                        }`}
                     >
-                    {cat}
+                        {cat}
                     </button>
                 ))}
-            </div>
-            <div className="relative group hidden md:block">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors" size={16} />
-                <input 
-                    type="text"
-                    placeholder="CHERCER UN ARTICLE..."
-                    value={rechercheProduit}
-                    onChange={(e) => setRechercheProduit(e.target.value)}
-                    className="w-64 pl-12 pr-6 py-4 rounded-2xl bg-white/[0.03] border border-white/5 focus:border-indigo-500/50 focus:bg-white/[0.05] outline-none text-[10px] font-black tracking-widest uppercase transition-all"
-                />
             </div>
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col overflow-hidden max-w-7xl mx-auto w-full px-6 pt-6">
+      <main className="flex-1 flex flex-col overflow-hidden max-w-7xl mx-auto w-full px-4 md:px-6 pt-4 md:pt-6">
         {/* Grille Produits */}
-        <div className="flex-1 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 pb-52 pr-2 custom-scrollbar no-scrollbar">
+        <div className="flex-1 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-5 pb-40 md:pb-52 custom-scrollbar no-scrollbar">
           <AnimatePresence mode="popLayout">
             {produitsFiltres.map((produit, idx) => (
               <motion.button
                 key={produit.id}
                 layout
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ delay: idx * 0.03 }}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: idx * 0.02 }}
                 whileTap={{ scale: 0.94 }}
                 onClick={() => {
                   if (commandeId) {
@@ -372,37 +357,18 @@ const InterfaceServeur = () => {
                       toast.success(`+1 ${produit.nom}`, { position: 'bottom-center', icon: '📝', duration: 1000 });
                   }
                 }}
-                className="group relative h-64 bg-slate-900/40 border border-white/5 rounded-[2.5rem] p-7 text-left hover:bg-slate-900/80 hover:border-indigo-500/30 transition-all duration-500 shadow-2xl overflow-hidden"
+                className="group relative h-48 md:h-64 bg-slate-900/40 border border-white/5 rounded-[1.5rem] md:rounded-[2.5rem] p-4 md:p-7 text-left hover:border-indigo-500/30 transition-all shadow-2xl overflow-hidden"
               >
-                {/* Visual Accent */}
-                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-white/[0.03] to-transparent rounded-bl-[4rem]" />
-                
                 <div className="relative z-10 flex flex-col h-full justify-between">
-                    <div className="relative inline-block">
-                        <div className="absolute inset-0 bg-white/20 blur-2xl rounded-full opacity-0 group-hover:opacity-40 transition-opacity" />
-                        <div className="relative w-16 h-16 rounded-[1.8rem] bg-slate-800/80 border border-white/5 flex items-center justify-center text-4xl group-hover:scale-110 transition-transform shadow-2xl">
-                            {produit.emoji}
-                        </div>
+                    <div className="relative w-12 h-12 md:w-16 md:h-16 rounded-2xl md:rounded-[1.8rem] bg-slate-800/80 border border-white/5 flex items-center justify-center text-2xl md:text-4xl">
+                        {produit.emoji}
                     </div>
                     
                     <div>
-                        <h4 className="font-bold text-white text-base leading-tight mb-3 group-hover:text-indigo-400 transition-colors uppercase tracking-tight line-clamp-2">{produit.nom}</h4>
+                        <h4 className="font-bold text-white text-[13px] md:text-base leading-tight mb-2 md:mb-3 uppercase tracking-tight line-clamp-2">{produit.nom}</h4>
                         <div className="flex justify-between items-end">
-                            <span className="text-2xl font-display font-black text-white tracking-tighter">{produit.prix.toLocaleString()}<span className="text-[10px] text-slate-500 ml-1 font-bold">F</span></span>
-                            
-                            {produit.stockTotal <= produit.stockAlerte && (
-                                <div className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 animate-pulse">
-                                    <AlertTriangle size={14} />
-                                </div>
-                            )}
+                            <span className="text-lg md:text-2xl font-display font-black text-white tracking-tighter">{produit.prix.toLocaleString()}<span className="text-[8px] md:text-[10px] text-slate-500 ml-1">F</span></span>
                         </div>
-                    </div>
-
-                    {/* Quick Add Label */}
-                    <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity translate-x-2 group-hover:translate-x-0 transition-transform">
-                         <div className="bg-indigo-600 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest text-white flex items-center gap-1 shadow-lg shadow-indigo-600/40">
-                             <Plus size={10} strokeWidth={4} /> AJOUTER
-                         </div>
                     </div>
                 </div>
               </motion.button>
@@ -410,74 +376,53 @@ const InterfaceServeur = () => {
           </AnimatePresence>
         </div>
 
-        {/* Le Panier Flottant "Magnétique" (Panel Commande) */}
+        {/* Le Panier Flottant */}
         <AnimatePresence>
           {commandeActive && commandeActive.lignes.length > 0 && (
             <motion.div
-              initial={{ y: 400, opacity: 0 }}
+              initial={{ y: 200, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 400, opacity: 0 }}
-              className="fixed bottom-0 left-0 right-0 z-[100] p-6 lg:p-10 pointer-events-none"
+              exit={{ y: 200, opacity: 0 }}
+              className="fixed bottom-0 left-0 right-0 z-[100] p-4 md:p-10 pointer-events-none"
             >
-              <div className="w-full max-w-4xl mx-auto bg-slate-900/80 backdrop-blur-3xl border border-white/10 rounded-[3.5rem] shadow-3xl shadow-indigo-600/20 flex flex-col md:flex-row pointer-events-auto overflow-hidden max-h-[70vh] md:max-h-[500px]">
+              <div className="w-full max-w-4xl mx-auto bg-slate-900/90 backdrop-blur-3xl border border-white/10 rounded-[2rem] md:rounded-[3.5rem] shadow-3xl shadow-indigo-600/20 flex flex-col md:flex-row pointer-events-auto overflow-hidden max-h-[60vh] md:max-h-[500px]">
                 
-                {/* Left Side: Tickets List */}
+                {/* Tickets List */}
                 <div className="flex-1 flex flex-col border-r border-white/5 min-w-0">
-                    <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
-                        <h3 className="text-[11px] font-black text-white uppercase tracking-[0.4em] flex items-center gap-4">
-                            <ShoppingBag size={20} className="text-indigo-500" />
-                            Contenu du Service
+                    <div className="p-4 md:p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
+                        <h3 className="text-[9px] md:text-[11px] font-black text-white uppercase tracking-[0.2em] md:tracking-[0.4em] flex items-center gap-3">
+                            <ShoppingBag size={18} className="text-indigo-500" />
+                            COMMANDE
                         </h3>
-                        <div className="bg-white/5 px-4 py-1.5 rounded-full text-[10px] font-black text-slate-400 uppercase tracking-widest border border-white/5">
-                            {commandeActive.lignes.length} RÉFÉRENCES
+                        <div className="bg-white/5 px-3 py-1 rounded-full text-[8px] font-black text-slate-400 uppercase tracking-widest border border-white/5">
+                            {commandeActive.lignes.length} RÉFS
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar no-scrollbar">
+                    <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 md:space-y-4 custom-scrollbar no-scrollbar">
                         {commandeActive.lignes.map(ligne => (
                             <motion.div 
                                 layout
                                 key={ligne.id} 
-                                className={`group flex items-center gap-5 p-5 rounded-[2rem] transition-all border ${
+                                className={`flex items-center gap-3 md:gap-5 p-3 md:p-5 rounded-2xl md:rounded-[2rem] border ${
                                     ligne.statut === 'en_attente' ? 'bg-white/[0.03] border-white/5' : 'bg-slate-950/40 border-indigo-500/20 opacity-80'
                                 }`}
                             >
-                                <div className="flex items-center gap-2 bg-slate-950/80 border border-white/10 rounded-2xl p-2 shadow-2xl">
-                                    <button 
-                                        onClick={() => modifierQuantite(commandeId!, ligne.id, -1)}
-                                        className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all active:scale-90"
-                                    >
-                                        <Minus size={14} strokeWidth={3} />
-                                    </button>
-                                    <span className="w-10 text-center font-display font-black text-2xl text-white">{ligne.quantite}</span>
-                                    <button 
-                                        onClick={() => modifierQuantite(commandeId!, ligne.id, 1)}
-                                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-90 ${
-                                            ligne.statut === 'en_attente' ? 'text-indigo-400 hover:bg-indigo-500/10' : 'text-slate-700'
-                                        }`}
-                                    >
-                                        <Plus size={14} strokeWidth={4} />
-                                    </button>
+                                <div className="flex items-center gap-1 bg-slate-950/80 border border-white/10 rounded-xl p-1 md:p-2">
+                                    <button onClick={() => modifierQuantite(commandeId!, ligne.id, -1)} className="w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center text-slate-500"><Minus size={12} /></button>
+                                    <span className="w-6 md:w-10 text-center font-display font-black text-xl md:text-2xl text-white">{ligne.quantite}</span>
+                                    <button onClick={() => modifierQuantite(commandeId!, ligne.id, 1)} className="w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center text-indigo-400"><Plus size={12} /></button>
                                 </div>
 
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-black text-white truncate uppercase tracking-tight group-hover:text-indigo-400 transition-colors">{ligne.produitNom}</p>
-                                    <p className="text-[10px] text-slate-500 font-bold tracking-widest mt-0.5 uppercase">PU: {ligne.prixUnitaire.toLocaleString()} F</p>
+                                    <p className="text-[11px] md:text-sm font-black text-white truncate uppercase tracking-tight">{ligne.produitNom}</p>
+                                    <p className="text-[8px] md:text-[10px] text-slate-500 font-bold uppercase">{ligne.prixUnitaire.toLocaleString()} F</p>
                                 </div>
 
-                                <div className="flex flex-col items-end gap-3">
-                                    <span className="font-display font-black text-xl text-white">{ligne.sousTotal.toLocaleString()} F</span>
-                                    {ligne.statut === 'en_attente' ? (
-                                        <button onClick={() => supprimerLigne(commandeId!, ligne.id)} className="p-2 bg-rose-500/10 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all">
-                                            <X size={14} strokeWidth={3} />
-                                        </button>
-                                    ) : (
-                                        <div className={`px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-widest border ${
-                                            ligne.statut === 'en_preparation' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
-                                            ligne.statut === 'pret' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-800 text-slate-500 border-transparent'
-                                        }`}>
-                                            {ligne.statut.replace('_', ' ')}
-                                        </div>
+                                <div className="flex flex-col items-end gap-1 md:gap-3">
+                                    <span className="font-display font-black text-base md:text-xl text-white">{ligne.sousTotal.toLocaleString()} F</span>
+                                    {ligne.statut === 'en_attente' && (
+                                        <button onClick={() => supprimerLigne(commandeId!, ligne.id)} className="p-1.5 md:p-2 bg-rose-500/10 text-rose-500 rounded-lg"><X size={12} /></button>
                                     )}
                                 </div>
                             </motion.div>
@@ -486,23 +431,11 @@ const InterfaceServeur = () => {
                 </div>
 
                 {/* Right Side: Total & Actions */}
-                <div className="w-full md:w-80 bg-slate-950 p-10 flex flex-col justify-between">
-                    <div>
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mb-4 block">RÉSUMÉ COMMANDE</span>
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center text-xs font-bold text-slate-400">
-                                <span>SOUS-TOTAL</span>
-                                <span>{(commandeActive.total).toLocaleString()} F</span>
-                            </div>
-                            <div className="flex justify-between items-center text-xs font-bold text-slate-400">
-                                <span>SERVICE (0%)</span>
-                                <span>0 F</span>
-                            </div>
-                            <div className="h-px bg-white/5 my-6" />
-                            <div className="flex justify-between items-end">
-                                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">NET À PAYER</span>
-                                <div className="text-4xl font-display font-black text-white">{(commandeActive.total).toLocaleString()}</div>
-                            </div>
+                <div className="w-full md:w-72 bg-slate-950 p-6 md:p-10 flex flex-col justify-center">
+                    <div className="hidden md:block mb-6">
+                        <div className="flex justify-between items-end">
+                            <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">TOTAL</span>
+                            <div className="text-3xl font-display font-black text-white">{commandeActive.total.toLocaleString()}</div>
                         </div>
                     </div>
 
@@ -510,15 +443,13 @@ const InterfaceServeur = () => {
                         onClick={() => {
                         if (commandeId) {
                             envoyerCuisine(commandeId);
-                            toast.success('Envoyé ! 🍳⚡', { 
-                                style: { background: '#0f172a', color: '#fff', borderRadius: '30px', border: '1px solid rgba(255,255,255,0.1)', fontWeight: 'bold' } 
-                            });
+                            toast.success('Envoyé ! 🍳⚡');
                         }
                         }}
                         disabled={!commandeActive.lignes.some(l => l.statut === 'en_attente')}
-                        className="w-full mt-10 bg-indigo-600 hover:bg-indigo-500 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-20 text-white font-black py-6 rounded-[2rem] flex items-center justify-center gap-4 text-[11px] tracking-[0.4em] shadow-2xl shadow-indigo-600/40 transition-all uppercase"
+                        className="w-full bg-indigo-600 disabled:opacity-20 text-white font-black py-4 md:py-6 rounded-xl md:rounded-[2rem] flex items-center justify-center gap-3 text-[10px] md:text-[11px] tracking-[0.2em] md:tracking-[0.4em] shadow-xl shadow-indigo-600/40 uppercase"
                     >
-                        <Send size={22} className="group-hover:-translate-y-1 transition-transform" /> ENVOYER
+                        <Send size={18} /> ENVOYER
                     </button>
                 </div>
               </div>
