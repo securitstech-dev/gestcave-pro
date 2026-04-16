@@ -98,8 +98,8 @@ const PageInscription = () => {
             animate={{ opacity: 1, x: 0 }}
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-500 text-[10px] font-black uppercase tracking-widest mb-8 shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-              Essai Gratuit • 14 Jours
+              <span className={`w-2 h-2 rounded-full ${planChoisi === 'essai_gratuit' ? 'bg-indigo-500' : 'bg-emerald-500'} animate-pulse`} />
+              {planChoisi === 'essai_gratuit' ? 'Essai Gratuit • 14 Jours' : `Pack ${planChoisi.toUpperCase()} • ${periodeChoisie === 'annuel' ? '1 AN' : '1 MOIS'}`}
             </div>
             <h1 className="text-6xl md:text-[5.5rem] font-display font-black text-slate-900 leading-[0.95] tracking-tighter mb-8">
               Digitalisez votre <br/>
@@ -111,10 +111,10 @@ const PageInscription = () => {
           </motion.div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-10">
-            <FeatureItem title="Zéro Frais" desc="Installation gratuite" color="indigo" />
+            <FeatureItem title="Zéro Frais" desc="Liberté totale" color="indigo" />
             <FeatureItem title="Cloud Sync" desc="Données sécurisées" color="emerald" />
             <FeatureItem title="Temps Réel" desc="Cuisine synchronisée" color="rose" />
-            <FeatureItem title="Support 24/7" desc="Équipe à l'écoute" color="slate" />
+            <FeatureItem title={planChoisi === 'essai_gratuit' ? 'Essai 14j' : 'Support 24/7'} desc="Équipe à l'écoute" color="slate" />
           </div>
         </div>
 
@@ -125,8 +125,12 @@ const PageInscription = () => {
           className="bg-white p-12 sm:p-14 rounded-[4rem] shadow-2xl shadow-indigo-900/5 border border-slate-100 relative"
         >
           <div className="mb-12">
-            <h2 className="text-4xl font-black text-slate-900 tracking-tight leading-none mb-4 uppercase">Demander mon accès</h2>
-            <p className="text-slate-400 font-medium">Validation immédiate par nos administrateurs.</p>
+            <h2 className="text-4xl font-black text-slate-900 tracking-tight leading-none mb-4 uppercase">
+              {planChoisi === 'essai_gratuit' ? 'Demander mon accès' : 'Sélectionnez votre Pack'}
+            </h2>
+            <p className="text-slate-400 font-medium">
+              {planChoisi === 'essai_gratuit' ? 'Validation immédiate par nos conseillers.' : `Vous avez choisi le pack ${planChoisi.toUpperCase()} (${periodeChoisie}).`}
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-8">

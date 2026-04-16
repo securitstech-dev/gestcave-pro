@@ -73,9 +73,13 @@ const TableauSuperAdmin = () => {
     let typePlan = 'essai_gratuit';
     let statut = 'essai';
     
+    if (planApprobation === 'demo') { jours = 14; typePlan = 'essai_gratuit'; statut = 'essai'; }
     if (planApprobation === 'mensuel') { jours = 30; typePlan = 'starter'; statut = 'actif'; }
+    if (planApprobation === 'starter_annuel') { jours = 365; typePlan = 'starter'; statut = 'actif'; }
     if (planApprobation === 'premium') { jours = 30; typePlan = 'premium'; statut = 'actif'; }
+    if (planApprobation === 'premium_annuel') { jours = 365; typePlan = 'premium'; statut = 'actif'; }
     if (planApprobation === 'business') { jours = 30; typePlan = 'business'; statut = 'actif'; }
+    if (planApprobation === 'business_annuel') { jours = 365; typePlan = 'business'; statut = 'actif'; }
 
     try {
       const etabRef = await addDoc(collection(db, 'etablissements'), {
@@ -607,7 +611,7 @@ const TableauSuperAdmin = () => {
                 <div className="flex gap-4">
                   <button onClick={() => setModalEtabDetails(null)} className="flex-1 py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-bold transition-all">Fermer</button>
                   <button onClick={() => { setProlongationPlan(modalEtabDetails.subscription_plan || 'starter'); setProlongationMode(true); }} className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all shadow-lg flex items-center justify-center gap-2">
-                    <TrendingUp size={16} /> Rallonger +30j
+                    <TrendingUp size={16} /> Prolonger l'abonnement
                   </button>
                 </div>
               ) : (
@@ -690,11 +694,14 @@ const TableauSuperAdmin = () => {
                    onChange={(e: any) => setPlanApprobation(e.target.value)}
                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none font-bold text-slate-700 appearance-none"
                 >
-                   <option value="demo">Essai Gratuit (14 jours)</option>
-                   <option value="mensuel">SaaS STARTER (1 mois)</option>
-                   <option value="premium">SaaS PREMIUM (1 mois)</option>
-                   <option value="business">SaaS BUSINESS (1 mois)</option>
-                </select>
+                    <option value="demo">Essai Gratuit (14 jours)</option>
+                    <option value="mensuel">SaaS STARTER (1 mois)</option>
+                    <option value="starter_annuel">SaaS STARTER (1 an)</option>
+                    <option value="premium">SaaS PREMIUM (1 mois)</option>
+                    <option value="premium_annuel">SaaS PREMIUM (1 an)</option>
+                    <option value="business">SaaS BUSINESS (1 mois)</option>
+                    <option value="business_annuel">SaaS BUSINESS (1 an)</option>
+                 </select>
               </div>
               <div className="flex gap-4">
                 <button onClick={() => setModalApprobation(null)} className="flex-1 py-3 bg-slate-50 hover:bg-slate-100 rounded-xl text-slate-600 font-bold transition-all">Annuler</button>

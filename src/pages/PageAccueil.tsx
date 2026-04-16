@@ -37,7 +37,7 @@ const PageAccueil = () => {
               Connexion
             </button>
             <button onClick={() => navigate('/inscription')} className="px-5 py-2 text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-lg shadow-slate-900/20 transition-colors hidden md:flex items-center">
-              Essai Gratuit
+              Rejoindre
             </button>
           </div>
         </div>
@@ -74,7 +74,7 @@ const PageAccueil = () => {
               className="flex flex-col sm:flex-row gap-4 w-full justify-center"
             >
               <button onClick={() => scrollToSection('inscription-section')} className="bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl text-lg px-10 py-4 shadow-xl shadow-slate-900/20 flex items-center justify-center gap-2 transition-transform active:scale-95">
-                Démarrer mon essai <ArrowRight size={20} />
+                Démarrer maintenant <ArrowRight size={20} />
               </button>
               <button onClick={() => scrollToSection('roles')} className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold rounded-2xl text-lg px-10 py-4 shadow-sm transition-transform active:scale-95 group">
                 Voir la démo <span className="opacity-0 group-hover:opacity-100 transition-opacity ml-1">✨</span>
