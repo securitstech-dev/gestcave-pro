@@ -16,6 +16,91 @@ import { db } from '../lib/firebase';
 import { useAuthStore } from './authStore';
 import { toast } from 'react-hot-toast';
 
+// Utilitaire pour l'impression thermique
+export const imprimerTicket = (commande: Commande, etablissementNom: string) => {
+  const contenu = `
+    <html>
+      <head>
+        <title>Ticket ${commande.id}</title>
+        <style>
+          @page { size: 80mm auto; margin: 0; }
+          body { 
+            width: 80mm; font-family: 'Courier New', Courier, monospace; 
+            padding: 5mm; font-size: 12px; line-height: 1.2;
+            color: black;
+          }
+          .header { text-align: center; margin-bottom: 5mm; border-bottom: 1px dashed black; padding-bottom: 2mm; }
+          .title { font-size: 16px; font-weight: bold; text-transform: uppercase; }
+          .details { margin-bottom: 5mm; font-size: 10px; }
+          .table { width: 100%; border-collapse: collapse; margin-bottom: 5mm; }
+          .table th { text-align: left; border-bottom: 1px solid black; padding-bottom: 1mm; }
+          .item-row td { padding: 1mm 0; }
+          .total-section { border-top: 2px solid black; padding-top: 2mm; text-align: right; }
+          .total { font-size: 18px; font-weight: bold; }
+          .footer { text-align: center; margin-top: 8mm; font-size: 10px; border-top: 1px dashed black; padding-top: 2mm; }
+          .no-print { display: none; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="title">${etablissementNom}</div>
+          <div>Buvette & Cave</div>
+        </div>
+        
+        <div class="details">
+          <div>Ticket: ${commande.id.slice(-8).toUpperCase()}</div>
+          <div>Table: ${commande.tableNom || 'EMPORTE'}</div>
+          <div>Date: ${new Date(commande.dateOuverture).toLocaleString('fr-FR')}</div>
+          <div>Serveur: ${commande.serveurNom}</div>
+        </div>
+
+        <table class="table">
+          <thead>
+            <tr>
+              <th width="10%">Qté</th>
+              <th width="60%">Article</th>
+              <th width="30%" style="text-align: right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${commande.lignes.map(l => `
+              <tr class="item-row">
+                <td>${l.quantite}</td>
+                <td>${l.produitNom}</td>
+                <td style="text-align: right">${l.sousTotal.toLocaleString()}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="total-section">
+          ${commande.remise ? `<div>Remise: -${commande.remise.toLocaleString()} F</div>` : ''}
+          <div class="total">TOTAL: ${commande.total.toLocaleString()} FCFA</div>
+        </div>
+
+        <div class="footer">
+          Merci de votre visite !<br/>
+          Propulsé par GESTCAVE PRO
+        </div>
+
+        <script>
+          window.focus();
+          window.print();
+          window.onafterprint = () => window.close();
+        </script>
+      </body>
+    </html>
+  `;
+
+  const fenetre = window.open('', '_blank', 'width=400,height=600');
+  if (fenetre) {
+    fenetre.document.write(contenu);
+    fenetre.document.close();
+  } else {
+    toast.error("Veuillez autoriser les popups pour l'impression");
+  }
+};
+
 export interface LigneCommande {
   id: string;
   produitId: string;

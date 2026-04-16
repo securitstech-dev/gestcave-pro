@@ -8,8 +8,9 @@ import {
   History, Zap, Phone, UserPlus, AlertCircle, Search
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { usePOSStore } from '../../store/posStore';
+import { usePOSStore, imprimerTicket } from '../../store/posStore';
 import { usePosteSession } from '../../hooks/usePosteSession';
+import { useAuthStore } from '../../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import type { LigneCommande } from '../../store/posStore';
 
@@ -94,6 +95,14 @@ const InterfaceCaissier = () => {
       );
       
       toast.success("Transaction validée !", { id: toastId, icon: '💰' });
+      
+      // On propose l'impression
+      const etablissementNom = useAuthStore.getState().etablissementDetails?.nom || 'Votre Établissement';
+      if (commandeActive) {
+         if (window.confirm("Voulez-vous imprimer le ticket ?")) {
+            imprimerTicket(commandeActive, etablissementNom);
+         }
+      }
       
       setCommandeSelectionnee(null);
       setModePaiement(null);

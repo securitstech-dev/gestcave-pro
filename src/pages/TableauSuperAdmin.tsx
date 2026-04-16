@@ -224,15 +224,22 @@ const TableauSuperAdmin = () => {
         <nav className="flex-1 px-4 py-6 space-y-1">
           {navItems.map((item) => (
             <button key={item.key} onClick={() => setOnglet(item.key as Onglet)}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all text-left ${
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all text-left group ${
                 onglet === item.key
                   ? (item.danger ? 'bg-rose-600 text-white shadow-lg' : 'bg-slate-900 text-white shadow-lg shadow-slate-900/20')
                   : (item.danger ? 'text-rose-500 hover:bg-rose-50' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900')
               }`}
             >
-              <div className="flex items-center gap-3">{item.icon}<span className="font-medium text-sm">{item.label}</span></div>
-              {item.badge != null && item.badge > 0 && onglet !== item.key && (
-                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${item.danger ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-600'}`}>{item.badge}</span>
+              <div className="flex items-center gap-3">
+                <span className={`transition-transform duration-300 ${onglet === item.key ? 'scale-110' : 'group-hover:scale-110'}`}>{item.icon}</span>
+                <span className="font-bold text-xs uppercase tracking-widest">{item.label}</span>
+              </div>
+              {item.badge != null && item.badge > 0 && (
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full transition-all ${
+                  onglet === item.key 
+                    ? 'bg-white/20 text-white' 
+                    : (item.danger ? 'bg-rose-100 text-rose-600' : 'bg-indigo-100 text-indigo-600')
+                }`}>{item.badge}</span>
               )}
             </button>
           ))}
