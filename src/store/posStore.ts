@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuthStore } from './authStore';
+import { toast } from 'react-hot-toast';
 
 export interface LigneCommande {
   id: string;
@@ -185,86 +186,136 @@ export const usePOSStore = create<PosState>((set, get) => ({
   },
 
   ajouterLigne: async (commandeId, produit) => {
-    const commande = get().commandes.find(c => c.id === commandeId);
-    if (!commande) return;
+    try {
+      let commande = get().commandes.find(c => c.id === commandeId);
+      
+      // Si non trouvé en local (latence snapshot), on tente un fetch direct
+      if (!commande) {
+        const snap = await getDocs(query(collection(db, 'commandes'), where('__name__', '==', commandeId)));
+        if (!snap.empty) {
+          commande = { id: snap.docs[0].id, ...snap.docs[0].data() } as Commande;
+        }
+      }
 
-    const existant = commande.lignes.find(l => l.produitId === produit.id && l.statut === 'en_attente');
-    let nouvellesLignes;
+      if (!commande) {
+        console.error("Commande introuvable:", commandeId);
+        return;
+      }
 
-    if (existant) {
-      nouvellesLignes = commande.lignes.map(l => 
-        l.id === existant.id ? { ...l, quantite: l.quantite + 1, sousTotal: (l.quantite + 1) * l.prixUnitaire } : l
-      );
-    } else {
-      const nouvelleLigne: LigneCommande = {
-        id: Math.random().toString(36).substr(2, 9),
-        produitId: produit.id,
-        produitNom: produit.nom,
-        quantite: 1,
-        prixUnitaire: produit.prix,
-        sousTotal: produit.prix,
-        statut: 'en_attente'
-      };
-      nouvellesLignes = [...commande.lignes, nouvelleLigne];
+      const existant = commande.lignes.find(l => l.produitId === produit.id && l.statut === 'en_attente');
+      let nouvellesLignes;
+
+      if (existant) {
+        nouvellesLignes = commande.lignes.map(l => 
+          l.id === existant.id ? { ...l, quantite: l.quantite + 1, sousTotal: (l.quantite + 1) * l.prixUnitaire } : l
+        );
+      } else {
+        const nouvelleLigne: LigneCommande = {
+          id: Math.random().toString(36).substr(2, 9),
+          produitId: produit.id,
+          produitNom: produit.nom,
+          quantite: 1,
+          prixUnitaire: produit.prix,
+          sousTotal: produit.prix,
+          statut: 'en_attente'
+        };
+        nouvellesLignes = [...commande.lignes, nouvelleLigne];
+      }
+
+      const total = nouvellesLignes.reduce((acc, l) => acc + l.sousTotal, 0);
+      await updateDoc(doc(db, 'commandes', commandeId), { 
+        lignes: nouvellesLignes, 
+        total 
+      });
+    } catch (error) {
+      console.error("Erreur ajouterLigne:", error);
+      toast.error("Erreur lors de l'ajout");
     }
-
-    const total = nouvellesLignes.reduce((acc, l) => acc + l.sousTotal, 0);
-    await updateDoc(doc(db, 'commandes', commandeId), { lignes: nouvellesLignes, total });
   },
 
   modifierQuantite: async (commandeId, ligneId, delta) => {
-    const commande = get().commandes.find(c => c.id === commandeId);
-    if (!commande) return;
-
-    const lignes = commande.lignes.map(l => {
-      if (l.id === ligneId) {
-        const nveleQte = Math.max(1, l.quantite + delta);
-        return { ...l, quantite: nveleQte, sousTotal: nveleQte * l.prixUnitaire };
+    try {
+      let commande = get().commandes.find(c => c.id === commandeId);
+      if (!commande) {
+        const snap = await getDocs(query(collection(db, 'commandes'), where('__name__', '==', commandeId)));
+        if (!snap.empty) {
+          commande = { id: snap.docs[0].id, ...snap.docs[0].data() } as Commande;
+        }
       }
-      return l;
-    });
+      if (!commande) return;
 
-    const total = lignes.reduce((acc, l) => acc + l.sousTotal, 0);
-    await updateDoc(doc(db, 'commandes', commandeId), { lignes, total });
+      const lignes = commande.lignes.map(l => {
+        if (l.id === ligneId) {
+          const nveleQte = Math.max(1, l.quantite + delta);
+          return { ...l, quantite: nveleQte, sousTotal: nveleQte * l.prixUnitaire };
+        }
+        return l;
+      });
+
+      const total = lignes.reduce((acc, l) => acc + l.sousTotal, 0);
+      await updateDoc(doc(db, 'commandes', commandeId), { lignes, total });
+    } catch (error) {
+      console.error("Erreur modifierQuantite:", error);
+    }
   },
 
   supprimerLigne: async (commandeId, ligneId) => {
-    const commande = get().commandes.find(c => c.id === commandeId);
-    if (!commande) return;
+    try {
+      let commande = get().commandes.find(c => c.id === commandeId);
+      if (!commande) {
+        const snap = await getDocs(query(collection(db, 'commandes'), where('__name__', '==', commandeId)));
+        if (!snap.empty) {
+          commande = { id: snap.docs[0].id, ...snap.docs[0].data() } as Commande;
+        }
+      }
+      if (!commande) return;
 
-    const lignes = commande.lignes.filter(l => l.id !== ligneId);
-    const total = lignes.reduce((acc, l) => acc + l.sousTotal, 0);
+      const lignes = commande.lignes.filter(l => l.id !== ligneId);
+      const total = lignes.reduce((acc, l) => acc + l.sousTotal, 0);
 
-    await updateDoc(doc(db, 'commandes', commandeId), { lignes, total });
+      await updateDoc(doc(db, 'commandes', commandeId), { lignes, total });
+    } catch (error) {
+      console.error("Erreur supprimerLigne:", error);
+    }
   },
 
   envoyerCuisine: async (commandeId) => {
-    const commande = get().commandes.find(c => c.id === commandeId);
-    if (!commande) return;
-
-    const maintenant = new Date().toISOString();
-    const batch = writeBatch(db);
-    
-    commande.lignes.forEach(ligne => {
-      if (ligne.statut === 'en_attente') {
-        const produitRef = doc(db, 'produits', ligne.produitId);
-        batch.update(produitRef, {
-          stockTotal: increment(-ligne.quantite)
-        });
+    try {
+      let commande = get().commandes.find(c => c.id === commandeId);
+      if (!commande) {
+        const snap = await getDocs(query(collection(db, 'commandes'), where('__name__', '==', commandeId)));
+        if (!snap.empty) {
+          commande = { id: snap.docs[0].id, ...snap.docs[0].data() } as Commande;
+        }
       }
-    });
+      if (!commande) return;
 
-    const lignes = commande.lignes.map(l => 
-      l.statut === 'en_attente' ? { ...l, statut: 'en_preparation', heureEnvoi: maintenant } as LigneCommande : l
-    );
+      const maintenant = new Date().toISOString();
+      const batch = writeBatch(db);
+      
+      commande.lignes.forEach(ligne => {
+        if (ligne.statut === 'en_attente') {
+          const produitRef = doc(db, 'produits', ligne.produitId);
+          batch.update(produitRef, {
+            stockTotal: increment(-ligne.quantite)
+          });
+        }
+      });
 
-    const commandeRef = doc(db, 'commandes', commandeId);
-    batch.update(commandeRef, { 
-      statut: 'envoyee',
-      lignes 
-    });
+      const lignes = commande.lignes.map(l => 
+        l.statut === 'en_attente' ? { ...l, statut: 'en_preparation', heureEnvoi: maintenant } as LigneCommande : l
+      );
 
-    await batch.commit();
+      const commandeRef = doc(db, 'commandes', commandeId);
+      batch.update(commandeRef, { 
+        statut: 'envoyee',
+        lignes 
+      });
+
+      await batch.commit();
+    } catch (error) {
+      console.error("Erreur envoyerCuisine:", error);
+    }
   },
 
   encaisserCommande: async (commandeId, modePaiement, clientNom, montantRemise = 0, montantPaye = 0, clientContact = '') => {
