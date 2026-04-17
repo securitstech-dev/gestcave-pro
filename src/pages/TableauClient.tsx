@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Wine, ShoppingCart, TrendingUp, AlertTriangle, Users, 
   Settings, LogOut, ChevronRight, Package, CreditCard, 
-  Layout, LayoutDashboard, Zap, Activity, ShieldCheck,
+  Layout, LayoutDashboard, Zap, Activity, ShieldCheck, Shield,
   Calendar, ArrowUpRight, ArrowDownRight, MoreVertical, DollarSign,
-  Bell, Search, Menu, X, PlusCircle, Globe, History, ArrowRight, Receipt, Clock
+  Bell, Search, Menu, X, PlusCircle, Globe, History, ArrowRight, ArrowLeft, Receipt, Clock
 } from 'lucide-react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
