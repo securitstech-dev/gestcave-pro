@@ -11,7 +11,7 @@ import { useAuthStore } from '../store/authStore';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, doc, updateDoc, addDoc, query, orderBy, getDocs, deleteDoc } from 'firebase/firestore';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Trash2, Database, AlertCircle, Info, Copy } from 'lucide-react';
+import { Trash2, Database, AlertCircle, Info, Copy, Key } from 'lucide-react';
 
 type Onglet = 'demandes' | 'paiements' | 'etablissements' | 'comptabilite' | 'maintenance';
 
@@ -176,6 +176,34 @@ const TableauSuperAdmin = () => {
 
       setModalEtabDetails(null);
       setProlongationMode(false);
+    } catch (err: any) {
+      toast.dismiss(toastId);
+      toast.error(`Erreur : ${err.message}`);
+    }
+  };
+
+  const regenererInvitation = async (etab: any) => {
+    if (!window.confirm(`Régénérer un lien d'activation pour ${etab.nom} ? L'ancien lien (si existant) deviendra obsolète.`)) return;
+    const toastId = toast.loading('Génération du nouveau lien...');
+    try {
+      // Génération d'un token unique
+      const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      
+      // Enregistrement de l'invitation dans Firestore
+      await addDoc(collection(db, 'invitations'), { 
+        token: invitationToken, 
+        email: etab.email_contact, 
+        nom: etab.contact_principal, 
+        etablissement_id: etab.id, 
+        role: 'client_admin', 
+        date_creation: new Date().toISOString(), 
+        expire: Date.now() + (72 * 60 * 60 * 1000) 
+      });
+
+      const urlComplete = `${window.location.origin}/activation?token=${invitationToken}`;
+      setLienActivation({ url: urlComplete, nom: etab.nom });
+      toast.dismiss(toastId);
+      toast.success(`Nouveau lien généré pour ${etab.nom} !`);
     } catch (err: any) {
       toast.dismiss(toastId);
       toast.error(`Erreur : ${err.message}`);
@@ -497,6 +525,19 @@ const TableauSuperAdmin = () => {
                           <button onClick={() => setModalEtabDetails(etab)} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-900 transition-colors border border-slate-200" title="Informations Clients">
                             <Info size={14} />
                           </button>
+                          <button onClick={() => regenererInvitation(etab)} className="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-500 rounded-lg border border-indigo-200 transition-colors" title="Régénérer lien de connexion">
+                            <Key size={14} />
+                          </button>
+                          <button 
+                            onClick={() => {
+                              useAuthStore.getState().setEtablissementSimule(etab.id);
+                              navigate('/tableau-de-bord');
+                            }} 
+                            className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg border border-emerald-200 transition-colors" 
+                            title="Ouvrir le Tableau de Bord (Mode Patron)"
+                          >
+                            <ExternalLink size={14} />
+                          </button>
                           {etab.subscription_status !== 'suspendu' && (
                             <button onClick={() => suspendreEtablissement(etab)} className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-lg border border-rose-200 transition-colors" title="Suspendre">
                               <Ban size={14} />
@@ -667,12 +708,29 @@ const TableauSuperAdmin = () => {
                 </div>
               </div>
 
-              {!prolongationMode ? (
-                <div className="flex gap-4">
-                  <button onClick={() => setModalEtabDetails(null)} className="flex-1 py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-bold transition-all">Fermer</button>
-                  <button onClick={() => { setProlongationPlan(modalEtabDetails.subscription_plan || 'starter'); setProlongationMode(true); }} className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all shadow-lg flex items-center justify-center gap-2">
-                    <TrendingUp size={16} /> Prolonger l'abonnement
-                  </button>
+               {!prolongationMode ? (
+                <div className="space-y-4">
+                  <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl">
+                    <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <Shield size={12} /> Sécurité & Accès
+                    </h4>
+                    <p className="text-[11px] text-slate-500 mb-4 leading-relaxed">
+                      Si le client a perdu ses accès ou n'a jamais activé son compte, vous pouvez générer un nouveau lien de connexion sécurisé.
+                    </p>
+                    <button 
+                      onClick={() => regenererInvitation(modalEtabDetails)}
+                      className="w-full py-3 bg-white border border-indigo-200 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center gap-2 shadow-sm"
+                    >
+                      <Key size={14} /> Régénérer le lien d'activation
+                    </button>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <button onClick={() => setModalEtabDetails(null)} className="flex-1 py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-bold transition-all">Fermer</button>
+                    <button onClick={() => { setProlongationPlan(modalEtabDetails.subscription_plan || 'starter'); setProlongationMode(true); }} className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 text-sm">
+                      <TrendingUp size={16} /> Prolonger
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 space-y-4">

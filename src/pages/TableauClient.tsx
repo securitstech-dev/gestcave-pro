@@ -28,19 +28,21 @@ import GestionEtablissement from './modules/GestionEtablissement';
 import GestionSessions from './modules/GestionSessions';
 
 const TableauClient = () => {
-  const { profil, deconnexion } = useAuthStore();
+  const { profil, deconnexion, etablissementSimuleId } = useAuthStore();
   const { initialiserTempsReel, arreterTempsReel } = usePOSStore();
   const navigate = useNavigate();
   const location = useLocation();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  const etablissementId = etablissementSimuleId || profil?.etablissement_id;
+
   useEffect(() => {
-    if (profil?.etablissement_id) {
-      initialiserTempsReel(profil.etablissement_id);
+    if (etablissementId) {
+      initialiserTempsReel(etablissementId);
     }
     return () => arreterTempsReel();
-  }, [profil?.etablissement_id, initialiserTempsReel, arreterTempsReel]);
+  }, [etablissementId, initialiserTempsReel, arreterTempsReel]);
 
   // Fermer la sidebar mobile lors d'un changement de route
   useEffect(() => {
@@ -67,17 +69,30 @@ const TableauClient = () => {
 
   const Sidebar = () => (
     <div className="flex flex-col h-full bg-white border-r border-slate-200">
-      <div className="p-8 flex items-center gap-4 border-b border-slate-100">
-        <img src="/logo_gestcave.png" alt="Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-slate-950/20" />
-        <div>
-
-          <h2 className="font-bold text-slate-900 text-sm tracking-tight leading-tight uppercase">
-            {profil?.etablissement_id?.slice(0, 8) || 'GESTCAVE'}
-          </h2>
-          <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest flex items-center gap-1">
-            <span className="w-1 h-1 rounded-full bg-emerald-500" /> Serveur Actif
-          </p>
+      <div className="p-8 flex flex-col gap-4 border-b border-slate-100">
+        <div className="flex items-center gap-4">
+          <img src="/logo_gestcave.png" alt="Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-slate-950/20" />
+          <div>
+            <h2 className="font-bold text-slate-900 text-sm tracking-tight leading-tight uppercase">
+              {profil?.etablissement_id?.slice(0, 8) || (etablissementSimuleId ? 'INSPECTION' : 'GESTCAVE')}
+            </h2>
+            <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest flex items-center gap-1">
+              <span className="w-1 h-1 rounded-full bg-emerald-500" /> {etablissementSimuleId ? 'Mode Simulation' : 'Serveur Actif'}
+            </p>
+          </div>
         </div>
+        
+        {etablissementSimuleId && (
+          <button 
+            onClick={() => {
+              useAuthStore.getState().setEtablissementSimule(null);
+              navigate('/super-admin');
+            }}
+            className="w-full py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-widest border border-indigo-200 transition-all flex items-center justify-center gap-2"
+          >
+            <Shield size={12} /> Quitter l'inspection
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar-admin">

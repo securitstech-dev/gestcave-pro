@@ -22,6 +22,8 @@ interface EtatAuth {
   profil: ProfilUtilisateur | null;
   chargement: boolean;
   initialise: boolean;
+  etablissementSimuleId: string | null;
+  setEtablissementSimule: (id: string | null) => void;
   connexion: (email: string, motDePasse: string) => Promise<void>;
   deconnexion: () => Promise<void>;
   initialiser: () => void;
@@ -32,6 +34,9 @@ export const useAuthStore = create<EtatAuth>((set) => ({
   profil: null,
   chargement: false,
   initialise: false,
+  etablissementSimuleId: null,
+
+  setEtablissementSimule: (id) => set({ etablissementSimuleId: id }),
 
   initialiser: () => {
     // Écouteur en temps réel de la session Firebase

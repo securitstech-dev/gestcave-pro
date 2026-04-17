@@ -101,11 +101,20 @@ const SelectionMode = () => {
   };
 
   const validerPIN = async (currentPin: string) => {
+    // Bypass total pour le Super Admin
+    if (profil?.role === 'super_admin') {
+      toast.success("Accès Super Admin autorisé");
+      setShowPinModal(false);
+      navigate(selectedMode.id === 'admin' ? '/tableau-de-bord' : selectedMode.route);
+      return;
+    }
+
     setLoading(true);
     try {
+      const etablissementId = profil?.etablissement_id || 'demo';
       const q = query(
         collection(db, 'employes'), 
-        where('etablissement_id', '==', profil.etablissement_id),
+        where('etablissement_id', '==', etablissementId),
         where('pin', '==', currentPin)
       );
       
@@ -138,7 +147,8 @@ const SelectionMode = () => {
         setPin('');
       }
     } catch (error) {
-      toast.error('Erreur réseau');
+      console.error("Erreur validation PIN:", error);
+      toast.error('Erreur réseau ou profil manquant');
       setPin('');
     } finally {
       setLoading(false);

@@ -95,6 +95,11 @@ const PageActivation = () => {
 
         } catch (err: any) {
             console.error(err);
+            if (err.code === 'auth/email-already-in-use') {
+                toast.error("Votre compte est déjà activé ! Connectez-vous.");
+                setTimeout(() => navigate('/connexion'), 2000);
+                return;
+            }
             toast.error(err.message || "Erreur lors de l'activation");
         } finally {
             setChargement(false);
@@ -103,18 +108,18 @@ const PageActivation = () => {
 
     if (chargement && etape === 'verification') {
         return (
-            <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-                <Loader2 className="animate-spin text-indigo-500" size={40} />
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+                <Loader2 className="animate-spin text-indigo-600" size={40} />
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 relative overflow-hidden">
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 relative overflow-hidden">
              {/* Background Effects */}
-             <div className="absolute top-0 left-0 w-full h-full">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/10 blur-[120px] rounded-full" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/10 blur-[120px] rounded-full" />
+             <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
+                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-100/50 blur-[120px] rounded-full" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-100/50 blur-[120px] rounded-full" />
             </div>
 
             <motion.div 
@@ -124,25 +129,25 @@ const PageActivation = () => {
             >
                 {/* Header */}
                 <div className="flex flex-col items-center mb-10 text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-glow mb-6">
-                        <ShieldCheck className="text-white" size={32} />
+                    <div className="w-20 h-20 rounded-[2rem] bg-white border border-slate-200 flex items-center justify-center shadow-xl shadow-slate-200/50 mb-8">
+                        <ShieldCheck className="text-indigo-600" size={40} />
                     </div>
-                    <h1 className="text-3xl font-display font-bold text-white tracking-tight">Activation GestCave Pro</h1>
-                    <p className="text-slate-400 mt-2">Plus qu'une étape pour digitaliser votre établissement.</p>
+                    <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase mb-2">Activation Compte</h1>
+                    <p className="text-slate-500 font-medium">Finalisez la configuration de votre espace GestCave Pro.</p>
                 </div>
 
-                <div className="glass-panel p-8 md:p-10 border-white/10 shadow-2xl">
+                <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-10 border border-white shadow-2xl shadow-slate-200/60">
                     {etape === 'formulaire' && (
                         <form onSubmit={finaliserActivation} className="space-y-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Adresse Email</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Adresse Email</label>
                                 <div className="relative">
-                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                     <input 
                                         type="email" 
                                         disabled 
                                         value={invitation?.email} 
-                                        className="glass-input w-full pl-12 opacity-60 cursor-not-allowed" 
+                                        className="w-full h-14 bg-slate-100/50 border border-slate-200 rounded-2xl pl-12 font-bold text-slate-400 cursor-not-allowed opacity-60" 
                                     />
                                 </div>
                             </div>
@@ -150,14 +155,14 @@ const PageActivation = () => {
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Définir un mot de passe</label>
                                 <div className="relative">
-                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                     <input 
                                         required
                                         type="password" 
                                         value={motDePasse}
                                         onChange={(e) => setMotDePasse(e.target.value)}
                                         placeholder="••••••••"
-                                        className="glass-input w-full pl-12" 
+                                        className="w-full h-14 bg-white border border-slate-200 rounded-2xl pl-12 outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/5 transition-all font-bold" 
                                     />
                                 </div>
                             </div>
@@ -165,14 +170,14 @@ const PageActivation = () => {
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Confirmer le mot de passe</label>
                                 <div className="relative">
-                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                     <input 
                                         required
                                         type="password" 
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
                                         placeholder="••••••••"
-                                        className="glass-input w-full pl-12" 
+                                        className="w-full h-14 bg-white border border-slate-200 rounded-2xl pl-12 outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/5 transition-all font-bold" 
                                     />
                                 </div>
                             </div>
@@ -180,25 +185,26 @@ const PageActivation = () => {
                             <button 
                                 type="submit" 
                                 disabled={chargement}
-                                className="w-full btn-primary accent py-4 flex items-center justify-center gap-3 text-lg mt-4"
+                                className="w-full h-16 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-xl shadow-slate-900/20 active:scale-95 transition-all flex items-center justify-center gap-3 mt-4"
                             >
-                                {chargement ? <Loader2 className="animate-spin" size={20} /> : "Activer mon espace"}
+                                {chargement ? <Loader2 className="animate-spin" size={20} /> : "Activer mon espace maintenant"}
                             </button>
                         </form>
                     )}
 
                     {etape === 'succes' && (
                         <div className="text-center py-6">
-                            <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 text-emerald-500">
-                                <CheckCircle2 size={44} />
+                            <div className="w-24 h-24 bg-emerald-50 text-emerald-600 rounded-[2rem] flex items-center justify-center mx-auto mb-8">
+                                <CheckCircle2 size={48} />
                             </div>
-                            <h2 className="text-2xl font-bold text-white mb-2">Bienvenue à bord !</h2>
-                            <p className="text-slate-400 mb-6">Votre espace est prêt. Votre code PIN d'accès par défaut est :</p>
-                            <div className="bg-white/10 p-6 rounded-3xl border border-white/20 mb-8 inline-block">
-                                <span className="text-4xl font-black text-indigo-400 tracking-[0.3em]">0000</span>
+                            <h2 className="text-3xl font-black text-slate-900 mb-2 uppercase tracking-tight">C'est prêt !</h2>
+                            <p className="text-slate-500 font-medium mb-10 px-4">Votre établissement est configuré. Votre code PIN d'accès par défaut est :</p>
+                            
+                            <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-200 mb-10 inline-block px-12">
+                                <span className="text-5xl font-black text-indigo-600 tracking-[0.4em]">0000</span>
                             </div>
-                            <p className="text-xs text-slate-500 italic">Vous pourrez le modifier à tout moment dans le Centre de Gestion.</p>
-                            <p className="text-slate-400 mt-6">Redirection automatique dans quelques secondes...</p>
+                            
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Redirection automatique...</p>
                         </div>
                     )}
                 </div>
