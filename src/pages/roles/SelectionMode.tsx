@@ -10,6 +10,8 @@ import { useAuthStore } from '../../store/authStore';
 import { db } from '../../lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import toast from 'react-hot-toast';
+import { runScenarioSeed } from '../../lib/scenarioSeed';
+import { runFullScenarioSimulation } from '../../lib/scenarioSimulator';
 
 const SelectionMode = () => {
   const navigate = useNavigate();
@@ -228,6 +230,29 @@ const SelectionMode = () => {
       >
         <LogOut size={16} /> Changer d'établissement
       </motion.button>
+
+      <button 
+        onClick={async () => {
+          const tid = toast.loading("Initialisation du scénario...");
+          await runScenarioSeed();
+          toast.success("Scénario initialisé ! Redémarrez si besoin.", { id: tid });
+        }}
+        className="mt-4 px-4 py-2 text-[8px] font-black text-slate-300 hover:text-slate-900 uppercase tracking-widest opacity-20 hover:opacity-100 transition-all"
+      >
+        Initialiser le Scénario "Étoile du Congo"
+      </button>
+
+      <button 
+        onClick={async () => {
+          const tid = toast.loading("Simulation du scénario complet...");
+          const success = await runFullScenarioSimulation();
+          if (success) toast.success("Scénario simulé ! Allez dans Finance pour voir les rapports.", { id: tid });
+          else toast.error("Erreur simulation", { id: tid });
+        }}
+        className="mt-2 px-4 py-2 text-[8px] font-black text-slate-300 hover:text-slate-900 uppercase tracking-widest opacity-20 hover:opacity-100 transition-all"
+      >
+        Simuler la journée du 17 Juin 2025
+      </button>
 
       {/* Modal PIN - Version Claire */}
       <AnimatePresence>

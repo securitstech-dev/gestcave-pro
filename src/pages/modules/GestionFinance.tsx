@@ -18,6 +18,7 @@ import {
 import StatCard from '../../components/ui/StatCard';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import ModalRapportFiscal from '../../components/modals/ModalRapportFiscal';
 
 interface Transaction {
   id: string;
@@ -44,6 +45,7 @@ const GestionFinance = () => {
   const [nouveauMontantCharge, setNouveauMontantCharge] = useState('');
   const [nouveauMotifCharge, setNouveauMotifCharge] = useState('');
   const [clientRecherche, setClientRecherche] = useState('');
+  const [showFiscalModal, setShowFiscalModal] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, 'transactions_pos'), where('etablissement_id', '==', profil.etablissement_id));
@@ -192,8 +194,11 @@ const GestionFinance = () => {
             <button onClick={() => setShowChargeModal(true)} className="px-6 py-5 rounded-2xl bg-white border border-slate-200 text-slate-900 font-bold text-[11px] uppercase tracking-[0.2em] flex items-center gap-4 hover:bg-slate-50 transition-all">
               <Calculator size={20} /> Nouvelle Charge
             </button>
-            <button onClick={genererRapportPDF} className="px-8 py-5 rounded-2xl bg-slate-900 text-white font-bold text-[11px] uppercase tracking-[0.2em] flex items-center gap-4 shadow-2xl shadow-slate-900/20 active:scale-95 transition-all">
-              <Download size={20} /> Exporter (PDF)
+            <button onClick={genererRapportPDF} className="px-8 py-5 rounded-2xl bg-white border border-slate-200 text-slate-900 font-bold text-[11px] uppercase tracking-[0.2em] flex items-center gap-4 hover:bg-slate-50 transition-all">
+              <Download size={20} /> Journal Caisse
+            </button>
+            <button onClick={() => setShowFiscalModal(true)} className="px-8 py-5 rounded-2xl bg-slate-900 text-white font-bold text-[11px] uppercase tracking-[0.2em] flex items-center gap-4 shadow-2xl shadow-slate-900/20 active:scale-95 transition-all">
+              <Calculator size={20} /> Rapport Fiscal Mensuel
             </button>
         </div>
       </header>
@@ -492,6 +497,12 @@ const GestionFinance = () => {
           </div>
         )}
       </AnimatePresence>
+
+      <ModalRapportFiscal 
+        isOpen={showFiscalModal} 
+        onClose={() => setShowFiscalModal(false)} 
+        defaultCA={1850000} 
+      />
 
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }

@@ -25,6 +25,7 @@ import PlanDeSalles from './modules/PlanDeSalles';
 import GestionFinance from './modules/GestionFinance';
 import GestionAchats from './modules/GestionAchats';
 import GestionEtablissement from './modules/GestionEtablissement';
+import GestionSessions from './modules/GestionSessions';
 
 const TableauClient = () => {
   const { profil, deconnexion } = useAuthStore();
@@ -84,6 +85,7 @@ const TableauClient = () => {
           <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Vue Principale</p>
           <div className="space-y-1">
             <SidebarLink icon={<LayoutDashboard size={18} />} label="Tableau de Bord" path="/tableau-de-bord" />
+            <SidebarLink icon={<Clock size={18} />} label="Sessions Journalières" path="/tableau-de-bord/sessions" />
             <SidebarLink icon={<Layout size={18} />} label="Plan de Salle" path="/tableau-de-bord/plan-salles" />
           </div>
         </div>
@@ -192,6 +194,7 @@ const TableauClient = () => {
               <Route path="/achats" element={<GestionAchats />} />
               <Route path="/tables" element={<GestionTables />} />
               <Route path="/admin" element={<GestionFinance />} />
+              <Route path="/sessions" element={<GestionSessions />} />
               <Route path="/settings" element={<GestionEtablissement />} />
             </Routes>
           </div>

@@ -12,6 +12,7 @@ import InterfaceCaissier from './pages/roles/InterfaceCaissier';
 import PageInscription from './pages/PageInscription';
 import PageActivation from './pages/PageActivation';
 import PagePoste from './pages/PagePoste';
+import PageDemoScenario from './pages/PageDemoScenario';
 import RoleGuard from './components/auth/RoleGuard';
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
         <Routes>
           {/* Routes publiques */}
           <Route path="/" element={<PageAccueil />} />
+          <Route path="/demo-scenario" element={<PageDemoScenario />} />
           <Route path="/connexion" element={<PageConnexion />} />
           <Route path="/activation" element={<PageActivation />} />
           
