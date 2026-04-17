@@ -11,6 +11,10 @@ import { useNavigate } from 'react-router-dom';
 
 const PlanDeSalles = () => {
   const { tables, commandes } = usePOSStore();
+  const navigate = useNavigate();
+  const [tableSelectionnee, setTableSelectionnee] = useState<{table: TablePlan, commande?: Commande} | null>(null);
+  const zones = ['salle', 'terrasse', 'vip'] as const;
+
   const totalLignes = commandes.filter(c => c.statut !== 'payee').reduce((acc, c) => acc + c.total, 0);
   const tablesOccupees = tables.filter(t => t.statut === 'occupee').length;
   const tauxOccupation = Math.round((tablesOccupees / (tables.length || 1)) * 100);
