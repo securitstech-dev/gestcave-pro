@@ -102,6 +102,7 @@ const TableauClient = () => {
             <SidebarLink icon={<LayoutDashboard size={18} />} label="Tableau de Bord" path="/tableau-de-bord" />
             <SidebarLink icon={<Clock size={18} />} label="Sessions Journalières" path="/tableau-de-bord/sessions" />
             <SidebarLink icon={<Layout size={18} />} label="Plan de Salle" path="/tableau-de-bord/plan-salles" />
+            <SidebarLink icon={<Settings size={18} />} label="Configuration des Tables" path="/tableau-de-bord/tables" />
           </div>
         </div>
 
