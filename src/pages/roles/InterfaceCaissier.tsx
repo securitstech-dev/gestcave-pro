@@ -97,7 +97,7 @@ const InterfaceCaissier = () => {
       toast.success("Transaction validée !", { id: toastId, icon: '💰' });
       
       // On propose l'impression
-      const etablissementNom = useAuthStore.getState().etablissementDetails?.nom || 'Votre Établissement';
+      const etablissementNom = (window as any).etablissement_nom || 'Votre Établissement';
       if (commandeActive) {
          if (window.confirm("Voulez-vous imprimer le ticket ?")) {
             imprimerTicket(commandeActive, etablissementNom);
