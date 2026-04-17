@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Wine, ShoppingCart, TrendingUp, AlertTriangle, Users, 
   Settings, LogOut, ChevronRight, Package, CreditCard, 
   Layout, LayoutDashboard, Zap, Activity, ShieldCheck,
   Calendar, ArrowUpRight, ArrowDownRight, MoreVertical, DollarSign,
-  Bell, Search, Menu, X, PlusCircle, Globe, History, ArrowRight, Receipt
+  Bell, Search, Menu, X, PlusCircle, Globe, History, ArrowRight, Receipt, Clock
 } from 'lucide-react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -202,9 +202,12 @@ const TableauClient = () => {
 };
 
 const DashboardAccueil = ({ profil, navigate }: any) => {
-  const { commandes, produits } = usePOSStore();
+  const { commandes, produits, tables } = usePOSStore();
   const [lienCopie, setLienCopie] = React.useState(false);
   const [transactions, setTransactions] = React.useState<any[]>([]);
+
+  const tablesOccupees = tables.filter(t => t.statut === 'occupee').length;
+  const tablesAttente = tables.filter(t => t.statut === 'en_attente_paiement').length;
 
   React.useEffect(() => {
     if (!profil?.etablissement_id) return;
@@ -223,6 +226,18 @@ const DashboardAccueil = ({ profil, navigate }: any) => {
 
   const ventesDuJour = transactions.reduce((acc, t) => acc + (t.total || 0), 0);
   const dettes = transactions.filter(t => t.modePaiement === 'credit').reduce((acc, t) => acc + (t.montantRestant || 0), 0);
+  const mobileMoney = transactions.filter(t => t.modePaiement === 'mobile').reduce((acc, t) => acc + (t.total || 0), 0);
+  const especes = transactions.filter(t => t.modePaiement === 'especes').reduce((acc, t) => acc + (t.total || 0), 0);
+
+  // Performance Serveurs
+  const perfServeurs = useMemo(() => {
+    const map: { [name: string]: number } = {};
+    transactions.forEach(t => {
+       const nom = t.serveurNom || 'Inconnu';
+       map[nom] = (map[nom] || 0) + (t.total || 0);
+    });
+    return Object.entries(map).sort((a,b) => b[1] - a[1]).slice(0, 3);
+  }, [transactions]);
 
   const copierLienPoste = () => {
     if (!profil?.etablissement_id) return;
@@ -234,128 +249,232 @@ const DashboardAccueil = ({ profil, navigate }: any) => {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-10 pb-20">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-12 pb-20">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 px-2">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">Bonjour, {profil?.prenom || 'Administrateur'}</h1>
-          <p className="text-slate-500 font-medium mt-1">Résumé global de votre établissement pour aujourd'hui.</p>
+          <div className="flex items-center gap-2 mb-2">
+             <span className="px-3 py-1 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest rounded-full">Vue Patron</span>
+             <span className="text-[10px] text-slate-400 font-bold">• Temps Réel Actif</span>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter">Tableau de Bord</h1>
         </div>
         
         <div className="flex gap-4 w-full md:w-auto">
              <button
                onClick={copierLienPoste}
-               className={`flex-1 md:flex-none py-3.5 px-6 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all flex items-center justify-center gap-3 border shadow-sm ${
+               className={`flex-1 md:flex-none py-4 px-8 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-3 border shadow-sm ${
                  lienCopie ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                }`}
              >
-               {lienCopie ? <ShieldCheck size={16} /> : <Globe size={16} />}
-               Ligne Serveurs
+               {lienCopie ? <ShieldCheck size={18} /> : <Globe size={18} />}
+               Accès Personnel
              </button>
              <button 
                onClick={() => navigate('/tableau-de-bord/achats')}
-               className="flex-1 md:flex-none py-3.5 px-6 rounded-xl bg-slate-900 font-bold text-[11px] text-white uppercase tracking-widest shadow-xl shadow-slate-950/20 hover:bg-slate-800 transition-all flex items-center justify-center gap-3"
+               className="flex-1 md:flex-none py-4 px-8 rounded-2xl bg-slate-900 font-black text-[10px] text-white uppercase tracking-widest shadow-xl shadow-slate-950/20 hover:bg-slate-800 transition-all flex items-center justify-center gap-3"
              >
-               <PlusCircle size={16} /> Nouvel Achat
+               <PlusCircle size={18} /> Approvisionner
              </button>
         </div>
       </div>
 
-      {/* Cartes de Stats Alpha */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard label="Recettes (F)" valeur={`${ventesDuJour.toLocaleString()}`} icon={<TrendingUp size={22} />} color="emerald" tendance="+8.4%" />
-        <StatCard label="Commandes Actives" valeur={commandes.filter(c => c.statut !== 'payee').length} icon={<Zap size={22} />} color="blue" subtext="En salle" />
-        <StatCard label="Dettes Clients" valeur={`${dettes.toLocaleString()}`} suffix="F" icon={<Users size={22} />} color="blue" subtext="À recouvrir" />
-        <StatCard label="Items Critiques" valeur={produits.filter(p => (p.stockTotal || 0) <= (p.stockAlerte || 0)).length} icon={<AlertTriangle size={22} />} color="red" important={produits.filter(p => (p.stockTotal || 0) <= (p.stockAlerte || 0)).length > 0} />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm relative overflow-hidden group">
+            <div className="relative z-10 flex flex-col h-full justify-between">
+                <div className="flex justify-between items-start mb-4">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center"><TrendingUp size={24} /></div>
+                    <span className="text-[10px] font-black text-emerald-600 bg-emerald-100/50 px-2 py-1 rounded-full">+12.4%</span>
+                </div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Caisse Totale</p>
+                <h3 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">{ventesDuJour.toLocaleString()} <span className="text-xs">F</span></h3>
+            </div>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-700" />
+        </div>
+
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm relative overflow-hidden group">
+            <div className="relative z-10 flex flex-col h-full justify-between">
+                <div className="flex justify-between items-start mb-4">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center"><Zap size={24} /></div>
+                    <span className="text-[10px] font-black text-blue-600 bg-blue-100/50 px-2 py-1 rounded-full">LIVE</span>
+                </div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Activité Salles</p>
+                <h3 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">{tablesOccupees} <span className="text-xs">Occupées</span></h3>
+            </div>
+        </div>
+
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm relative overflow-hidden group">
+            <div className="relative z-10 flex flex-col h-full justify-between">
+                <div className="flex justify-between items-start mb-4">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center"><Users size={24} /></div>
+                    <span className="text-[10px] font-black text-amber-600 bg-amber-100/50 px-2 py-1 rounded-full">{tablesAttente} Notes</span>
+                </div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Encours Clients</p>
+                <h3 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">{commandes.filter(c => c.statut !== 'payee').length} <span className="text-xs">Cmds</span></h3>
+            </div>
+        </div>
+
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm relative overflow-hidden group">
+            <div className="relative z-10 flex flex-col h-full justify-between">
+                <div className="flex justify-between items-start mb-4">
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center"><CreditCard size={24} /></div>
+                </div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Dettes À Recouvrer</p>
+                <h3 className="text-3xl font-black text-indigo-900 tracking-tighter uppercase">{dettes.toLocaleString()} <span className="text-xs">F</span></h3>
+            </div>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
-        {/* Liste des Opérations */}
-        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
-          <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-            <div className="flex items-center gap-3">
-               <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-900 shadow-sm">
-                  <Receipt size={18} />
-               </div>
-               <h3 className="text-base font-bold text-slate-900 uppercase tracking-tight">Journal des Opérations</h3>
-            </div>
-            <button className="text-[10px] font-bold text-blue-600 uppercase tracking-widest hover:underline">Voir Tout</button>
+        <div className="lg:col-span-2 space-y-8">
+          {/* Situation des Salles (Live) */}
+          <div className="bg-white border border-slate-200 rounded-[3rem] p-10 shadow-sm relative overflow-hidden">
+             <div className="flex justify-between items-center mb-10">
+                <div className="flex items-center gap-4">
+                   <div className="w-12 h-12 rounded-2xl bg-indigo-900 text-white flex items-center justify-center shadow-lg"><Activity size={24} /></div>
+                   <div>
+                      <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase">Monitor Live</h3>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Aperçu direct occupation</p>
+                   </div>
+                </div>
+                <button onClick={() => navigate('/tableau-de-bord/plan-salles')} className="flex items-center gap-2 text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:bg-indigo-50 px-4 py-2 rounded-xl transition-all border border-indigo-100">
+                   Plan Complet <ArrowRight size={14} />
+                </button>
+             </div>
+
+             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {tables.slice(0, 8).map(table => {
+                   const cmd = commandes.find(c => c.tableId === table.id && c.statut !== 'payee');
+                   const duree = cmd?.dateOuverture ? Math.floor((Date.now() - new Date(cmd.dateOuverture).getTime()) / 60000) : 0;
+                   
+                   return (
+                      <div key={table.id} className={`p-6 rounded-3xl border transition-all flex flex-col items-center justify-center gap-2 relative group ${
+                         table.statut === 'occupee' ? 'bg-rose-50 border-rose-100 shadow-lg shadow-rose-500/5' : 
+                         table.statut === 'en_attente_paiement' ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-transparent'
+                      }`}>
+                         <span className={`text-2xl font-black ${table.statut === 'occupee' ? 'text-rose-600' : table.statut === 'en_attente_paiement' ? 'text-amber-600' : 'text-slate-400'}`}>{table.nom.split(' ')[1] || table.nom}</span>
+                         {cmd && (
+                           <div className="flex flex-col items-center gap-1">
+                              <span className="text-[9px] font-black text-slate-900">{cmd.total.toLocaleString()} F</span>
+                              <div className="flex items-center gap-1 text-[8px] font-bold text-slate-400">
+                                <Clock size={8} /> {duree}m
+                              </div>
+                           </div>
+                         )}
+                         {table.statut === 'libre' && <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Libre</span>}
+                      </div>
+                   )
+                })}
+             </div>
           </div>
 
-          <div className="divide-y divide-slate-100">
-            {transactions.length === 0 ? (
-                <div className="py-24 text-center">
-                    <History size={48} className="mx-auto mb-6 text-slate-200" />
-                    <p className="text-slate-400 font-bold text-sm uppercase tracking-widest">Aucun mouvement aujourd'hui</p>
-                </div>
-            ) : (
-                transactions.slice(0, 8).map((transaction, i) => (
-                    <div key={transaction.id || i} className="flex items-center justify-between p-6 hover:bg-slate-50 transition-colors">
-                        <div className="flex items-center gap-5">
-                            <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-900 text-xs">
-                                ENC
-                            </div>
-                            <div>
-                                <h4 className="font-bold text-slate-900 text-sm">Ticket #{transaction.commandeId?.slice(-6).toUpperCase() || 'NR'}</h4>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Par {transaction.serveurNom || 'Caisse'}</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-6">
-                            <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest border ${
-                                transaction.modePaiement === 'credit' ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                            }`}>
-                                {transaction.modePaiement === 'credit' ? 'Dette' : 'Payé'}
-                            </span>
-                            <p className="text-lg font-bold text-slate-900 w-24 text-right uppercase tracking-tighter">{transaction.total?.toLocaleString() || 0} F</p>
-                        </div>
-                    </div>
-                ))
-            )}
+          <div className="bg-white border border-slate-200 rounded-[3rem] overflow-hidden shadow-sm">
+            <div className="p-10 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
+              <div className="flex items-center gap-4">
+                 <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-900 shadow-sm">
+                    <Receipt size={22} />
+                 </div>
+                 <div>
+                    <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase">Journal Pos</h3>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Flux des ventes du jour</p>
+                 </div>
+              </div>
+            </div>
+
+            <div className="divide-y divide-slate-100">
+              {transactions.length === 0 ? (
+                  <div className="py-24 text-center">
+                      <History size={48} className="mx-auto mb-6 text-slate-200" />
+                      <p className="text-slate-400 font-bold text-sm uppercase tracking-widest">Rien à signaler pour l'instant</p>
+                  </div>
+              ) : (
+                  transactions.slice(0, 8).map((transaction, i) => (
+                      <div key={transaction.id || i} className="flex items-center justify-between p-8 hover:bg-slate-50 transition-colors">
+                          <div className="flex items-center gap-6">
+                              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-[10px] shadow-sm tracking-tighter ${
+                                 transaction.modePaiement === 'mobile' ? 'bg-indigo-500 text-white shadow-indigo-200' : 'bg-slate-100 text-slate-900'
+                              }`}>
+                                  {transaction.modePaiement === 'mobile' ? 'MOBI' : 'CASH'}
+                              </div>
+                              <div>
+                                  <h4 className="font-black text-slate-900 text-sm uppercase tracking-tight">Ticket #{transaction.commandeId?.slice(-6).toUpperCase() || 'SYS'}</h4>
+                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                     {transaction.serveurNom || 'Admin'} <span className="w-1 h-1 rounded-full bg-slate-200" /> {new Date(transaction.date).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}
+                                  </p>
+                              </div>
+                          </div>
+                          <div className="flex items-center gap-8">
+                              <span className={`text-[9px] font-black px-4 py-1.5 rounded-full uppercase tracking-[0.2em] border ${
+                                  transaction.modePaiement === 'credit' ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                              }`}>
+                                  {transaction.modePaiement === 'credit' ? 'Note' : 'Encais'}
+                              </span>
+                              <p className="text-2xl font-black text-slate-950 w-32 text-right tracking-tighter uppercase">{transaction.total?.toLocaleString() || 0} F</p>
+                          </div>
+                      </div>
+                  ))
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Sidebar d'alertes */}
-        <div className="space-y-6">
-             <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
+        <div className="space-y-8">
+             <div className="bg-slate-900 rounded-[3rem] p-10 text-white shadow-2xl shadow-slate-950/20">
                 <div className="flex items-center gap-4 mb-8">
-                     <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shadow-sm">
-                         <AlertTriangle size={20} />
-                     </div>
-                     <h4 className="font-bold text-slate-900 text-sm uppercase tracking-tight">Ruptures & Alertes</h4>
+                    <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center"><TrendingUp size={20} className="text-emerald-400" /></div>
+                    <h4 className="font-black text-sm uppercase tracking-widest">Force de Vente</h4>
                 </div>
                 <div className="space-y-6">
-                    {produits.filter(p => p.stockTotal <= p.stockAlerte).length === 0 ? (
-                      <div className="py-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                   {perfServeurs.length === 0 ? (
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest text-center py-6 border border-dashed border-white/5 rounded-2xl">Aucune donnée</p>
+                   ) : (
+                      perfServeurs.map(([nom, val], idx) => (
+                         <div key={idx} className="flex flex-col gap-2">
+                            <div className="flex justify-between items-end">
+                               <p className="text-xs font-black uppercase text-slate-400">{nom}</p>
+                               <p className="text-sm font-black text-white">{val.toLocaleString()} F</p>
+                            </div>
+                            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                               <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(val / perfServeurs[0][1]) * 100}%` }} />
+                            </div>
+                         </div>
+                      ))
+                   )}
+                </div>
+             </div>
+
+             <div className="bg-white border border-slate-200 rounded-[3rem] p-10 shadow-sm relative overflow-hidden">
+                <div className="flex items-center gap-4 mb-8">
+                     <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shadow-sm">
+                         <AlertTriangle size={24} />
+                     </div>
+                     <div>
+                        <h4 className="font-black text-slate-900 text-sm uppercase tracking-tight">Stock Critique</h4>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Attention immédiate</p>
+                     </div>
+                </div>
+                <div className="space-y-8">
+                    {produits.filter(p => p.stockTotal <= (p.stockAlerte || 0)).length === 0 ? (
+                      <div className="py-10 text-center bg-slate-50 rounded-[2rem] border border-dashed border-slate-200">
                           <ShieldCheck size={32} className="mx-auto text-emerald-500 mb-3" />
-                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Stocks Verrouillés</p>
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Stocks Sécurisés</p>
                       </div>
                     ) : (
-                      produits.filter(p => p.stockTotal <= p.stockAlerte).slice(0, 5).map(p => (
-                        <div key={p.id} className="space-y-2">
-                          <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-tight">
+                      produits.filter(p => p.stockTotal <= (p.stockAlerte || 0)).slice(0, 5).map(p => (
+                        <div key={p.id} className="space-y-3">
+                          <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
                             <span className="text-slate-600 truncate max-w-[150px]">{p.nom}</span>
-                            <span className={p.stockTotal <= 0 ? 'text-red-600' : 'text-orange-600'}>{p.stockTotal} un.</span>
+                            <span className={p.stockTotal <= 0 ? 'text-red-600' : 'text-orange-600 font-black'}>{p.stockTotal} UN.</span>
                           </div>
-                          <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                             <div className={`h-full rounded-full ${p.stockTotal <= 0 ? 'bg-red-600' : 'bg-orange-500'}`} style={{ width: `${(p.stockTotal/p.stockAlerte)*100}%` }} />
+                          <div className="h-2 w-full bg-slate-50 rounded-full overflow-hidden">
+                             <div className={`h-full rounded-full transition-all duration-1000 ${p.stockTotal <= 0 ? 'bg-red-600' : 'bg-orange-500'}`} style={{ width: `${Math.min(100, (p.stockTotal/(p.stockAlerte || 1))*100)}%` }} />
                           </div>
                         </div>
                       ))
                     )}
                 </div>
-                <button onClick={() => navigate('/tableau-de-bord/stocks')} className="mt-8 w-full py-4 rounded-xl bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg shadow-slate-950/10">
-                    Gérer Inventaire
+                <button onClick={() => navigate('/tableau-de-bord/stocks')} className="mt-10 w-full py-5 rounded-2xl bg-slate-950 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-xl shadow-slate-950/20 active:scale-95">
+                    Inventaire Global
                 </button>
-             </div>
-
-             <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-8 text-white relative overflow-hidden group">
-                  <div className="relative z-10">
-                    <h4 className="font-bold text-sm mb-2 uppercase tracking-tight">Support GESTCAVE</h4>
-                    <p className="text-slate-400 text-xs leading-relaxed mb-6 font-medium">Besoin d'aide pour vos rapports ou d'un conseil technique ?</p>
-                    <button className="w-full py-4 rounded-xl bg-white/10 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-white/20 transition-all border border-white/10">
-                        Assistance Immédiate
-                    </button>
-                  </div>
-                  <Wine size={80} className="absolute -bottom-4 -right-4 text-white/5 group-hover:rotate-12 transition-transform duration-700" />
              </div>
         </div>
       </div>
