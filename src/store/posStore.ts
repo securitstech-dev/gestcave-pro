@@ -397,12 +397,28 @@ export const usePOSStore = create<PosState>((set, get) => ({
     await get().refreshCommande(commandeId);
   },
 
-  marquerCommandeServie: async (commandeId) => {
+  marquerCommandeServie: async (commandeId, destination?: string) => {
     const ref = doc(db, 'commandes', commandeId);
     const snap = await getDoc(ref);
     if (!snap.exists()) return;
-    const nvelles = (snap.data().lignes || []).map((l:any) => ({...l, statut: 'servi'}));
-    await updateDoc(ref, { statut: 'servie', lignes: nvelles });
+    const data = snap.data();
+    const lignes = (data.lignes || []) as LigneCommande[];
+    
+    // On ne marque comme servi que les lignes de la station (ou toutes si pas de station)
+    const nvelles = lignes.map((l: any) => {
+      if (!destination || l.destination === destination) {
+        return { ...l, statut: 'servi' };
+      }
+      return l;
+    });
+
+    // La commande n'est "servie" globalement que si TOUTES les lignes sont servies
+    const toutesServies = nvelles.every((l: any) => l.statut === 'servi');
+    
+    await updateDoc(ref, { 
+      statut: toutesServies ? 'servie' : data.statut, 
+      lignes: nvelles 
+    });
     await get().refreshCommande(commandeId);
   },
 

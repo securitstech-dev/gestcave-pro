@@ -493,7 +493,7 @@ const KDSTicket = ({ commande, filterLigne, minutes, highlightItem, onPrint }: a
       <div className="p-5 mt-auto bg-slate-950/20 border-t border-white/5">
         <button
           onClick={() => {
-            marquerCommandeServie(commande.id);
+            marquerCommandeServie(commande.id, posteId && posteId !== 'tous' ? posteId : undefined);
             toast.success(`${commande.tableNom} ENVOYÉ !`, {
               style: { background: '#10b981', color: '#fff', fontWeight: 'black', borderRadius: '1rem' }
             });
