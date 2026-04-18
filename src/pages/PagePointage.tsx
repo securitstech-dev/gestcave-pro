@@ -6,6 +6,10 @@ import {
   CheckCircle2, History
 } from 'lucide-react';
 import { db } from '../lib/firebase';
+import { 
+  collection, query, where, getDocs, doc, updateDoc, 
+  Timestamp, addDoc, limit, orderBy 
+} from 'firebase/firestore';
 import { useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 

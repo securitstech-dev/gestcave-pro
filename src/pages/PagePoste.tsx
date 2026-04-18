@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Smartphone, ChefHat, Receipt, LayoutDashboard, Key, Wifi, WifiOff, Zap, X } from 'lucide-react';
+import { Smartphone, ChefHat, Receipt, LayoutDashboard, Key, Wifi, WifiOff, Zap, X, Clock } from 'lucide-react';
 import { db } from '../lib/firebase';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, addDoc } from 'firebase/firestore';
 import { usePOSStore } from '../store/posStore';
 import toast from 'react-hot-toast';
 

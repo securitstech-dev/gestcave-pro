@@ -8,7 +8,7 @@ import {
   FileText, Percent
 } from 'lucide-react';
 import { db } from '../../lib/firebase';
-import { collection, query, where, onSnapshot, addDoc, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, getDocs, Timestamp, doc, getDoc } from 'firebase/firestore';
 import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
 import StatCard from '../../components/ui/StatCard';
@@ -44,6 +44,7 @@ const GestionPaie = () => {
   const [sessions, setSessions] = useState<SessionTravail[]>([]);
   const [avances, setAvances] = useState<Avance[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [etablissementNom, setEtablissementNom] = useState('Mon Établissement');
   const [loading, setLoading] = useState(true);
   
   const [moisSelectionne, setMoisSelectionne] = useState(new Date().getMonth() + 1);
@@ -54,6 +55,15 @@ const GestionPaie = () => {
 
     const debutMois = new Date(anneeSelectionnee, moisSelectionne - 1, 1);
     const finMois = new Date(anneeSelectionnee, moisSelectionne, 0, 23, 59, 59);
+
+    const chargerEtablissement = async () => {
+      try {
+        const docRef = doc(db, 'etablissements', profil.etablissement_id);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) setEtablissementNom(snap.data().nom || 'Mon Établissement');
+      } catch (e) {}
+    };
+    chargerEtablissement();
 
     // Charger les employés
     const qEmp = query(collection(db, 'employes'), where('etablissement_id', '==', profil.etablissement_id));
@@ -167,7 +177,7 @@ const GestionPaie = () => {
 
     // Infos Entreprise
     doc.setFont(undefined, 'bold'); doc.text("ÉTABLISSEMENT", 120, 45);
-    doc.setFont(undefined, 'normal'); doc.text(`${profil?.etablissement_nom || 'Mon Restaurant'}`, 120, 52);
+    doc.setFont(undefined, 'normal'); doc.text(`${etablissementNom}`, 120, 52);
     doc.text(`Période: ${dateStr}`, 120, 58);
 
     // Tableau des rubriques

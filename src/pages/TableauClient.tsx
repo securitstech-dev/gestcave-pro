@@ -6,7 +6,7 @@ import {
   Layout, LayoutDashboard, Zap, Activity, ShieldCheck, Shield,
   Calendar, ArrowUpRight, ArrowDownRight, MoreVertical, DollarSign,
   Bell, Search, Menu, X, PlusCircle, Globe, History, ArrowRight, ArrowLeft, Receipt, Clock,
-  ChefHat, Flame, Timer
+  ChefHat, Flame, Timer, Wallet
 } from 'lucide-react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -312,7 +312,7 @@ const DashboardAccueil = ({ profil, navigate }: any) => {
            <LayoutDashboard size={10} /> Tables
          </button>
          <a 
-          href={`/pointage/${etablissementId}`} 
+          href={`/pointage/${profil?.etablissement_id}`} 
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 text-slate-700 font-black text-[7px] uppercase tracking-widest hover:bg-slate-100 transition-all border border-transparent shadow-none"
         >
           <Clock size={10} /> Pointage
