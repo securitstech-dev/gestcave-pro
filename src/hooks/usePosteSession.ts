@@ -28,10 +28,29 @@ export const usePosteSession = () => {
     }
   }, [etablissementId, posEtabId, initialiserTempsReel]);
 
-  const quitterPoste = () => {
+  const quitterPoste = async () => {
+    const sessionId = sessionStorage.getItem('poste_session_travail_id');
+    const etabId = sessionStorage.getItem('poste_etablissement_id');
+
+    // POINTAGE : Enregistrement de la fin de service
+    if (sessionId) {
+      try {
+        const { doc, updateDoc } = await import('firebase/firestore');
+        const { db } = await import('../lib/firebase');
+        await updateDoc(doc(db, 'sessions_travail', sessionId), {
+          fin: new Date().toISOString(),
+          statut: 'termine'
+        });
+      } catch (e) {
+        console.error("Erreur clôture pointage:", e);
+      }
+    }
+
+    sessionStorage.removeItem('poste_employe_id');
     sessionStorage.removeItem('poste_employe_nom');
     sessionStorage.removeItem('poste_employe_role');
-    const etabId = sessionStorage.getItem('poste_etablissement_id');
+    sessionStorage.removeItem('poste_session_travail_id');
+    
     if (etabId) {
       navigate(`/poste/${etabId}`);
     } else {

@@ -19,7 +19,7 @@ const InterfaceServeur = () => {
   const { 
     tables, produits, commandes, 
     ouvrirTable, ajouterLigne, modifierQuantite, 
-    supprimerLigne, envoyerCuisine, annulerCommande 
+    supprimerLigne, envoyerCuisine, annulerCommande, demanderAddition
   } = usePOSStore();
   
   const { nomEmploye, etablissementId, quitterPoste } = usePosteSession();
@@ -615,24 +615,45 @@ const InterfaceServeur = () => {
                     <p className="text-lg font-black text-white tracking-tighter">{(commandeActive?.total || 0).toLocaleString()} <span className="text-[8px] opacity-40 ml-1">F</span></p>
                 </div>
                 
-                <motion.button 
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    disabled={panierActuel.length === 0}
-                    onClick={() => {
-                        if (commandeId) {
-                            try {
-                                envoyerCuisine(commandeId);
-                                toast.success('Commande envoyée !');
-                            } catch (e) {
-                                toast.error("Erreur d'envoi");
-                            }
-                        }
-                    }}
-                    className="w-full h-10 rounded-xl bg-white text-slate-950 font-black uppercase tracking-widest text-[9px] shadow-lg flex items-center justify-center gap-2 transition-all hover:bg-indigo-50 active:scale-95 disabled:opacity-20"
-                >
-                    Envoyer Commande <Send size={12} />
-                </motion.button>
+                {panierActuel.length > 0 ? (
+                  <motion.button 
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                          if (commandeId) {
+                              try {
+                                  envoyerCuisine(commandeId);
+                                  toast.success('Commande envoyée !');
+                              } catch (e) {
+                                  toast.error("Erreur d'envoi");
+                              }
+                          }
+                      }}
+                      className="w-full h-10 rounded-xl bg-white text-slate-950 font-black uppercase tracking-widest text-[9px] shadow-lg flex items-center justify-center gap-2 transition-all hover:bg-indigo-50 active:scale-95"
+                  >
+                      Envoyer Commande <Send size={12} />
+                  </motion.button>
+                ) : (
+                  <motion.button 
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={async () => {
+                          if (commandeId && tableSelectionnee) {
+                              try {
+                                  await demanderAddition(commandeId, tableSelectionnee.id);
+                                  setEtape('tables'); // Retourner à l'écran des tables
+                                  setCommandeId(null);
+                                  setTableSelectionnee(null);
+                              } catch (e) {
+                                  toast.error("Erreur lors de la demande d'addition");
+                              }
+                          }
+                      }}
+                      className="w-full h-10 rounded-xl bg-emerald-500 text-white font-black uppercase tracking-widest text-[9px] shadow-lg flex items-center justify-center gap-2 transition-all hover:bg-emerald-400 active:scale-95"
+                  >
+                      Demander l'Addition <Receipt size={12} />
+                  </motion.button>
+                )}
             </div>
         </aside>
       </div>

@@ -19,7 +19,8 @@ const InterfaceCuisine = () => {
     commandes, 
     marquerLignePrete, 
     marquerLigneEnPreparation, 
-    marquerCommandeServie 
+    marquerCommandeServie,
+    etablissement_id: posEtabId
   } = usePOSStore();
   const { nomEmploye, quitterPoste } = usePosteSession();
   const navigate = useNavigate();
@@ -157,6 +158,9 @@ const InterfaceCuisine = () => {
               <h1 className="text-[11px] font-black text-slate-950 uppercase tracking-tighter flex items-center gap-2">
                 KDS <span className="text-indigo-600">PRO</span>
                 <span className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 text-[8px] font-black border border-indigo-100">{posteId?.toUpperCase()}</span>
+                <span className="text-[7px] text-slate-400 font-normal normal-case ml-2">
+                  (Debug: {commandes.length} cmds, Etab: {posEtabId || 'NON-INIT'})
+                </span>
               </h1>
           </div>
           <div className="flex items-center gap-2">
@@ -235,12 +239,17 @@ const KDSTicket = ({ commande, filterLigne, minutes, highlightItem, onPrint, pos
 
   return (
     <motion.div layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className={`bg-white rounded-xl border ${isLate ? 'border-rose-200 shadow-rose-100' : 'border-slate-200'} shadow-sm overflow-hidden`}>
-      <div className="p-2 flex justify-between items-center bg-slate-50 border-b border-slate-100">
+      <div className="p-2 flex justify-between items-start bg-slate-50 border-b border-slate-100">
         <div>
-          <h4 className="text-[11px] font-black text-slate-950 uppercase">{commande.tableNom}</h4>
-          <p className="text-[7px] text-slate-400 font-bold uppercase">{commande.serveurNom}</p>
+          <div className="flex items-center gap-2">
+            <h4 className="text-[12px] font-black text-slate-950 uppercase tracking-tighter">{commande.tableNom}</h4>
+            <span className="text-[9px] font-bold text-indigo-500 bg-indigo-50 px-1 rounded">#{commande.id.slice(-4).toUpperCase()}</span>
+          </div>
+          <p className="text-[9px] text-slate-600 font-black uppercase mt-0.5">👤 {commande.serveurNom}</p>
         </div>
-        <div className={`px-1.5 py-0.5 rounded text-[9px] font-black ${isLate ? 'bg-rose-500 text-white' : 'bg-slate-200 text-slate-600'}`}>{minutes}m</div>
+        <div className={`px-1.5 py-1 rounded-lg text-[10px] font-black shadow-sm ${isLate ? 'bg-rose-500 text-white animate-pulse' : 'bg-slate-900 text-white'}`}>
+          {minutes}m
+        </div>
       </div>
 
       <div className="p-2 space-y-2">

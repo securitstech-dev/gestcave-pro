@@ -212,6 +212,7 @@ interface PosState {
   marquerCommandeServie: (commandeId: string) => Promise<void>;
   encaisserCommande: (commandeId: string, modePaiement: 'comptant' | 'credit', clientNom: string, montantRemise?: number, montantPaye?: number, clientContact?: string, refPaiement?: string) => Promise<void>;
   annulerCommande: (commandeId: string) => Promise<void>;
+  demanderAddition: (commandeId: string, tableId: string) => Promise<void>;
 }
 
 export const usePOSStore = create<PosState>((set, get) => ({
@@ -254,22 +255,24 @@ export const usePOSStore = create<PosState>((set, get) => ({
       set({ historiqueSessions: snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SessionCaisse)) });
     }));
 
-    // COMMANDES (DOUBLE ÉCOUTE POUR RÉTROCOMPATIBILITÉ etablissementId / etablissement_id)
+    // COMMANDES
     const handleCommandes = (snap: any) => {
       const newItems = snap.docs.map((d:any) => ({ id: d.id, ...d.data() } as Commande));
       set(state => {
+          // On fusionne les nouvelles données avec les existantes
           const current = [...state.commandes];
           newItems.forEach((item: Commande) => {
               const idx = current.findIndex(c => c.id === item.id);
               if (idx > -1) current[idx] = item;
               else current.push(item);
           });
+          // On filtre en JS pour ne garder que les commandes actives
           return { commandes: current.filter(c => c.statut !== 'payee') };
       });
     };
 
-    unsubs.push(onSnapshot(query(collection(db, 'commandes'), where('etablissement_id', '==', etablissementId), where('statut', '!=', 'payee')), handleCommandes));
-    unsubs.push(onSnapshot(query(collection(db, 'commandes'), where('etablissementId', '==', etablissementId), where('statut', '!=', 'payee')), handleCommandes));
+    unsubs.push(onSnapshot(query(collection(db, 'commandes'), where('etablissement_id', '==', etablissementId)), handleCommandes));
+    unsubs.push(onSnapshot(query(collection(db, 'commandes'), where('etablissementId', '==', etablissementId)), handleCommandes));
 
     // SESSIONS
     unsubs.push(onSnapshot(query(collection(db, 'sessions_caisse'), where('etablissement_id', '==', etablissementId), where('statut', '==', 'ouverte')), (snap) => {
@@ -660,5 +663,13 @@ export const usePOSStore = create<PosState>((set, get) => ({
     
     // Nettoyage de l'état local
     set(state => ({ commandes: state.commandes.filter(c => c.id !== commandeId) }));
+  },
+
+  demanderAddition: async (commandeId, tableId) => {
+    if (!tableId || !commandeId) return;
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'tables', tableId), { statut: 'en_attente_paiement' });
+    await batch.commit();
+    toast.success("Demande d'addition envoyée à la caisse !");
   }
 }));

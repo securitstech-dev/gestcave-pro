@@ -16,7 +16,14 @@ interface Employe {
   nom: string;
   role: 'serveur' | 'caissier' | 'cuisine' | 'gerant' | 'livreur' | 'securite' | 'admin';
   pin: string;
-  salaire: number;
+  salaire: number; // Valeur de base (selon type)
+  typeSalaire: 'mensuel' | 'horaire' | 'journalier';
+  primes?: {
+    transport: number;
+    logement: number;
+    autres: number;
+  };
+  nbEnfants?: number;
   actif: boolean;
 }
 
@@ -36,7 +43,11 @@ const GestionEmployes = () => {
   
   const [nouveauNom, setNouveauNom] = useState('');
   const [nouveauRole, setNouveauRole] = useState<'serveur' | 'caissier' | 'cuisine' | 'gerant' | 'livreur' | 'securite' | 'admin'>('serveur');
+  const [typeSalaire, setTypeSalaire] = useState<'mensuel' | 'horaire' | 'journalier'>('mensuel');
   const [nouveauSalaire, setNouveauSalaire] = useState(0);
+  const [primeTransport, setPrimeTransport] = useState(0);
+  const [primeLogement, setPrimeLogement] = useState(0);
+  
   const [showModal, setShowModal] = useState(false);
   const [selectedEmploye, setSelectedEmploye] = useState<Employe | null>(null);
   const [montantAvance, setMontantAvance] = useState(0);
@@ -44,12 +55,11 @@ const GestionEmployes = () => {
   const [showAvanceModal, setShowAvanceModal] = useState(false);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [showPayerModal, setShowPayerModal] = useState(false);
-  const [montantPaiement, setMontantPaiement] = useState(0);
 
   useEffect(() => {
     if (!profil?.etablissement_id) return;
 
-    // Fetch transactions for commissions (current month)
+    // Fetch transactions pour commissions
     const debutMois = new Date();
     debutMois.setDate(1); debutMois.setHours(0,0,0,0);
 
@@ -79,7 +89,7 @@ const GestionEmployes = () => {
       setAvances(snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Avance[]);
     });
 
-    return () => { unsubEmp(); unsubAvances(); };
+    return () => { unsubEmp(); unsubAvances(); unsubTrans(); };
   }, [profil?.etablissement_id]);
 
   const genererPIN = () => Math.floor(1000 + Math.random() * 9000).toString();
@@ -88,11 +98,22 @@ const GestionEmployes = () => {
     e.preventDefault();
     try {
       await addDoc(collection(db, 'employes'), {
-        nom: nouveauNom, role: nouveauRole, pin: genererPIN(), salaire: Number(nouveauSalaire),
-        actif: true, etablissement_id: profil.etablissement_id, dateCreation: new Date().toISOString()
+        nom: nouveauNom, 
+        role: nouveauRole, 
+        pin: genererPIN(), 
+        salaire: Number(nouveauSalaire),
+        typeSalaire,
+        primes: {
+          transport: Number(primeTransport),
+          logement: Number(primeLogement),
+          autres: 0
+        },
+        actif: true, 
+        etablissement_id: profil.etablissement_id, 
+        dateCreation: new Date().toISOString()
       });
       toast.success(`${nouveauNom} recruté !`);
-      setNouveauNom(''); setNouveauSalaire(0); setShowModal(false);
+      setNouveauNom(''); setNouveauSalaire(0); setPrimeTransport(0); setPrimeLogement(0); setShowModal(false);
     } catch {
       toast.error("Échec du recrutement");
     }
@@ -213,24 +234,37 @@ const GestionEmployes = () => {
                 </div>
 
                 <div className="bg-slate-50 rounded-lg p-2 border border-slate-100 space-y-1.5">
-                  <div className="flex justify-between items-center text-[9px] font-medium text-slate-500">
-                    <span>Base</span>
-                    <span className="text-slate-900 font-bold">{emp.salaire?.toLocaleString()} F</span>
+                  <div className="flex justify-between items-center text-[9px] font-medium text-slate-50">
+                    <span className="text-slate-400">Rémunération</span>
+                    <span className="text-slate-900 font-bold">
+                        {emp.salaire?.toLocaleString()} F 
+                        <span className="text-[7px] text-slate-400 ml-1">
+                            ({emp.typeSalaire === 'horaire' ? '/heure' : emp.typeSalaire === 'journalier' ? '/jour' : '/mois'})
+                        </span>
+                    </span>
                   </div>
+                  
+                  {(emp.primes?.transport || 0) + (emp.primes?.logement || 0) > 0 && (
+                    <div className="flex justify-between items-center text-[9px] font-medium text-emerald-600">
+                        <span>Avantages Fixes</span>
+                        <span>+{( (emp.primes?.transport || 0) + (emp.primes?.logement || 0) ).toLocaleString()} F</span>
+                    </div>
+                  )}
+
                   {commission > 0 && (
-                    <div className="flex justify-between items-center text-[9px] font-bold text-emerald-600">
-                      <span>Commissions</span>
+                    <div className="flex justify-between items-center text-[9px] font-bold text-blue-600">
+                      <span>Commissions (2%)</span>
                       <span>+{commission.toLocaleString()} F</span>
                     </div>
                   )}
                   {totalAvances > 0 && (
                     <div className="flex justify-between items-center text-[9px] font-bold text-rose-500 italic">
-                      <span>Avances</span>
+                      <span>Avances à déduire</span>
                       <span>-{totalAvances.toLocaleString()} F</span>
                     </div>
                   )}
                   <div className="flex justify-between items-center pt-1.5 border-t border-slate-200">
-                    <span className="text-[7px] text-slate-400 font-black uppercase">Solde</span>
+                    <span className="text-[7px] text-slate-400 font-black uppercase">Estimation Solde</span>
                     <span className="text-slate-900 font-black text-xs">{soldeNet.toLocaleString()} F</span>
                   </div>
                 </div>
@@ -285,11 +319,35 @@ const GestionEmployes = () => {
                         <option value="admin">🛡️ Admin</option>
                     </select>
                   </div>
-                  <div>
-                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Salaire (F CFA)</label>
-                    <input type="number" value={nouveauSalaire} onChange={(e) => setNouveauSalaire(Number(e.target.value))} required
-                      className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none font-bold text-emerald-600 text-xs" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Type de Paie</label>
+                        <select value={typeSalaire} onChange={(e) => setTypeSalaire(e.target.value as any)} className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 outline-none font-bold text-slate-900 text-xs">
+                            <option value="mensuel">Mensuel</option>
+                            <option value="horaire">Horaire</option>
+                            <option value="journalier">Journalier</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Base (F CFA)</label>
+                        <input type="number" value={nouveauSalaire} onChange={(e) => setNouveauSalaire(Number(e.target.value))} required
+                        className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none font-bold text-emerald-600 text-xs" />
+                    </div>
                   </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Transport</label>
+                        <input type="number" value={primeTransport} onChange={(e) => setPrimeTransport(Number(e.target.value))}
+                        className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none font-bold text-slate-900 text-xs" />
+                    </div>
+                    <div>
+                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Logement</label>
+                        <input type="number" value={primeLogement} onChange={(e) => setPrimeLogement(Number(e.target.value))}
+                        className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none font-bold text-slate-900 text-xs" />
+                    </div>
+                  </div>
+
                   <button type="submit" className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold uppercase tracking-widest text-[9px] shadow-xl shadow-slate-900/20 active:scale-95 transition-all mt-2">
                     Valider le recrutement
                   </button>

@@ -27,6 +27,8 @@ import GestionFinance from './modules/GestionFinance';
 import GestionAchats from './modules/GestionAchats';
 import GestionEtablissement from './modules/GestionEtablissement';
 import GestionSessions from './modules/GestionSessions';
+import GestionPaie from './modules/GestionPaie';
+import SimulationLab from '../components/SimulationLab';
 
 const TableauClient = () => {
   const { profil, deconnexion, etablissementSimuleId } = useAuthStore();
@@ -122,7 +124,16 @@ const TableauClient = () => {
             <SidebarLink icon={<TrendingUp size={14} />} label="Achats" path="/tableau-de-bord/achats" />
             <SidebarLink icon={<DollarSign size={14} />} label="Finance" path="/tableau-de-bord/admin" />
             <SidebarLink icon={<Users size={14} />} label="Ressources Humaines" path="/tableau-de-bord/rh" />
+            <SidebarLink icon={<Wallet size={14} />} label="Paie & Salaires" path="/tableau-de-bord/paie" />
+            <SidebarLink icon={<Clock size={14} />} label="Terminal Pointage" path={`/pointage/${profil?.etablissement_id}`} />
             <SidebarLink icon={<Settings size={14} />} label="Paramètres" path="/tableau-de-bord/settings" />
+          </div>
+        </div>
+
+        <div>
+          <p className="px-3 text-[7px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-2">Laboratoire</p>
+          <div className="space-y-0.5">
+            <SidebarLink icon={<Zap size={14} />} label="Simulation" path="/tableau-de-bord/simulation" />
           </div>
         </div>
       </div>
@@ -210,12 +221,14 @@ const TableauClient = () => {
               <Route path="/caisse" element={<InterfaceCaissier />} />
               <Route path="/cuisine" element={<InterfaceCuisine />} />
               <Route path="/rh" element={<GestionEmployes />} />
+              <Route path="/paie" element={<GestionPaie />} />
               <Route path="/stocks" element={<GestionStocks />} />
               <Route path="/achats" element={<GestionAchats />} />
               <Route path="/tables" element={<GestionTables />} />
               <Route path="/admin" element={<GestionFinance />} />
               <Route path="/sessions" element={<GestionSessions />} />
               <Route path="/settings" element={<GestionEtablissement />} />
+              <Route path="/simulation" element={<SimulationLab />} />
             </Routes>
           </div>
         </div>
@@ -298,9 +311,12 @@ const DashboardAccueil = ({ profil, navigate }: any) => {
          <button onClick={() => navigate('/tableau-de-bord/tables')} className="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 font-black text-[7px] uppercase tracking-widest hover:bg-indigo-100 transition-all flex items-center gap-1.5">
            <LayoutDashboard size={10} /> Tables
          </button>
-         <button onClick={() => navigate('/tableau-de-bord/plan-salles')} className="px-3 py-1.5 rounded-lg bg-slate-50 text-slate-700 font-black text-[7px] uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center gap-1.5">
-           <Layout size={10} /> Plan
-         </button>
+         <a 
+          href={`/pointage/${etablissementId}`} 
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 text-slate-700 font-black text-[7px] uppercase tracking-widest hover:bg-slate-100 transition-all border border-transparent shadow-none"
+        >
+          <Clock size={10} /> Pointage
+         </a>
          <button onClick={() => navigate('/tableau-de-bord/stocks')} className="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 font-black text-[7px] uppercase tracking-widest hover:bg-amber-100 transition-all flex items-center gap-1.5">
            <Package size={10} /> Stocks
          </button>

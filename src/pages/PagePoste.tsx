@@ -126,10 +126,29 @@ const PagePoste = () => {
       const snap = await getDocs(q);
 
       if (!snap.empty) {
-        const employe = snap.docs[0].data();
+        const employeDoc = snap.docs[0];
+        const employe = { id: employeDoc.id, ...employeDoc.data() } as any;
+        
+        sessionStorage.setItem('poste_employe_id', employe.id);
         sessionStorage.setItem('poste_employe_nom', employe.nom);
         sessionStorage.setItem('poste_employe_role', employe.role);
         sessionStorage.setItem('poste_etablissement_id', etablissementId);
+
+        // POINTAGE : Enregistrement du début de service
+        try {
+          const sessionRef = await addDoc(collection(db, 'sessions_travail'), {
+            employe_id: employe.id,
+            employe_nom: employe.nom,
+            etablissement_id: etablissementId,
+            debut: new Date().toISOString(),
+            fin: null,
+            statut: 'en_cours',
+            poste: selectedMode.role
+          });
+          sessionStorage.setItem('poste_session_travail_id', sessionRef.id);
+        } catch (e) {
+          console.error("Erreur pointage:", e);
+        }
 
         if (employe.role === selectedMode.role || employe.role === 'admin' || employe.role === 'gerant') {
           toast.success(`Accès autorisé : ${employe.nom}`, { position: 'top-center' });
@@ -227,10 +246,17 @@ const PagePoste = () => {
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em] mb-4">
           GESTCAVE PRO · ECOSYSTÈME SaaS SÉCURISÉ
         </p>
-        <p className="max-w-xs text-slate-500 text-[9px] font-bold uppercase tracking-widest leading-loose">
+        <p className="max-w-xs text-slate-500 text-[9px] font-bold uppercase tracking-widest leading-loose mb-6">
           Cette interface est dédiée aux terminaux de service (TabS, iPads, TPE). <br/>
           Les serveurs, cuisiniers et caissiers se connectent via leur PIN personnel.
         </p>
+        <a 
+          href={`/pointage/${etablissementId}`} 
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-slate-100 text-slate-600 font-black text-[9px] uppercase tracking-widest hover:bg-slate-200 transition-all border border-slate-200 shadow-sm"
+        >
+          <Clock size={14} className="text-emerald-500" />
+          Ouvrir le Pointeur de Présence
+        </a>
       </motion.div>
 
       {/* Pin Modal - Premium Version */}

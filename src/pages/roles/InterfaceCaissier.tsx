@@ -222,6 +222,11 @@ const InterfaceCaissier = () => {
                    }`}>
                      {c.type === 'a_emporter' ? '⚡ Comptoir' : '🏠 Salle'}
                    </div>
+                   {tables.find(t => t.commandeActiveId === c.id)?.statut === 'en_attente_paiement' && (
+                      <div className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[7px] font-black tracking-widest uppercase animate-pulse">
+                         Paiement Demandé
+                      </div>
+                   )}
                    <span className={`text-[11px] font-black tracking-tight ${commandeSelectionnee === c.id ? 'text-white' : 'text-slate-900'}`}>
                      {(c.total || 0).toLocaleString()} <span className="text-[7px] font-normal opacity-50">F</span>
                    </span>
