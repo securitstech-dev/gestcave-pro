@@ -55,9 +55,20 @@ const GestionEmployes = () => {
   const [showAvanceModal, setShowAvanceModal] = useState(false);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [showPayerModal, setShowPayerModal] = useState(false);
+  const [presents, setPresents] = useState<any[]>([]);
 
   useEffect(() => {
     if (!profil?.etablissement_id) return;
+
+    // Personnel présent en temps réel
+    const qPresence = query(
+      collection(db, 'pointage_presence'),
+      where('etablissement_id', '==', profil.etablissement_id),
+      where('statut', 'in', ['present', 'pause'])
+    );
+    const unsubPresence = onSnapshot(qPresence, (snap) => {
+      setPresents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
 
     // Fetch transactions pour commissions
     const debutMois = new Date();
@@ -199,6 +210,26 @@ const GestionEmployes = () => {
               <p className="text-slate-500 text-[9px]">Chaque employé utilise son <span className="font-bold text-slate-900 italic underline">PIN unique</span>.</p>
           </div>
       </div>
+
+      {/* Section Présence Live */}
+      {presents.length > 0 && (
+        <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100 space-y-3">
+          <h3 className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.2em] flex items-center gap-2">
+            <Activity size={14} className="animate-pulse" /> Personnel en Poste ({presents.length})
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {presents.map((p, i) => (
+              <div key={i} className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-emerald-200 shadow-sm">
+                 <div className={`w-2 h-2 rounded-full ${p.statut === 'pause' ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`} />
+                 <span className="text-[10px] font-bold text-slate-800 uppercase">{p.employe_nom}</span>
+                 <span className="text-[8px] font-black text-slate-400 tracking-tighter">
+                   {new Date(p.debut.seconds * 1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                 </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {employes.map((emp) => {

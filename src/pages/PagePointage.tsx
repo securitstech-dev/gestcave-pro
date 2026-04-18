@@ -3,18 +3,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Clock, UserCheck, Coffee, LogOut, 
   ChevronRight, AlertCircle, Fingerprint,
-  CheckCircle2, History
+  CheckCircle2, History, ArrowLeft, Home, X
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { 
   collection, query, where, getDocs, doc, updateDoc, 
   Timestamp, addDoc, limit, orderBy 
 } from 'firebase/firestore';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 const PagePointage = () => {
   const { etablissementId } = useParams<{ etablissementId: string }>();
+  const navigate = useNavigate();
   const [pin, setPin] = useState('');
   const [employe, setEmploye] = useState<any>(null);
   const [sessionActuelle, setSessionActuelle] = useState<any>(null);
@@ -141,7 +142,19 @@ const PagePointage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans">
+    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 font-sans relative overflow-hidden">
+      
+      {/* Bouton Retour (Navigation Terminal) */}
+      <div className="absolute top-8 left-8">
+        <button 
+          onClick={() => navigate(`/poste/${etablissementId}`)}
+          className="group flex items-center gap-3 px-6 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest transition-all border border-white/5"
+        >
+          <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> 
+          Quitter le Terminal
+        </button>
+      </div>
+
       <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
         
         {/* Colonne Gauche : Terminal PIN */}
@@ -166,14 +179,16 @@ const PagePointage = () => {
 
             <div className="grid grid-cols-3 gap-4">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-                <button key={n} onClick={() => handlePIN(n.toString())} className="h-16 rounded-2xl bg-white/5 hover:bg-white/10 text-white text-2xl font-black transition-all active:scale-90 border border-white/5">
+                <button key={n} onClick={() => handlePIN(n.toString())} className="h-20 rounded-2xl bg-white/5 hover:bg-white/10 text-white text-3xl font-black transition-all active:scale-90 border border-white/5 shadow-lg active:bg-emerald-500/20">
                   {n}
                 </button>
               ))}
-              <button onClick={() => setPin('')} className="h-16 rounded-2xl bg-rose-500/10 text-rose-500 text-sm font-black uppercase tracking-widest hover:bg-rose-500/20 transition-all border border-rose-500/20">Annuler</button>
-              <button onClick={() => handlePIN('0')} className="h-16 rounded-2xl bg-white/5 hover:bg-white/10 text-white text-2xl font-black transition-all active:scale-90 border border-white/5">0</button>
-              <div className="h-16 flex items-center justify-center">
-                 {loading && <div className="w-6 h-6 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />}
+              <button onClick={() => setPin('')} className="h-20 rounded-2xl bg-rose-500/10 text-rose-500 text-xs font-black uppercase tracking-widest hover:bg-rose-500/20 transition-all border border-rose-500/20 flex items-center justify-center gap-2">
+                <X size={16} /> Effacer
+              </button>
+              <button onClick={() => handlePIN('0')} className="h-20 rounded-2xl bg-white/5 hover:bg-white/10 text-white text-3xl font-black transition-all active:scale-90 border border-white/5 shadow-lg active:bg-emerald-500/20">0</button>
+              <div className="h-20 flex items-center justify-center">
+                 {loading && <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />}
               </div>
             </div>
           </div>
@@ -231,19 +246,19 @@ const PagePointage = () => {
                         <button onClick={() => actionPointage('pause_fin')} 
                           className="py-6 rounded-2xl bg-indigo-600 text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-500/20 hover:bg-indigo-700 active:scale-95 transition-all flex flex-col items-center gap-2"
                         >
-                          <History size={24} /> Fin de Pause
+                          <History size={24} /> Retour de Pause
                         </button>
                       ) : (
                         <button onClick={() => actionPointage('pause_debut')} 
                           className="py-6 rounded-2xl bg-amber-500 text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-amber-500/20 hover:bg-amber-600 active:scale-95 transition-all flex flex-col items-center gap-2"
                         >
-                          <Coffee size={24} /> Prendre Pause
+                          <Coffee size={24} /> Prendre une Pause
                         </button>
                       )}
                       <button onClick={() => actionPointage('depart')} 
                         className="py-6 rounded-2xl bg-rose-600 text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-rose-500/20 hover:bg-rose-700 active:scale-95 transition-all flex flex-col items-center gap-2"
                       >
-                        <LogOut size={24} /> Pointer Départ
+                        <LogOut size={24} /> Fin de Journée
                       </button>
                     </div>
                   </>
