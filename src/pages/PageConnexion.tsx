@@ -21,7 +21,8 @@ const PageConnexion = () => {
       if (!email || !password) throw new Error("Veuillez remplir tous les champs");
       await connexion(email, password);
       toast.success('Connexion réussie — Bienvenue !');
-      if (email.toLowerCase() === 'securitstech@gmail.com') {
+      const superAdmins = ['securitstech@gmail.com', 'tendressematoko@gmail.com'];
+      if (superAdmins.includes(email.toLowerCase())) {
         navigate('/super-admin');
       } else {
         navigate('/choisir-role');
@@ -96,7 +97,21 @@ const PageConnexion = () => {
               <div>
                 <div className="flex justify-between items-center mb-2 px-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mot de passe</label>
-                  <a href="#" className="text-[10px] font-bold text-slate-400 hover:text-slate-900 transition-colors">Oublié ?</a>
+                  <button 
+                    type="button"
+                    onClick={async () => {
+                      if (!email) return toast.error("Entrez votre email d'abord");
+                      try {
+                        await useAuthStore.getState().reinitialiserMotDePasse(email);
+                        toast.success("Email de réinitialisation envoyé !");
+                      } catch (err: any) {
+                        toast.error("Erreur : " + err.message);
+                      }
+                    }}
+                    className="text-[10px] font-bold text-slate-400 hover:text-slate-900 transition-colors"
+                  >
+                    Oublié ?
+                  </button>
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />

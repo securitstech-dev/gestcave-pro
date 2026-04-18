@@ -26,6 +26,7 @@ interface EtatAuth {
   setEtablissementSimule: (id: string | null) => void;
   connexion: (email: string, motDePasse: string) => Promise<void>;
   deconnexion: () => Promise<void>;
+  reinitialiserMotDePasse: (email: string) => Promise<void>;
   initialiser: () => void;
 }
 
@@ -37,6 +38,11 @@ export const useAuthStore = create<EtatAuth>((set) => ({
   etablissementSimuleId: null,
 
   setEtablissementSimule: (id) => set({ etablissementSimuleId: id }),
+
+  reinitialiserMotDePasse: async (email) => {
+    const { sendPasswordResetEmail } = await import('firebase/auth');
+    await sendPasswordResetEmail(auth, email);
+  },
 
   initialiser: () => {
     // Écouteur en temps réel de la session Firebase
