@@ -184,66 +184,66 @@ const GestionFinance = () => {
   if (loading) return <div className="p-20 text-center font-black animate-pulse text-slate-400 uppercase tracking-widest">Calcul des finances...</div>;
 
   return (
-    <div className="space-y-10 pb-20">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+    <div className="space-y-4 pb-20">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-4xl font-display font-black text-slate-900 tracking-tight uppercase">Comptabilité Patron</h2>
-          <p className="text-slate-500 font-medium mt-1">Surveillez l'argent encaissé, les dettes et les sorties de stock.</p>
+          <h2 className="text-lg font-display font-black text-slate-900 tracking-tight uppercase">Comptabilité Patron</h2>
+          <p className="text-slate-500 font-medium text-[10px]">Surveillez l'argent encaissé, les dettes et les sorties de stock.</p>
         </div>
-        <div className="flex gap-4">
-            <button onClick={() => setShowChargeModal(true)} className="px-6 py-5 rounded-2xl bg-white border border-slate-200 text-slate-900 font-bold text-[11px] uppercase tracking-[0.2em] flex items-center gap-4 hover:bg-slate-50 transition-all">
-              <Calculator size={20} /> Nouvelle Charge
+        <div className="flex gap-2">
+            <button onClick={() => setShowChargeModal(true)} className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-bold text-[9px] uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-all">
+              <Calculator size={14} /> Charge
             </button>
-            <button onClick={genererRapportPDF} className="px-8 py-5 rounded-2xl bg-white border border-slate-200 text-slate-900 font-bold text-[11px] uppercase tracking-[0.2em] flex items-center gap-4 hover:bg-slate-50 transition-all">
-              <Download size={20} /> Journal Caisse
+            <button onClick={genererRapportPDF} className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-bold text-[9px] uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-all">
+              <Download size={14} /> Journal
             </button>
-            <button onClick={() => setShowFiscalModal(true)} className="px-8 py-5 rounded-2xl bg-slate-900 text-white font-bold text-[11px] uppercase tracking-[0.2em] flex items-center gap-4 shadow-2xl shadow-slate-900/20 active:scale-95 transition-all">
-              <Calculator size={20} /> Rapport Fiscal Mensuel
+            <button onClick={() => setShowFiscalModal(true)} className="px-3 py-1.5 rounded-xl bg-slate-900 text-white font-bold text-[9px] uppercase tracking-widest flex items-center gap-2 shadow-2xl shadow-slate-900/20 active:scale-95 transition-all">
+              <Calculator size={14} /> Fiscal
             </button>
         </div>
       </header>
 
       {/* Résumé des flux */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <StatCard label="Argent Encaissé" valeur={`${totalEncaisse.toLocaleString()}`} suffix="F" color="emerald" important />
-          <StatCard label="Arriérés (Dettes)" valeur={`${dettesClients.toLocaleString()}`} suffix="F" color="rose" important={dettesClients > 0} icon={<AlertCircle size={16}/>} />
-          <StatCard label="Sorties Achats" valeur={`${depensesAchats.toLocaleString()}`} suffix="F" color="slate" />
-          <StatCard label="Caisse Nette" valeur={`${resultatNet.toLocaleString()}`} suffix="F" color="slate" subtext="Revenu réel encaissé" />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <StatCard label="Encaissé" valeur={`${totalEncaisse.toLocaleString()}`} suffix="F" color="emerald" important />
+          <StatCard label="Dettes" valeur={`${dettesClients.toLocaleString()}`} suffix="F" color="rose" important={dettesClients > 0} icon={<AlertCircle size={14}/>} />
+          <StatCard label="Achats" valeur={`${depensesAchats.toLocaleString()}`} suffix="F" color="slate" />
+          <StatCard label="Caisse Nette" valeur={`${resultatNet.toLocaleString()}`} suffix="F" color="slate" subtext="Réel" />
       </div>
 
       {/* Onglets */}
-      <div className="flex bg-slate-100 p-1.5 rounded-2xl w-fit">
+      <div className="flex bg-slate-100 p-0.5 rounded-xl w-fit">
           <button 
             onClick={() => setActiveTab('journal')}
-            className={`px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'journal' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`px-3 py-1.5 rounded-lg font-black text-[8px] uppercase tracking-widest transition-all ${activeTab === 'journal' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
           >
-            Journal de Caisse
+            Journal
           </button>
           <button 
             onClick={() => setActiveTab('dettes')}
-            className={`px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'dettes' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`px-3 py-1.5 rounded-lg font-black text-[8px] uppercase tracking-widest transition-all ${activeTab === 'dettes' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
           >
-            Suivi des Dettes ({transactionsDettes.length})
+            Dettes ({transactionsDettes.length})
           </button>
           <button 
             onClick={() => setActiveTab('charges')}
-            className={`px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'charges' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`px-3 py-1.5 rounded-lg font-black text-[8px] uppercase tracking-widest transition-all ${activeTab === 'charges' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
           >
-            Charges & Frais ({charges.length})
+            Charges ({charges.length})
           </button>
       </div>
 
       <AnimatePresence mode="wait">
         {activeTab === 'journal' ? (
-          <motion.div key="journal" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-8">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <motion.div key="journal" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Graphique de Performance */}
-                <div className="lg:col-span-2 bg-white p-8 lg:p-10 rounded-[2.5rem] border border-slate-100 shadow-sm">
-                  <div className="flex justify-between items-center mb-10">
-                      <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Évolution des encaissements (7j)</h3>
-                      <TrendingUp size={20} className="text-emerald-500" />
+                <div className="lg:col-span-2 bg-white p-3 lg:p-4 rounded-xl border border-slate-100 shadow-sm">
+                  <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Évolution (7j)</h3>
+                      <TrendingUp size={14} className="text-emerald-500" />
                   </div>
-                  <div className="h-[300px]">
+                  <div className="h-[200px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={chartData}>
                         <defs>
@@ -253,44 +253,44 @@ const GestionFinance = () => {
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 700}} dy={10} />
-                        <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 700}} dx={-10} />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 8, fontWeight: 700}} dy={5} />
+                        <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 8, fontWeight: 700}} dx={-5} />
                         <Tooltip 
-                          contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px'}}
-                          itemStyle={{fontWeight: 800, color: '#0f172a', fontSize: '14px'}}
+                          contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '8px'}}
+                          itemStyle={{fontWeight: 800, color: '#0f172a', fontSize: '10px'}}
                         />
-                        <Area type="monotone" dataKey="revenue" stroke="#0f172a" strokeWidth={4} fillOpacity={1} fill="url(#colorRevenue)" />
+                        <Area type="monotone" dataKey="revenue" stroke="#0f172a" strokeWidth={2} fillOpacity={1} fill="url(#colorRevenue)" />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
 
                 {/* Alertes et Info */}
-                <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white shadow-2xl overflow-hidden relative">
-                    <div className="absolute top-0 right-0 p-8 opacity-10">
-                        <Calculator size={120} />
+                <div className="bg-slate-900 rounded-xl p-4 text-white shadow-2xl overflow-hidden relative">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                        <Calculator size={60} />
                     </div>
-                    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-10">Conseil de gestion</h3>
-                    <div className="space-y-6 relative z-10">
-                        <div className="flex gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                                <TrendingUp size={20} />
+                    <h3 className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-4">Conseil</h3>
+                    <div className="space-y-2 relative z-10">
+                        <div className="flex gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                                <TrendingUp size={16} />
                             </div>
-                            <p className="text-sm text-slate-300 leading-relaxed"><span className="text-white font-bold">Encaissements :</span> Représentent les règlements réels (Cash, Mobile). C'est l'argent disponible.</p>
+                            <p className="text-[11px] text-slate-300 leading-tight"><span className="text-white font-bold">Encaissements :</span> Argent réel disponible.</p>
                         </div>
-                        <div className="flex gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center shrink-0">
-                                <History size={20} />
+                        <div className="flex gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-white/10 text-white flex items-center justify-center shrink-0">
+                                <History size={16} />
                             </div>
-                            <p className="text-sm text-slate-300 leading-relaxed"><span className="text-white font-bold">Dettes :</span> N'oubliez pas de relancer les clients qui ont une ardoise. Tout est dans l'onglet Dettes.</p>
+                            <p className="text-[11px] text-slate-300 leading-tight"><span className="text-white font-bold">Dettes :</span> Suivez les remboursements.</p>
                         </div>
                     </div>
-                    <div className="mt-14 pt-8 border-t border-white/10">
-                        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">
-                            <span>Rentabilité brute</span>
+                    <div className="mt-4 pt-3 border-t border-white/10">
+                        <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest text-slate-500 mb-1.5">
+                            <span>Rentabilité</span>
                             <span className="text-emerald-400">{totalEncaisse > 0 ? Math.round((resultatNet / totalEncaisse) * 100) : 0}%</span>
                         </div>
-                        <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                             <motion.div initial={{ width: 0 }} animate={{ width: `${totalEncaisse > 0 ? (resultatNet / totalEncaisse) * 100 : 0}%` }} className="h-full bg-emerald-500" />
                         </div>
                     </div>
@@ -298,15 +298,15 @@ const GestionFinance = () => {
             </div>
 
             {/* Livre de Caisse */}
-            <div className="bg-white border border-slate-100 rounded-[2.5rem] overflow-hidden shadow-sm">
-                <div className="p-8 border-b border-slate-100 flex items-center justify-between">
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Journal des opérations financières</h3>
-                    <div className="flex items-center gap-3">
-                        <Search size={14} className="text-slate-400" />
+            <div className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm">
+                <div className="p-3 border-b border-slate-100 flex items-center justify-between">
+                    <h3 className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Journal</h3>
+                    <div className="flex items-center gap-2">
+                        <Search size={12} className="text-slate-400" />
                         <input 
                           type="text" 
-                          placeholder="RECHERCHER UN CLIENT..." 
-                          className="bg-transparent border-none outline-none text-[10px] font-black uppercase tracking-widest w-40"
+                          placeholder="CLIENT..." 
+                          className="bg-transparent border-none outline-none text-[8px] font-black uppercase tracking-widest w-32"
                           value={clientRecherche}
                           onChange={(e) => setClientRecherche(e.target.value)}
                         />
@@ -316,10 +316,10 @@ const GestionFinance = () => {
                     <table className="w-full text-left">
                         <thead>
                             <tr className="bg-slate-50/50">
-                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Opération</th>
-                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Détail / Client</th>
-                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Flux</th>
-                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Montant</th>
+                                <th className="px-4 py-2 text-[8px] font-black text-slate-400 uppercase tracking-widest">Opération</th>
+                                <th className="px-4 py-2 text-[8px] font-black text-slate-400 uppercase tracking-widest">Client</th>
+                                <th className="px-4 py-2 text-[8px] font-black text-slate-400 uppercase tracking-widest">Flux</th>
+                                <th className="px-4 py-2 text-[8px] font-black text-slate-400 uppercase tracking-widest text-right">Montant</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
@@ -327,29 +327,28 @@ const GestionFinance = () => {
                               .filter(t => !clientRecherche || (t.clientNom?.toLowerCase().includes(clientRecherche.toLowerCase())))
                               .map(t => (
                                 <tr key={t.id} className="hover:bg-slate-50/30 transition-all group">
-                                    <td className="px-8 py-6">
-                                        <div className="flex items-center gap-4">
-                                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${t.type === 'depense' ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-500'}`}>
-                                                {t.type === 'depense' ? <ShoppingCart size={16} /> : <Receipt size={16} />}
+                                    <td className="px-4 py-1.5">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${t.type === 'depense' ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-500'}`}>
+                                                {t.type === 'depense' ? <ShoppingCart size={14} /> : <Receipt size={14} />}
                                             </div>
                                             <div>
-                                                <p className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{t.type === 'depense' ? 'ACHAT STOCK' : 'VENTE TICKET'}</p>
-                                                <p className="text-[9px] text-slate-400 font-bold uppercase">{new Date(t.date).toLocaleDateString()}</p>
+                                                <p className="text-[10px] font-black text-slate-900 uppercase tracking-tight">{t.type === 'depense' ? 'ACHAT' : 'VENTE'}</p>
+                                                <p className="text-[8px] text-slate-400 font-bold uppercase">{new Date(t.date).toLocaleDateString()}</p>
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-8 py-6">
-                                        <p className="font-bold text-slate-600 text-[11px] uppercase">{t.clientNom || t.tableNom || t.description || 'DIRECT'}</p>
-                                        <p className="text-[9px] text-slate-400 font-bold">{t.clientContact || '-'}</p>
+                                    <td className="px-4 py-1.5">
+                                        <p className="font-bold text-slate-600 text-[10px] uppercase">{t.clientNom || t.tableNom || t.description || 'DIRECT'}</p>
                                     </td>
-                                    <td className="px-8 py-6">
-                                        <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${t.type === 'depense' ? 'text-rose-600 bg-rose-50' : 'text-emerald-600 bg-emerald-50'}`}>
+                                    <td className="px-4 py-1.5">
+                                        <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md ${t.type === 'depense' ? 'text-rose-600 bg-rose-50' : 'text-emerald-600 bg-emerald-50'}`}>
                                             {t.type === 'depense' ? 'SORTIE' : 'ENTRÉE'}
                                         </span>
                                     </td>
-                                    <td className="px-8 py-6 text-right">
-                                        <p className="font-display font-black text-slate-900">{t.type === 'depense' ? '-' : '+'}{(t.montantRecu || t.total).toLocaleString()} F</p>
-                                        {t.montantRestant! > 0 && <p className="text-[9px] font-black text-rose-500 uppercase">Reste: {t.montantRestant?.toLocaleString()} F</p>}
+                                    <td className="px-4 py-1.5 text-right">
+                                        <p className="font-display font-black text-slate-900 text-xs">{t.type === 'depense' ? '-' : '+'}{(t.montantRecu || t.total).toLocaleString()} F</p>
+                                        {t.montantRestant! > 0 && <p className="text-[8px] font-black text-rose-500 uppercase">Reste: {t.montantRestant?.toLocaleString()} F</p>}
                                     </td>
                                 </tr>
                             ))}
@@ -359,28 +358,28 @@ const GestionFinance = () => {
             </div>
           </motion.div>
         ) : activeTab === 'dettes' ? (
-          <motion.div key="dettes" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <motion.div key="dettes" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {transactionsDettes.length === 0 ? (
-                  <div className="col-span-full py-32 text-center bg-white border border-dashed border-slate-200 rounded-[2.5rem]">
-                      <ShieldCheck size={64} className="mx-auto text-emerald-500 mb-6" />
-                      <h3 className="text-xl font-display font-black text-slate-900 uppercase">AUCUNE DETTE EN COURS</h3>
+                  <div className="col-span-full py-20 text-center bg-white border border-dashed border-slate-200 rounded-xl">
+                      <ShieldCheck size={48} className="mx-auto text-emerald-500 mb-4" />
+                      <h3 className="text-lg font-display font-black text-slate-900 uppercase">AUCUNE DETTE EN COURS</h3>
                       <p className="text-slate-400 font-medium">Félicitations, tous vos clients sont à jour !</p>
                   </div>
                 ) : (
                   transactionsDettes.map(t => (
-                    <div key={t.id} className="bg-white border border-slate-100 rounded-3xl p-8 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all border-b-4 border-b-rose-500">
-                        <div className="flex justify-between items-start mb-6">
-                            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center">
-                                <Users size={24} />
+                    <div key={t.id} className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all border-b-4 border-b-rose-500">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                                <Users size={20} />
                             </div>
                             <div className="text-right">
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dette Totale</p>
-                                <p className="text-2xl font-display font-black text-rose-600 leading-tight">{t.montantRestant?.toLocaleString()} F</p>
+                                <p className="text-xl font-display font-black text-rose-600 leading-tight">{t.montantRestant?.toLocaleString()} F</p>
                             </div>
                         </div>
 
-                        <div className="space-y-4 mb-8">
+                        <div className="space-y-2 mb-4">
                             <div>
                                 <h4 className="font-black text-slate-900 uppercase text-xs tracking-tight">{t.clientNom || 'Client Inconnu'}</h4>
                                 <p className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-2">
@@ -388,18 +387,18 @@ const GestionFinance = () => {
                                 </p>
                             </div>
                             {t.clientContact && (
-                                <div className="flex items-center gap-2 text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg w-fit">
+                                <div className="flex items-center gap-2 text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-lg w-fit">
                                     <CreditCard size={12} /> {t.clientContact}
                                 </div>
                             )}
                         </div>
 
-                        <div className="pt-6 border-t border-slate-50 space-y-3">
+                        <div className="pt-4 border-t border-slate-50 space-y-3">
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Encaisser un remboursement</p>
                             <div className="grid grid-cols-2 gap-3">
                                 <button 
                                   onClick={() => encaisserDette(t.id, t.montantRestant!)}
-                                  className="py-3 rounded-xl bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all"
+                                  className="py-2 rounded-xl bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all"
                                 >
                                   Totalité
                                 </button>
@@ -420,34 +419,34 @@ const GestionFinance = () => {
             </div>
           </motion.div>
         ) : (
-          <motion.div key="charges" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
-            <div className="bg-white border border-slate-100 rounded-[2.5rem] overflow-hidden shadow-sm">
-                <div className="p-8 border-b border-slate-100">
+          <motion.div key="charges" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+            <div className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm">
+                <div className="p-4 border-b border-slate-100">
                     <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Liste des charges & frais d'exploitation</h3>
                 </div>
                 <div className="overflow-x-auto no-scrollbar">
                     <table className="w-full text-left">
                         <thead>
                             <tr className="bg-slate-50/50">
-                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
-                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Désignation</th>
-                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Montant</th>
-                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Désignation</th>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Montant</th>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                             {charges.map(c => (
                                 <tr key={c.id} className="hover:bg-slate-50/30 transition-all">
-                                    <td className="px-8 py-6 text-[11px] font-bold text-slate-400">
+                                    <td className="px-4 py-3 text-[11px] font-bold text-slate-400">
                                         {new Date(c.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
                                     </td>
-                                    <td className="px-8 py-6">
+                                    <td className="px-4 py-3">
                                         <p className="font-black text-slate-900 text-xs uppercase tracking-tight">{c.motif}</p>
                                     </td>
-                                    <td className="px-8 py-6 font-display font-black text-rose-600">
+                                    <td className="px-4 py-3 font-display font-black text-rose-600">
                                         -{c.montant.toLocaleString()} F
                                     </td>
-                                    <td className="px-8 py-6 text-right">
+                                    <td className="px-4 py-3 text-right">
                                         <button onClick={() => supprimerCharge(c.id)} className="p-2 text-slate-300 hover:text-rose-500 transition-colors">
                                             <Trash2 size={16} />
                                         </button>
@@ -469,27 +468,27 @@ const GestionFinance = () => {
 
       <AnimatePresence>
         {showChargeModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-md bg-white rounded-[2.5rem] p-10 shadow-2xl relative"
+              className="w-full max-w-md bg-white rounded-xl p-6 shadow-2xl relative"
             >
-              <button onClick={() => setShowChargeModal(false)} className="absolute top-8 right-8 p-3 text-slate-400 hover:text-slate-900"><X size={24} /></button>
-              <div className="mb-10 text-center">
-                  <h3 className="text-3xl font-bold text-slate-900 tracking-tight underline decoration-rose-500 decoration-4 underline-offset-8">Décaissement</h3>
-                  <p className="text-slate-500 font-medium mt-4">Enregistrez une charge ou un frais fixe.</p>
+              <button onClick={() => setShowChargeModal(false)} className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-900"><X size={20} /></button>
+              <div className="mb-4 text-center">
+                  <h3 className="text-xl font-bold text-slate-900 tracking-tight underline decoration-rose-500 decoration-4 underline-offset-8">Décaissement</h3>
+                  <p className="text-slate-500 font-medium mt-2">Enregistrez une charge ou un frais fixe.</p>
               </div>
-              <form onSubmit={ajouterCharge} className="space-y-6">
+              <form onSubmit={ajouterCharge} className="space-y-3">
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Motif du décaissement</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Motif du décaissement</label>
                   <input type="text" value={nouveauMotifCharge} onChange={(e) => setNouveauMotifCharge(e.target.value)} required placeholder="Ex: Loyer, Électricité, Impôts..."
-                    className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none focus:border-slate-900 transition-all font-bold text-slate-900" />
+                    className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none focus:border-slate-900 transition-all font-bold text-slate-900" />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Montant décaissé (F CFA)</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Montant décaissé (F CFA)</label>
                   <input type="number" value={nouveauMontantCharge} onChange={(e) => setNouveauMontantCharge(e.target.value)} required placeholder="0"
-                    className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-black text-rose-600 text-xl" />
+                    className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none font-black text-rose-600 text-xl" />
                 </div>
-                <button type="submit" className="w-full py-5 bg-rose-600 text-white rounded-2xl font-bold uppercase tracking-widest text-[11px] shadow-xl shadow-rose-600/20 active:scale-95 transition-all mt-4">
+                <button type="submit" className="w-full py-3 bg-rose-600 text-white rounded-xl font-bold uppercase tracking-widest text-[11px] shadow-xl shadow-rose-600/20 active:scale-95 transition-all mt-4">
                   Confirmer le décaissement
                 </button>
               </form>

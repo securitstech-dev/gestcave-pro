@@ -475,6 +475,7 @@ export const usePOSStore = create<PosState>((set, get) => ({
     const lignes = (data.lignes || []) as LigneCommande[];
     const batch = writeBatch(db);
     const mtn = new Date().toISOString();
+    const etablissementId = useAuthStore.getState().profil?.etablissement_id;
     
     lignes.forEach(l => {
         if (l.statut === 'en_attente') {
@@ -482,21 +483,47 @@ export const usePOSStore = create<PosState>((set, get) => ({
             if (produit?.recette && produit.recette.length > 0) {
               // Décrémenter les ingrédients
               produit.recette.forEach(ing => {
-                batch.update(doc(db, 'produits', ing.ingredientId), { stockTotal: increment(-(ing.quantite * l.quantite)) });
+                const qteTotale = ing.quantite * l.quantite;
+                batch.update(doc(db, 'produits', ing.ingredientId), { stockTotal: increment(-qteTotale) });
+                
+                // Historique pour l'ingrédient
+                batch.set(doc(collection(db, 'historique_stocks')), {
+                  produitId: ing.ingredientId,
+                  produitNom: ing.nom || 'Ingrédient',
+                  type: 'sortie_vente',
+                  quantite: qteTotale,
+                  date: mtn,
+                  etablissement_id: etablissementId,
+                  commandeId: commandeId,
+                  note: `Consommation recette: ${produit.nom} (x${l.quantite})`
+                });
               });
             } else {
               // Comportement standard
               batch.update(doc(db, 'produits', l.produitId), { stockTotal: increment(-l.quantite) });
+              
+              // Historique pour le produit
+              batch.set(doc(collection(db, 'historique_stocks')), {
+                produitId: l.produitId,
+                produitNom: l.produitNom,
+                type: 'sortie_vente',
+                quantite: l.quantite,
+                date: mtn,
+                etablissement_id: etablissementId,
+                commandeId: commandeId,
+                note: `Vente directe`
+              });
             }
         }
     });
 
-    // Les lignes restent en 'en_attente' (du point de vue cuisine) mais avec une heure d'envoi
-    const nvele = lignes.map(l => l.statut === 'en_attente' ? { ...l, heureEnvoi: mtn } : l);
+    // On change le statut des lignes pour éviter la double déduction au prochain envoi
+    const nvele = lignes.map(l => l.statut === 'en_attente' ? { ...l, statut: 'en_preparation' as const, heureEnvoi: mtn } : l);
     batch.update(commandeRef, { statut: 'envoyee', lignes: nvele });
+    
     await batch.commit();
     await get().refreshCommande(commandeId);
-    toast.success("Tournée validée !");
+    toast.success("Tournée envoyée en production !");
   },
 
   marquerLigneEnPreparation: async (commandeId, ligneId) => {

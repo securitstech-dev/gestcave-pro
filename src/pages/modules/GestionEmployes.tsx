@@ -151,31 +151,31 @@ const GestionEmployes = () => {
   const totalAvancesMois = avances.reduce((acc, curr) => acc + (curr.montant || 0), 0);
 
   return (
-    <div className="space-y-10">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+    <div className="space-y-4">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Ressources Humaines</h2>
-          <p className="text-slate-500 font-medium mt-1">Supervisez votre personnel et gérez la trésorerie salariale.</p>
+          <h2 className="text-lg font-bold text-slate-900 tracking-tight">Personnel</h2>
+          <p className="text-slate-500 font-medium text-[8px] mt-0.5">Supervisez votre personnel et gérez la trésorerie salariale.</p>
         </div>
-        <button onClick={() => setShowModal(true)} className="px-6 py-4 rounded-2xl bg-slate-900 text-white font-bold text-[11px] uppercase tracking-widest flex items-center gap-3 shadow-xl shadow-slate-900/20 active:scale-95 transition-all">
-          <UserPlus size={18} /> Recruter un employé
+        <button onClick={() => setShowModal(true)} className="px-3 py-1.5 rounded-lg bg-slate-900 text-white font-bold text-[8px] uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-slate-900/20 active:scale-95 transition-all">
+          <UserPlus size={12} /> Recruter
         </button>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <StatCard label="Effectif" valeur={employes.length} subtext="Contrats actifs" color="slate" />
           <StatCard label="Masse Brut" valeur={`${masseSalariale.toLocaleString()}`} suffix="F" subtext="Total salaires" color="slate" />
           <StatCard label="Avances" valeur={`${totalAvancesMois.toLocaleString()}`} suffix="F" subtext="Déboursés ce mois" color="slate" />
           <StatCard label="Net mensuel" valeur={`${(masseSalariale - totalAvancesMois).toLocaleString()}`} suffix="F" subtext="Restant à payer" color="slate" />
       </div>
 
-      <div className="bg-white p-8 rounded-3xl border border-slate-200 flex gap-6 items-center shadow-sm">
-          <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 outline outline-4 outline-blue-50/50">
-              <ShieldCheck size={28} />
+      <div className="bg-white p-2 rounded-xl border border-slate-200 flex gap-3 items-center shadow-sm">
+          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+              <ShieldCheck size={16} />
           </div>
           <div>
-              <p className="font-bold text-slate-900 text-lg">Sécurité et Accès Tablettes</p>
-              <p className="text-slate-500 text-sm">Chaque employé utilise son <span className="font-bold text-slate-900 italic underline">PIN unique</span> pour se connecter sur les tablettes de service.</p>
+              <p className="font-bold text-slate-900 text-xs">Accès Tablettes</p>
+              <p className="text-slate-500 text-[9px]">Chaque employé utilise son <span className="font-bold text-slate-900 italic underline">PIN unique</span>.</p>
           </div>
       </div>
 
@@ -188,10 +188,10 @@ const GestionEmployes = () => {
 
               return (
               <motion.div layout key={emp.id}
-                className="bg-white p-8 rounded-3xl border border-slate-200 hover:border-slate-300 transition-all relative shadow-sm group"
+                className="bg-white p-3 rounded-xl border border-slate-200 hover:border-slate-300 transition-all relative shadow-sm group"
               >
-                <div className="flex justify-between items-start mb-6">
-                  <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-xl border border-slate-100 shadow-inner">
+                <div className="flex justify-between items-start mb-3">
+                  <div className="w-7 h-7 bg-slate-50 rounded-lg flex items-center justify-center text-md border border-slate-100 shadow-inner">
                     {emp.role === 'caissier' ? '💰' : 
                      emp.role === 'cuisine' ? '👨‍🍳' : 
                      emp.role === 'gerant' ? '💼' :
@@ -199,57 +199,57 @@ const GestionEmployes = () => {
                      emp.role === 'securite' ? '👮' :
                      emp.role === 'admin' ? '🛡️' : '🤵'}
                   </div>
-                  <span className="text-[10px] font-black px-2.5 py-1 rounded-lg tracking-widest uppercase bg-slate-900 text-white">
+                  <span className="text-[7px] font-black px-1.5 py-0.5 rounded-md tracking-widest uppercase bg-slate-900 text-white">
                     {emp.role}
                   </span>
                 </div>
 
-                <div className="mb-6">
-                    <h3 className="font-bold text-slate-900 text-xl">{emp.nom}</h3>
-                    <div className="flex items-center gap-2 text-slate-400 text-[10px] uppercase font-bold tracking-widest mt-1">
+                <div className="mb-3">
+                    <h3 className="font-bold text-slate-900 text-sm">{emp.nom}</h3>
+                    <div className="flex items-center gap-1.5 text-slate-400 text-[7px] uppercase font-bold tracking-widest mt-0.5">
                         PIN: <span className="text-slate-900 font-mono tracking-widest">{emp.pin}</span>
-                        <button onClick={() => copierPIN(emp.pin, emp.nom)} className="p-1 hover:text-slate-900 transition-colors"><Copy size={12} /></button>
+                        <button onClick={() => copierPIN(emp.pin, emp.nom)} className="p-0.5 hover:text-slate-900 transition-colors"><Copy size={8} /></button>
                     </div>
                 </div>
 
-                <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 space-y-3">
-                  <div className="flex justify-between items-center text-xs font-medium text-slate-500">
-                    <span>Salaire de base</span>
+                <div className="bg-slate-50 rounded-lg p-2 border border-slate-100 space-y-1.5">
+                  <div className="flex justify-between items-center text-[9px] font-medium text-slate-500">
+                    <span>Base</span>
                     <span className="text-slate-900 font-bold">{emp.salaire?.toLocaleString()} F</span>
                   </div>
                   {commission > 0 && (
-                    <div className="flex justify-between items-center text-xs font-bold text-emerald-600">
-                      <span>Commissions (2%)</span>
+                    <div className="flex justify-between items-center text-[9px] font-bold text-emerald-600">
+                      <span>Commissions</span>
                       <span>+{commission.toLocaleString()} F</span>
                     </div>
                   )}
                   {totalAvances > 0 && (
-                    <div className="flex justify-between items-center text-xs font-bold text-rose-500 italic">
+                    <div className="flex justify-between items-center text-[9px] font-bold text-rose-500 italic">
                       <span>Avances</span>
                       <span>-{totalAvances.toLocaleString()} F</span>
                     </div>
                   )}
-                  <div className="flex justify-between items-center pt-3 border-t border-slate-200">
-                    <span className="text-[10px] text-slate-400 font-black uppercase">Solde à Payer</span>
-                    <span className="text-slate-900 font-black text-lg">{soldeNet.toLocaleString()} F</span>
+                  <div className="flex justify-between items-center pt-1.5 border-t border-slate-200">
+                    <span className="text-[7px] text-slate-400 font-black uppercase">Solde</span>
+                    <span className="text-slate-900 font-black text-xs">{soldeNet.toLocaleString()} F</span>
                   </div>
                 </div>
 
-                <div className="mt-8 flex flex-col gap-3">
-                    <div className="flex gap-3">
+                <div className="mt-3 flex flex-col gap-1.5">
+                    <div className="flex gap-1.5">
                         <button onClick={() => { setSelectedEmploye(emp); setShowAvanceModal(true); }}
-                          className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-[10px] font-bold uppercase tracking-widest text-slate-700 transition-all font-display"
+                          className="flex-1 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-[7px] font-bold uppercase tracking-widest text-slate-700 transition-all"
                         >
-                          Décaisser Avance
+                          Avance
                         </button>
                         <button onClick={() => enregistrerPaiement(emp, soldeNet)}
-                          className="flex-1 py-3.5 bg-emerald-600 hover:bg-emerald-700 rounded-xl text-[10px] font-bold uppercase tracking-widest text-white transition-all shadow-lg shadow-emerald-600/20 font-display"
+                          className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-[7px] font-bold uppercase tracking-widest text-white transition-all shadow-lg shadow-emerald-600/20"
                         >
-                          Solder Mois
+                          Solder
                         </button>
                     </div>
-                    <button onClick={() => supprimerEmploye(emp.id, emp.nom)} className="w-full py-3 bg-white border border-slate-200 rounded-xl text-slate-300 hover:text-rose-500 hover:border-rose-100 transition-all flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest">
-                       <Trash2 size={14} /> Révoquer l'accès
+                    <button onClick={() => supprimerEmploye(emp.id, emp.nom)} className="w-full py-1 bg-white border border-slate-200 rounded-lg text-slate-300 hover:text-rose-500 hover:border-rose-100 transition-all flex items-center justify-center gap-1 text-[7px] font-bold uppercase tracking-widest">
+                       <Trash2 size={10} /> Révoquer
                     </button>
                 </div>
               </motion.div>
@@ -258,39 +258,39 @@ const GestionEmployes = () => {
 
       <AnimatePresence>
           {showModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-                className="w-full max-w-md bg-white rounded-[2.5rem] p-10 shadow-2xl relative"
+                className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl relative"
               >
-                <button onClick={() => setShowModal(false)} className="absolute top-8 right-8 p-3 text-slate-400 hover:text-slate-900"><X size={24} /></button>
-                <div className="mb-10 text-center">
-                    <h3 className="text-3xl font-bold text-slate-900 tracking-tight">Embauche</h3>
-                    <p className="text-slate-500 font-medium">Enregistrez un nouvel accès employé.</p>
+                <button onClick={() => setShowModal(false)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-900"><X size={18} /></button>
+                <div className="mb-6 text-center">
+                    <h3 className="text-xl font-bold text-slate-900 tracking-tight">Embauche</h3>
+                    <p className="text-slate-500 font-medium text-[10px]">Enregistrez un nouvel accès employé.</p>
                 </div>
-                <form onSubmit={ajouterEmploye} className="space-y-6">
+                <form onSubmit={ajouterEmploye} className="space-y-4">
                   <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Nom complet</label>
+                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Nom complet</label>
                     <input type="text" value={nouveauNom} onChange={(e) => setNouveauNom(e.target.value)} required placeholder="Prénom Nom"
-                      className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none focus:border-slate-900 transition-all font-bold text-slate-900" />
+                      className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none focus:border-slate-900 transition-all font-bold text-slate-900 text-xs" />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Rôle affecté</label>
-                    <select value={nouveauRole} onChange={(e) => setNouveauRole(e.target.value as any)} className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-4 outline-none font-bold text-slate-900">
-                        <option value="serveur">🤵 Serveur / Barmaid</option>
-                        <option value="caissier">💰 Caissier (Caisse Centrale)</option>
-                        <option value="cuisine">👨‍🍳 Cuisine / Barman</option>
-                        <option value="gerant">💼 Gérant / Manager</option>
+                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Rôle affecté</label>
+                    <select value={nouveauRole} onChange={(e) => setNouveauRole(e.target.value as any)} className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 outline-none font-bold text-slate-900 text-xs">
+                        <option value="serveur">🤵 Serveur</option>
+                        <option value="caissier">💰 Caissier</option>
+                        <option value="cuisine">👨‍🍳 Cuisine</option>
+                        <option value="gerant">💼 Gérant</option>
                         <option value="livreur">🛵 Livreur</option>
-                        <option value="securite">👮 Sécurité / Gardien</option>
-                        <option value="admin">🛡️ Responsable / Admin</option>
+                        <option value="securite">👮 Sécurité</option>
+                        <option value="admin">🛡️ Admin</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Salaire (F CFA)</label>
+                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Salaire (F CFA)</label>
                     <input type="number" value={nouveauSalaire} onChange={(e) => setNouveauSalaire(Number(e.target.value))} required
-                      className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-bold text-emerald-600" />
+                      className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none font-bold text-emerald-600 text-xs" />
                   </div>
-                  <button type="submit" className="w-full py-5 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-[11px] shadow-xl shadow-slate-900/20 active:scale-95 transition-all mt-4">
+                  <button type="submit" className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold uppercase tracking-widest text-[9px] shadow-xl shadow-slate-900/20 active:scale-95 transition-all mt-2">
                     Valider le recrutement
                   </button>
                 </form>

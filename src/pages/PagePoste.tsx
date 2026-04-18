@@ -86,15 +86,41 @@ const PagePoste = () => {
     setPin('');
   };
 
-  const validerPIN = async () => {
-    if (pin.length < 4 || !etablissementId) return;
+  // Ajout du support clavier pour le code PIN
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!showPinModal || loading) return;
+
+      if (e.key >= '0' && e.key <= '9') {
+        setPin(currentPin => {
+          if (currentPin.length >= 4) return currentPin;
+          const newPin = currentPin + e.key;
+          if (newPin.length === 4) {
+            setTimeout(() => validerPIN(newPin), 200);
+          }
+          return newPin;
+        });
+      } else if (e.key === 'Backspace') {
+        setPin(p => p.slice(0, -1));
+      } else if (e.key === 'Escape') {
+        setShowPinModal(false);
+        setPin('');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showPinModal, loading]);
+
+  const validerPIN = async (pinToCheck: string = pin) => {
+    if (pinToCheck.length < 4 || !etablissementId) return;
     setLoading(true);
 
     try {
       const q = query(
         collection(db, 'employes'),
         where('etablissement_id', '==', etablissementId),
-        where('pin', '==', pin)
+        where('pin', '==', pinToCheck)
       );
 
       const snap = await getDocs(q);
@@ -113,7 +139,7 @@ const PagePoste = () => {
           toast.error(`Poste non autorisé. Requis: ${selectedMode.role}`);
           setPin('');
         }
-      } else if (pin === '0000') {
+      } else if (pinToCheck === '0000') {
         toast.success("Mode Démo activé");
         setShowPinModal(false);
         navigate(selectedMode.route);
@@ -130,7 +156,7 @@ const PagePoste = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 font-display flex flex-col items-center justify-center p-6 md:p-12 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 font-display flex flex-col items-center justify-center p-6 md:p-12 relative overflow-hidden">
       
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700;900&display=swap');
@@ -138,8 +164,8 @@ const PagePoste = () => {
       `}</style>
       
       {/* Dynamic Background Elements */}
-      <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-600/10 blur-[150px] rounded-full" />
-      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-emerald-600/5 blur-[150px] rounded-full" />
+      <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-500/5 blur-[150px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-emerald-500/5 blur-[150px] rounded-full pointer-events-none" />
 
       {/* Header View */}
       <motion.div
@@ -147,16 +173,16 @@ const PagePoste = () => {
         animate={{ opacity: 1, y: 0 }}
         className="text-center mb-20 relative z-10"
       >
-        <div className="inline-flex items-center justify-center w-24 h-24 rounded-[2.5rem] bg-white border border-slate-200 shadow-2xl mb-10 text-4xl">
+        <div className="inline-flex items-center justify-center w-24 h-24 rounded-[2.5rem] bg-white border border-slate-200 shadow-xl shadow-slate-200/50 mb-10 text-4xl">
            <Zap className="text-slate-900" size={32} />
         </div>
-        <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter uppercase mb-4">
-          Poste <span className="text-indigo-500">{nomEtablissement}</span>
+        <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter uppercase mb-4">
+          Poste <span className="text-indigo-600">{nomEtablissement}</span>
         </h1>
         <div className="flex items-center justify-center gap-4">
-             <div className="px-5 py-2 rounded-full border border-white/10 bg-white/5 flex items-center gap-3">
+             <div className="px-5 py-2 rounded-full border border-slate-200 bg-white flex items-center gap-3 shadow-sm">
                  <div className={`w-2 h-2 rounded-full ${connecte ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
                    {connecte ? 'Flux Sync Transmis' : 'Attente Réseau...'}
                  </span>
              </div>
@@ -173,20 +199,20 @@ const PagePoste = () => {
             transition={{ delay: i * 0.1 }}
             whileHover={{ y: -10, scale: 1.02 }}
             onClick={() => gererSelection(mode)}
-            className="group relative h-80 rounded-[3rem] bg-white/5 border border-white/5 hover:border-indigo-500/30 transition-all duration-500 p-8 flex flex-col items-center justify-center text-center overflow-hidden"
+            className="group relative h-80 rounded-[3rem] bg-white border border-slate-200 hover:border-indigo-200 shadow-xl shadow-slate-200/30 transition-all duration-500 p-8 flex flex-col items-center justify-center text-center overflow-hidden"
           >
-            <div className={`absolute inset-0 bg-gradient-to-b from-transparent to-${mode.couleur}-500/10 opacity-0 group-hover:opacity-100 transition-opacity`} />
+            <div className={`absolute inset-0 bg-gradient-to-b from-transparent to-${mode.couleur}-500/5 opacity-0 group-hover:opacity-100 transition-opacity`} />
             
-            <div className={`w-20 h-20 rounded-[2rem] bg-white/5 border border-white/10 flex items-center justify-center text-white group-hover:bg-${mode.couleur}-500 transition-all duration-500 mb-8`}>
+            <div className={`w-20 h-20 rounded-[2rem] bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-900 group-hover:bg-${mode.couleur}-500 group-hover:text-white transition-all duration-500 mb-8 shadow-sm`}>
               {mode.icon}
             </div>
 
-            <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-2 relative z-10">{mode.titre}</h2>
-            <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest leading-relaxed mb-6 opacity-60 group-hover:opacity-100 transition-opacity">
+            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-2 relative z-10">{mode.titre}</h2>
+            <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest leading-relaxed mb-6 opacity-80 group-hover:opacity-100 transition-opacity">
               {mode.description}
             </p>
 
-            <div className="flex items-center gap-2 text-[8px] font-black text-slate-600 uppercase tracking-[0.3em]">
+            <div className="flex items-center gap-2 text-[8px] font-black text-slate-400 uppercase tracking-[0.3em]">
                <Key size={10} /> Authentification Requise
             </div>
           </motion.button>
@@ -198,10 +224,10 @@ const PagePoste = () => {
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}
         className="mt-24 text-center cursor-default"
       >
-        <p className="text-[10px] font-black text-slate-700 uppercase tracking-[0.5em] mb-4">
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em] mb-4">
           GESTCAVE PRO · ECOSYSTÈME SaaS SÉCURISÉ
         </p>
-        <p className="max-w-xs text-slate-800 text-[9px] font-bold uppercase tracking-widest leading-loose">
+        <p className="max-w-xs text-slate-500 text-[9px] font-bold uppercase tracking-widest leading-loose">
           Cette interface est dédiée aux terminaux de service (TabS, iPads, TPE). <br/>
           Les serveurs, cuisiniers et caissiers se connectent via leur PIN personnel.
         </p>
@@ -250,7 +276,7 @@ const PagePoste = () => {
                       if (pin.length < 4) {
                         const newP = pin + n;
                         setPin(newP);
-                        if (newP.length === 4) setTimeout(() => validerPIN(), 200);
+                        if (newP.length === 4) setTimeout(() => validerPIN(newP), 200);
                       }
                     }}
                     className="h-20 rounded-[2rem] bg-slate-50 hover:bg-slate-100 active:scale-95 border border-slate-100 text-slate-950 text-3xl font-black transition-all"
@@ -269,7 +295,7 @@ const PagePoste = () => {
                     const newP = pin + '0';
                     if (pin.length < 4) {
                         setPin(newP);
-                        if (newP.length === 4) setTimeout(() => validerPIN(), 200);
+                        if (newP.length === 4) setTimeout(() => validerPIN(newP), 200);
                     }
                   }}
                   className="h-20 rounded-[2rem] bg-slate-50 hover:bg-slate-100 border border-slate-100 text-slate-950 text-3xl font-black flex items-center justify-center transition-all"

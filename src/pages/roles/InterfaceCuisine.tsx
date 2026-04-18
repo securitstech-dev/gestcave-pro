@@ -148,266 +148,64 @@ const InterfaceCuisine = () => {
   }
 
   return (
-    <div className="h-screen bg-[#0f1117] text-slate-200 flex flex-col overflow-hidden font-outfit">
-      {/* Header KDS Professionnel */}
-      <header className="h-20 bg-[#161922] border-b border-slate-800/50 px-8 flex items-center justify-between flex-shrink-0 z-20 shadow-2xl">
-          <div className="flex items-center gap-6">
-              <button 
-                onClick={() => setShowPosteSelector(true)}
-                className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/20 hover:scale-105 transition-all"
-              >
-                  <ChefHat size={24} />
+    <div className="h-screen bg-[#fbfbfb] text-slate-900 flex flex-col overflow-hidden font-outfit">
+      <header className="h-8 bg-white border-b border-slate-200 px-3 flex items-center justify-between flex-shrink-0 z-50 shadow-sm">
+          <div className="flex items-center gap-3">
+              <button onClick={() => setShowPosteSelector(true)} className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg">
+                  <ChefHat size={16} />
               </button>
-              <div>
-                  <h1 className="text-lg font-black text-white uppercase tracking-tighter flex items-center gap-3">
-                    KDS <span className="text-indigo-500">PRO</span>
-                    <span className="px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 text-[9px] border border-indigo-500/20 font-black">STATION: {posteId?.toUpperCase()}</span>
-                  </h1>
-                  <div className="flex items-center gap-3 mt-0.5">
-                    <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-500 uppercase tracking-widest">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> {commandesKDS.length} BONS EN ATTENTE
-                    </span>
-                    <span className="text-slate-700">|</span>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{nomEmploye || 'CHEF DE PARTIE'}</span>
-                  </div>
-              </div>
+              <h1 className="text-[11px] font-black text-slate-950 uppercase tracking-tighter flex items-center gap-2">
+                KDS <span className="text-indigo-600">PRO</span>
+                <span className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 text-[8px] font-black border border-indigo-100">{posteId?.toUpperCase()}</span>
+              </h1>
           </div>
-
-          <div className="flex items-center gap-4">
-               {/* Buzzer Toggle */}
-               <button 
-                onClick={() => setSonActif(!sonActif)}
-                className={`w-11 h-11 flex items-center justify-center rounded-xl border transition-all ${sonActif ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400' : 'bg-slate-800 border-slate-700 text-slate-600'}`}
-               >
-                  {sonActif ? <Volume2 size={18} /> : <VolumeX size={18} />}
+          <div className="flex items-center gap-2">
+               <button onClick={() => setSonActif(!sonActif)} className={`w-8 h-8 flex items-center justify-center rounded-lg border ${sonActif ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
+                  {sonActif ? <Volume2 size={14} /> : <VolumeX size={14} />}
                </button>
-
-               {/* Toggle Vue */}
-               <div className="flex bg-slate-900/50 p-1 rounded-xl border border-slate-800 mx-2">
-                  <button 
-                    onClick={() => setView('kds')}
-                    className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${view === 'kds' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}
-                  >
-                    <LayoutDashboard size={14} /> LIVE KDS
-                  </button>
-                  <button 
-                    onClick={() => setView('historique')}
-                    className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${view === 'historique' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}
-                  >
-                    <History size={14} /> HISTORIQUE
-                  </button>
+               <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                  <button onClick={() => setView('kds')} className={`px-3 py-1 rounded text-[8px] font-black uppercase ${view === 'kds' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}>LIVE</button>
+                  <button onClick={() => setView('historique')} className={`px-3 py-1 rounded text-[8px] font-black uppercase ${view === 'historique' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}>HISTO</button>
                </div>
-
-               <div className="bg-slate-900/50 px-4 py-2 rounded-xl border border-slate-800 flex items-center gap-3 mr-4">
-                    <Clock size={16} className="text-indigo-500" />
-                    <span className="text-lg font-bold text-white tracking-tighter">
-                      {new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-               </div>
-               
-               <button onClick={quitterPoste} className="w-11 h-11 flex items-center justify-center rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white transition-all">
-                   <LogOut size={18} />
+               <button onClick={quitterPoste} className="w-8 h-8 flex items-center justify-center rounded-lg bg-rose-50 text-rose-600 border border-rose-100">
+                   <LogOut size={14} />
                </button>
           </div>
       </header>
 
-      {/* Zone d'impression masquée */}
-      <div className="hidden">
-        <div id="section-to-print" ref={printRef} className="p-8 text-black bg-white w-[80mm] font-mono">
-            {activePrintCmd && <PrintableBon commande={activePrintCmd} posteId={posteId} />}
+      <main className="flex-1 overflow-hidden p-0 bg-slate-100">
+        <div className="h-full flex gap-0.5">
+          <KDSColumn title="À Préparer" count={commandesKDS.filter(c => c.lignes.some(l => l.statut === 'en_attente' && filterLigne(l))).length} color="bg-rose-500">
+            {commandesKDS.filter(c => c.lignes.some(l => l.statut === 'en_attente' && filterLigne(l))).map(cmd => (
+               <KDSTicket key={cmd.id} commande={cmd} filterLigne={filterLigne} minutes={minutesEcoulees(cmd.dateOuverture)} highlightItem={highlightItem} onPrint={() => imprimerBon(cmd)} posteId={posteId} />
+            ))}
+          </KDSColumn>
+          <KDSColumn title="En Cuisine" count={commandesKDS.filter(c => c.lignes.some(l => l.statut === 'en_preparation' && filterLigne(l))).length} color="bg-amber-500">
+            {commandesKDS.filter(c => c.lignes.some(l => l.statut === 'en_preparation' && filterLigne(l))).map(cmd => (
+               <KDSTicket key={cmd.id} commande={cmd} filterLigne={filterLigne} minutes={minutesEcoulees(cmd.dateOuverture)} highlightItem={highlightItem} onPrint={() => imprimerBon(cmd)} posteId={posteId} />
+            ))}
+          </KDSColumn>
+          <KDSColumn title="Prêt" count={commandesKDS.filter(c => c.lignes.every(l => (l.statut === 'pret' || !filterLigne(l))) && c.lignes.some(l => l.statut === 'pret' && filterLigne(l))).length} color="bg-emerald-500">
+            {commandesKDS.filter(c => c.lignes.every(l => (l.statut === 'pret' || !filterLigne(l))) && c.lignes.some(l => l.statut === 'pret' && filterLigne(l))).map(cmd => (
+               <KDSTicket key={cmd.id} commande={cmd} filterLigne={filterLigne} minutes={minutesEcoulees(cmd.dateOuverture)} highlightItem={highlightItem} onPrint={() => imprimerBon(cmd)} posteId={posteId} />
+            ))}
+          </KDSColumn>
         </div>
-      </div>
-
-      <style>{`
-        @media print {
-            body * { visibility: hidden; }
-            #section-to-print, #section-to-print * { visibility: visible; }
-            #section-to-print { 
-                position: absolute; 
-                left: 0; 
-                top: 0; 
-                width: 80mm;
-                padding: 0;
-                margin: 0;
-            }
-            @page { size: 80mm auto; margin: 0; }
-        }
-      `}</style>
-
-      {/* Recapitulatif Interactif */}
-      <div className="bg-[#161922] border-b border-slate-800/30 flex-shrink-0">
-          <div className="px-8 py-4 flex items-center gap-8">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-indigo-400 flex-shrink-0">
-                  <Flame size={14} className="animate-pulse" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Total Production</span>
-              </div>
-              <div className="flex-1 flex gap-3 overflow-x-auto no-scrollbar mask-fade-right">
-                  {recapItems.length === 0 ? (
-                    <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest py-1.5">Aucun article à produire pour l'instant</span>
-                  ) : recapItems.map(([nom, qte]) => (
-                    <button 
-                      key={nom} 
-                      onClick={() => setHighlightItem(highlightItem === nom ? null : nom)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${
-                        highlightItem === nom 
-                          ? 'bg-indigo-600 border-indigo-400 text-white' 
-                          : 'bg-slate-800/50 border-slate-700/50 text-slate-300 hover:border-slate-500'
-                      }`}
-                    >
-                        <span className={`font-black ${highlightItem === nom ? 'text-white' : 'text-indigo-400'}`}>{qte}</span>
-                        <span className="text-[10px] font-bold uppercase tracking-tight">{nom}</span>
-                    </button>
-                  ))}
-              </div>
-          </div>
-      </div>
-
-      <main className="flex-1 overflow-hidden relative">
-        <AnimatePresence mode="wait">
-          {view === 'kds' ? (
-            <motion.div 
-              key="kds" 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="h-full flex gap-1 p-1"
-            >
-              {/* Colonne 1: A Préparer */}
-              <KDSColumn 
-                title="A Préparer" 
-                subtitle="Nouveaux bons entrants"
-                count={commandesKDS.filter(c => c.lignes.some(l => l.statut === 'en_attente' && filterLigne(l))).length}
-                color="border-indigo-500/30"
-                bg="bg-indigo-500/5"
-              >
-                {commandesKDS.filter(c => c.lignes.some(l => l.statut === 'en_attente' && filterLigne(l))).map(cmd => (
-                   <KDSTicket 
-                    key={cmd.id} 
-                    commande={cmd} 
-                    filterLigne={filterLigne} 
-                    minutes={minutesEcoulees(cmd.dateOuverture)}
-                    highlightItem={highlightItem}
-                    onPrint={() => imprimerBon(cmd)}
-                    posteId={posteId}
-                   />
-                ))}
-              </KDSColumn>
-
-              {/* Colonne 2: Au Feu */}
-              <KDSColumn 
-                title="Au Feu" 
-                subtitle="En cours de traitement"
-                count={commandesKDS.filter(c => c.lignes.some(l => l.statut === 'en_preparation' && filterLigne(l))).length}
-                color="border-amber-500/30"
-                bg="bg-amber-500/5"
-              >
-                {commandesKDS.filter(c => c.lignes.some(l => l.statut === 'en_preparation' && filterLigne(l))).map(cmd => (
-                   <KDSTicket 
-                    key={cmd.id} 
-                    commande={cmd} 
-                    filterLigne={filterLigne} 
-                    minutes={minutesEcoulees(cmd.dateOuverture)}
-                    highlightItem={highlightItem}
-                    onPrint={() => imprimerBon(cmd)}
-                    posteId={posteId}
-                   />
-                ))}
-              </KDSColumn>
-
-              {/* Colonne 3: Prêt / Ramasse */}
-              <KDSColumn 
-                title="Prêt / Ramasse" 
-                subtitle="A appeler serveur"
-                count={commandesKDS.filter(c => c.lignes.every(l => (l.statut === 'pret' || !filterLigne(l))) && c.lignes.some(l => l.statut === 'pret' && filterLigne(l))).length}
-                color="border-emerald-500/30"
-                bg="bg-emerald-500/5"
-              >
-                {commandesKDS.filter(c => c.lignes.every(l => (l.statut === 'pret' || !filterLigne(l))) && c.lignes.some(l => l.statut === 'pret' && filterLigne(l))).map(cmd => (
-                   <KDSTicket 
-                    key={cmd.id} 
-                    commande={cmd} 
-                    filterLigne={filterLigne} 
-                    minutes={minutesEcoulees(cmd.dateOuverture)}
-                    highlightItem={highlightItem}
-                    onPrint={() => imprimerBon(cmd)}
-                    posteId={posteId}
-                   />
-                ))}
-              </KDSColumn>
-            </motion.div>
-          ) : (
-            <motion.div 
-              key="history"
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-              className="h-full p-8 overflow-y-auto custom-scrollbar-admin"
-            >
-              <div className="max-w-5xl mx-auto space-y-6">
-                <div className="flex items-center justify-between mb-10">
-                  <div>
-                    <h2 className="text-4xl font-black text-white tracking-tighter uppercase italic">Historique de Service</h2>
-                    <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mt-1">Dernières commandes servies (30 dernières)</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4">
-                  {historiqueCommandes.map(cmd => (
-                    <div key={cmd.id} className="bg-[#161922] border border-slate-800 p-8 rounded-[2rem] flex items-center justify-between group hover:border-slate-700 hover:bg-[#1a1d27] transition-all shadow-xl">
-                      <div className="flex items-center gap-8">
-                        <div className="w-16 h-16 rounded-[1.25rem] bg-slate-900 border border-slate-800 flex flex-col items-center justify-center text-emerald-500">
-                          <CheckCircle size={28} />
-                          <span className="text-[8px] font-black mt-1 uppercase">SERVI</span>
-                        </div>
-                        <div>
-                          <h4 className="font-black text-white text-2xl italic tracking-tighter uppercase">{cmd.tableNom}</h4>
-                          <div className="flex items-center gap-3 mt-1.5">
-                             <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Par {cmd.serveurNom}</p>
-                             <span className="text-slate-800">•</span>
-                             <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{new Date(cmd.dateOuverture).toLocaleTimeString()}</p>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex-1 flex gap-2 ml-12 overflow-x-auto no-scrollbar">
-                        {cmd.lignes.filter(filterLigne).map(l => (
-                          <div key={l.id} className="px-4 py-2 bg-slate-900/50 border border-slate-800 rounded-xl flex items-center gap-2 whitespace-nowrap">
-                            <span className="font-black text-indigo-400 text-xs">{l.quantite}x</span>
-                            <span className="text-[10px] font-bold text-slate-300 uppercase">{l.produitNom}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="flex items-center gap-4 ml-8">
-                         <button 
-                          onClick={() => {
-                            toast.success(`Commande ${cmd.tableNom} rappelée (Simulé)`);
-                          }}
-                          className="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-900 border border-slate-800 text-slate-500 hover:text-white hover:bg-indigo-600 hover:border-indigo-500 transition-all group/btn"
-                         >
-                            <RotateCcw size={20} className="group-hover/btn:rotate-[-45deg] transition-all" />
-                         </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </main>
     </div>
   );
 };
 
-const KDSColumn = ({ title, subtitle, count, children, color, bg }: any) => (
-  <div className={`flex-1 flex flex-col min-w-[400px] rounded-[2.5rem] border-2 ${color} ${bg} m-2 overflow-hidden shadow-2xl relative`}>
-    <div className="p-6 flex items-center justify-between border-b border-white/5 bg-slate-950/20">
-      <div>
-        <h3 className="text-base font-black text-white uppercase tracking-[0.2em]">{title}</h3>
-        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1 italic opacity-70">{subtitle}</p>
+const KDSColumn = ({ title, count, children, color }: any) => (
+  <div className="flex-1 flex flex-col min-w-[240px] bg-white rounded-lg overflow-hidden border border-slate-200">
+    <div className="p-2 border-b border-slate-100 flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <div className={`w-2 h-2 rounded-full ${color}`} />
+        <h3 className="text-[9px] font-black text-slate-950 uppercase tracking-[0.2em]">{title}</h3>
       </div>
-      <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white font-black text-sm border border-white/5">
-        {count}
-      </div>
+      <div className="px-2 py-0.5 rounded bg-slate-100 text-[8px] font-black text-slate-500">{count}</div>
     </div>
-    <div className="flex-1 overflow-y-auto p-4 space-y-5 custom-scrollbar-admin">
+    <div className="flex-1 overflow-y-auto p-1.5 space-y-2 bg-slate-50/50">
       <LayoutGroup>
         <AnimatePresence mode="popLayout">
           {children}
@@ -418,17 +216,8 @@ const KDSColumn = ({ title, subtitle, count, children, color, bg }: any) => (
 );
 
 const KDSTicket = ({ commande, filterLigne, minutes, highlightItem, onPrint, posteId }: any) => {
-  const { 
-    marquerLignePrete, 
-    marquerLigneEnPreparation, 
-    marquerToutesLignesPretes,
-    marquerToutesLignesEnPreparation,
-    marquerCommandeServie 
-  } = usePOSStore();
-  
+  const { marquerLignePrete, marquerLigneEnPreparation, marquerToutesLignesPretes, marquerToutesLignesEnPreparation, marquerCommandeServie } = usePOSStore();
   const lignesFiltrees = commande.lignes.filter(filterLigne);
-  
-  // Groupement par catégorie pour une meilleure organisation
   const categories = useMemo(() => {
     const groups: Record<string, any[]> = {};
     lignesFiltrees.forEach(l => {
@@ -442,140 +231,32 @@ const KDSTicket = ({ commande, filterLigne, minutes, highlightItem, onPrint, pos
   const toutPret = lignesFiltrees.every(l => l.statut === 'pret');
   const aPreparer = lignesFiltrees.some(l => l.statut === 'en_attente');
   const enPrep = lignesFiltrees.some(l => l.statut === 'en_preparation');
-  
-  const urgenceClass = minutes >= 20 ? 'border-rose-500 shadow-rose-500/20' : minutes >= 12 ? 'border-amber-500 shadow-amber-500/20' : 'border-slate-800 shadow-xl';
-  const headerBg = minutes >= 20 ? 'bg-rose-500/20' : minutes >= 12 ? 'bg-amber-500/20' : 'bg-slate-900/80';
+  const isLate = minutes >= 15;
 
   return (
-    <motion.div 
-      layout
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, y: -20 }}
-      className={`bg-[#1c212c] rounded-[2rem] border-2 overflow-hidden flex flex-col transition-all duration-500 ${urgenceClass}`}
-    >
-      {/* Header du Ticket */}
-      <div className={`p-5 flex justify-between items-start border-b border-white/5 ${headerBg}`}>
+    <motion.div layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className={`bg-white rounded-xl border ${isLate ? 'border-rose-200 shadow-rose-100' : 'border-slate-200'} shadow-sm overflow-hidden`}>
+      <div className="p-2 flex justify-between items-center bg-slate-50 border-b border-slate-100">
         <div>
-          <div className="flex items-center gap-3">
-            <h4 className="text-2xl font-black text-white tracking-tighter uppercase italic">{commande.tableNom}</h4>
-            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${commande.type === 'a_emporter' ? 'bg-amber-500 text-slate-900' : 'bg-indigo-600 text-white'}`}>
-              {commande.type === 'a_emporter' ? 'A EMPORTER' : 'SUR PLACE'}
-            </span>
-          </div>
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1.5 opacity-60">
-            #{commande.id.slice(-4).toUpperCase()} • {commande.serveurNom}
-          </p>
+          <h4 className="text-[11px] font-black text-slate-950 uppercase">{commande.tableNom}</h4>
+          <p className="text-[7px] text-slate-400 font-bold uppercase">{commande.serveurNom}</p>
         </div>
-        <div className="flex flex-col items-end gap-2">
-            <div className={`px-4 py-2 rounded-xl flex items-center gap-2 font-black text-sm border shadow-lg ${
-                minutes >= 20 ? 'bg-rose-600 border-rose-400 text-white animate-pulse' : 
-                minutes >= 12 ? 'bg-amber-500 border-amber-400 text-white' : 
-                'bg-slate-900 border-slate-700 text-slate-300'
-            }`}>
-              <Timer size={16} /> {minutes}'
-            </div>
-        </div>
+        <div className={`px-1.5 py-0.5 rounded text-[9px] font-black ${isLate ? 'bg-rose-500 text-white' : 'bg-slate-200 text-slate-600'}`}>{minutes}m</div>
       </div>
 
-      {/* Lignes du Ticket groupées par Catégorie */}
-      <div className="p-5 flex-1 space-y-6">
+      <div className="p-2 space-y-2">
         {Object.entries(categories).map(([cat, lignes]) => (
-          <div key={cat} className="space-y-2">
-            <div className="flex items-center gap-2 px-1">
-              <div className="h-[1px] flex-1 bg-slate-800"></div>
-              <span className="text-[8px] font-black text-slate-600 uppercase tracking-[0.3em]">{cat}</span>
-              <div className="h-[1px] flex-1 bg-slate-800"></div>
-            </div>
-            
-            <div className="space-y-2">
-              {lignes.map((ligne: any) => {
-                const isHighlighted = highlightItem === ligne.produitNom;
-                return (
-                  <motion.div 
-                    layout
-                    key={ligne.id} 
-                    onClick={() => {
-                      if (ligne.statut === 'en_attente') marquerLigneEnPreparation(commande.id, ligne.id);
-                      else if (ligne.statut === 'en_preparation') marquerLignePrete(commande.id, ligne.id);
-                    }}
-                    className={`p-4 rounded-[1.25rem] border-2 flex items-center gap-4 cursor-pointer transition-all duration-300 group ${
-                      ligne.statut === 'pret' ? 'bg-emerald-500/10 border-emerald-500/10 opacity-40' : 
-                      ligne.statut === 'en_preparation' ? 'bg-amber-500/10 border-amber-500/30 animate-pulse' : 
-                      isHighlighted ? 'bg-indigo-600 border-indigo-400 shadow-lg scale-[1.02]' : 'bg-slate-900/40 border-slate-800 hover:border-slate-700'
-                    }`}
-                  >
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xl transition-all ${
-                       ligne.statut === 'pret' ? 'text-emerald-500 bg-emerald-500/10' : 
-                       ligne.statut === 'en_preparation' ? 'text-amber-500 bg-amber-500/10' : 
-                       isHighlighted ? 'text-white bg-indigo-500' : 'text-white bg-slate-800 border border-slate-700 group-hover:border-slate-500'
-                    }`}>
-                      {ligne.quantite}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className={`font-black uppercase tracking-tight truncate ${ligne.statut === 'pret' ? 'text-emerald-500/50 line-through' : 'text-white text-lg italic'}`}>
-                          {ligne.produitNom}
-                        </p>
-                        {ligne.statut === 'en_preparation' && <Flame size={14} className="text-amber-500" />}
-                        {ligne.statut === 'pret' && <CheckCircle size={14} className="text-emerald-500" />}
-                      </div>
-                      {ligne.note && (
-                        <p className="text-[10px] text-rose-400 font-bold mt-1 uppercase bg-rose-400/10 px-2 py-0.5 rounded inline-block">
-                          {ligne.note}
-                        </p>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
+          <div key={cat} className="space-y-1">
+            <div className="text-[7px] font-black text-slate-400 uppercase tracking-widest">{cat}</div>
+            {lignes.map((l: any) => (
+              <div key={l.id} onClick={() => l.statut === 'en_attente' ? marquerLigneEnPreparation(commande.id, l.id) : marquerLignePrete(commande.id, l.id)} className={`flex items-center gap-2 p-1.5 rounded-lg border ${l.statut === 'pret' ? 'bg-emerald-50 border-emerald-100 opacity-50' : 'bg-slate-50 border-slate-100'}`}>
+                <div className="w-5 h-5 rounded bg-white border border-slate-200 flex items-center justify-center text-[9px] font-black">{l.quantite}</div>
+                <span className={`text-[10px] font-bold uppercase ${l.statut === 'pret' ? 'line-through text-slate-400' : 'text-slate-900'}`}>{l.produitNom}</span>
+              </div>
+            ))}
           </div>
         ))}
       </div>
 
-      {/* Actions de bas de Ticket */}
-      <div className="p-4 bg-slate-950/40 border-t border-white/5 grid grid-cols-2 gap-3">
-        {aPreparer && (
-          <button 
-            onClick={() => marquerToutesLignesEnPreparation(commande.id, posteId)}
-            className="col-span-2 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 font-black text-[10px] uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all flex items-center justify-center gap-2"
-          >
-            <Flame size={14} /> Lancer Toute la Tournée
-          </button>
-        )}
-        
-        {!toutPret && !aPreparer && enPrep && (
-          <button 
-            onClick={() => marquerToutesLignesPretes(commande.id, posteId)}
-            className="col-span-2 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 font-black text-[10px] uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center gap-2"
-          >
-            <Check size={14} /> Tout Marquer Prêt
-          </button>
-        )}
-
-        {toutPret && (
-          <button 
-            onClick={() => marquerCommandeServie(commande.id)}
-            className="col-span-2 py-4 rounded-2xl bg-emerald-600 text-white font-black text-xs uppercase tracking-[0.2em] hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-3 animate-bounce"
-          >
-            <CheckCircle2 size={18} /> Appeler Serveur
-          </button>
-        )}
-
-        <button 
-          onClick={onPrint}
-          className="py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-500 hover:text-white transition-all flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest"
-        >
-          <Printer size={14} /> Bon
-        </button>
-        
-        <button 
-          className="py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-500 hover:text-white transition-all flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest"
-        >
-          <Info size={14} /> Détails
-        </button>
-      </div>
     </motion.div>
   );
 };

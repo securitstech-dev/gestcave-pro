@@ -198,38 +198,38 @@ const GestionStocks = () => {
   const valeurStockTotal = produits.reduce((acc, p) => acc + (p.stockTotal * p.prix), 0);
 
   return (
-    <div className="space-y-10">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+    <div className="space-y-2.5">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Inventaire Appliqué</h2>
-          <p className="text-slate-500 font-medium mt-1">Gérez vos références et supervisez vos niveaux critiques.</p>
+          <h2 className="text-lg font-bold text-slate-900 tracking-tight">Inventaire Appliqué</h2>
+          <p className="text-slate-500 font-medium text-[8px] mt-0.5">Gérez vos références et supervisez vos niveaux critiques.</p>
         </div>
-        <div className="flex gap-4">
-            <button onClick={() => setShowModal(true)} className="px-6 py-4 rounded-2xl bg-white border border-slate-200 text-slate-900 font-bold text-[11px] uppercase tracking-widest flex items-center gap-3 shadow-sm hover:bg-slate-50 active:scale-95 transition-all">
-                <Plus size={18} /> Nouvelle Référence
+        <div className="flex gap-2">
+            <button onClick={() => setShowModal(true)} className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-900 font-bold text-[8px] uppercase tracking-widest flex items-center gap-2 shadow-sm hover:bg-slate-50 active:scale-95 transition-all">
+                <Plus size={12} /> Nouvelle Référence
             </button>
-            <button className="px-6 py-4 rounded-2xl bg-slate-900 text-white font-bold text-[11px] uppercase tracking-widest flex items-center gap-3 shadow-xl shadow-slate-900/20 active:scale-95 transition-all">
-                <BarChart3 size={18} /> Rapport Mensuel
+            <button className="px-3 py-1.5 rounded-lg bg-slate-900 text-white font-bold text-[8px] uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-slate-900/20 active:scale-95 transition-all">
+                <BarChart3 size={12} /> Rapport Mensuel
             </button>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           <StatCard label="Total Références" valeur={produits.length} subtext="Catalogue actif" color="slate" />
           <StatCard label="Valeur Marchande" valeur={`${valeurStockTotal.toLocaleString()}`} suffix="F" subtext="Estimation prix vente" color="slate" />
           <StatCard label="États Critiques" valeur={articlesEnAlerte} subtext="Sous seuil d'alerte" color={articlesEnAlerte > 0 ? "rose" : "slate"} important={articlesEnAlerte > 0} />
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-4 rounded-3xl border border-slate-200">
+      <div className="flex flex-col md:flex-row gap-2 items-center bg-white p-1.5 rounded-xl border border-slate-200">
           <div className="relative flex-grow">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input type="text" placeholder="Rechercher un produit dans l'inventaire..." value={recherche} onChange={(e) => setRecherche(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-slate-900 transition-all font-medium text-slate-900" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
+            <input type="text" placeholder="Rechercher un produit..." value={recherche} onChange={(e) => setRecherche(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-slate-900 transition-all font-medium text-slate-900 text-xs" />
           </div>
-          <div className="flex gap-2 bg-slate-100 p-1 rounded-xl">
+          <div className="flex gap-1.5 bg-slate-100 p-1 rounded-lg">
               {categoriesList.map(cat => (
                 <button key={cat} onClick={() => setFiltreCategorie(cat)}
-                  className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                  className={`px-2 py-1 rounded-md text-[7px] font-black uppercase tracking-widest transition-all ${
                     filtreCategorie === cat ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
                   }`}
                 >
@@ -239,16 +239,16 @@ const GestionStocks = () => {
           </div>
       </div>
 
-      <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
               <table className="w-full text-left">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] font-black uppercase tracking-widest">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[7px] font-black uppercase tracking-widest">
                   <tr>
-                    <th className="px-8 py-5">Article Référencé</th>
-                    <th className="px-8 py-5">Prix Unitaire</th>
-                    <th className="px-8 py-5">Situation Casiers</th>
-                    <th className="px-8 py-5">Stock Unitaire</th>
-                    <th className="px-8 py-5 text-right">Actions</th>
+                    <th className="px-2 py-1.5">Article</th>
+                    <th className="px-2 py-1.5">Prix</th>
+                    <th className="px-2 py-1.5">Casiers</th>
+                    <th className="px-2 py-1.5">Stock Unitaire</th>
+                    <th className="px-2 py-1.5 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -256,40 +256,40 @@ const GestionStocks = () => {
                     const estEnAlerte = p.stockTotal <= p.stockAlerte;
                     return (
                       <tr key={p.id} className={`hover:bg-slate-50 transition-colors ${estEnAlerte ? 'bg-red-50/30' : ''}`}>
-                        <td className="px-8 py-6">
-                          <div className="flex items-center gap-4">
-                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl bg-slate-100 border border-slate-200`}>
+                        <td className="px-2 py-1">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-5 h-5 rounded flex items-center justify-center text-sm bg-slate-100 border border-slate-200`}>
                               {p.emoji || '📦'}
                             </div>
                             <div>
-                              <div className="font-bold text-slate-900 text-base">{p.nom}</div>
-                              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{p.categorie}</div>
+                              <div className="font-bold text-slate-900 text-xs">{p.nom}</div>
+                              <div className="text-[7px] text-slate-400 font-bold uppercase tracking-widest">{p.categorie}</div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-8 py-6">
-                            <span className="text-slate-900 font-bold">{p.prix.toLocaleString()} F</span>
-                        </td>
-                        <td className="px-8 py-6">
-                          {p.categorie === 'Boisson' ? formatStock(p.stockTotal, p.unitesParCasier) : <span className="text-slate-300">-</span>}
-                        </td>
-                        <td className="px-8 py-6">
-                            <div className="flex items-center gap-3">
-                                <span className={`text-lg font-bold ${estEnAlerte ? 'text-red-500' : 'text-slate-900'}`}>{p.stockTotal}</span>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase">{p.uniteMesure || 'unités'}</span>
-                            </div>
-                        </td>
-                        <td className="px-8 py-6">
-                          <div className="flex justify-end gap-3">
+                        <td className="px-2 py-1">
+                             <span className="text-slate-900 font-bold text-[10px]">{p.prix.toLocaleString()} F</span>
+                         </td>
+                         <td className="px-2 py-1">
+                           {p.categorie === 'Boisson' ? formatStock(p.stockTotal, p.unitesParCasier) : <span className="text-slate-300">-</span>}
+                         </td>
+                         <td className="px-2 py-1">
+                             <div className="flex items-center gap-1.5">
+                                 <span className={`text-xs font-bold ${estEnAlerte ? 'text-red-500' : 'text-slate-900'}`}>{p.stockTotal}</span>
+                                 <span className="text-[7px] font-bold text-slate-400 uppercase">{p.uniteMesure || 'u'}</span>
+                             </div>
+                         </td>
+                        <td className="px-2 py-1">
+                          <div className="flex justify-end gap-2">
                              <button 
                                onClick={() => {
                                    setSelectedProduct(p);
                                    setStockReel(p.stockTotal);
                                    setShowComptage(true);
                                }}
-                               className="px-4 py-2 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all flex items-center gap-2"
+                               className="px-2 py-1 border border-slate-200 rounded-lg text-[8px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all flex items-center gap-1.5"
                              >
-                               <Archive size={14} /> Inventaire
+                               <Archive size={12} /> Inventaire
                              </button>
                              {p.categorie !== 'Ingrédient' && (
                                <button 
@@ -297,19 +297,19 @@ const GestionStocks = () => {
                                      setSelectedProduct(p);
                                      setShowRecetteModal(true);
                                  }}
-                                 className="px-4 py-2 border border-indigo-200 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all flex items-center gap-2"
+                                 className="px-2 py-1 border border-indigo-200 text-indigo-600 rounded-lg text-[8px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all flex items-center gap-1.5"
                                >
-                                 <Plus size={14} /> Recette
+                                 <Plus size={12} /> Recette
                                </button>
                              )}
-                             <div className="flex bg-slate-100 rounded-xl p-1 border border-slate-200">
-                                <button onClick={() => ajusterStock(p, -1, 'unite')} className="p-2 text-slate-400 hover:text-slate-900"><Minus size={14} /></button>
-                                <button onClick={() => ajusterStock(p, 1, 'unite')} className="p-2 text-slate-900"><Plus size={14} /></button>
+                             <div className="flex bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+                                <button onClick={() => ajusterStock(p, -1, 'unite')} className="p-1 text-slate-400 hover:text-slate-900"><Minus size={12} /></button>
+                                <button onClick={() => ajusterStock(p, 1, 'unite')} className="p-1 text-slate-900"><Plus size={12} /></button>
                              </div>
                              {p.categorie === 'Boisson' && (
-                               <div className="flex bg-slate-900 rounded-xl p-1 text-white shadow-lg shadow-slate-900/10">
-                                  <button onClick={() => ajusterStock(p, -1, 'casier')} className="p-2 opacity-50 hover:opacity-100"><Layers size={14} /></button>
-                                  <button onClick={() => ajusterStock(p, 1, 'casier')} className="p-2"><Plus size={14} /></button>
+                               <div className="flex bg-slate-900 rounded-lg p-0.5 text-white shadow-lg shadow-slate-900/10">
+                                  <button onClick={() => ajusterStock(p, -1, 'casier')} className="p-1 opacity-50 hover:opacity-100"><Layers size={12} /></button>
+                                  <button onClick={() => ajusterStock(p, 1, 'casier')} className="p-1"><Plus size={12} /></button>
                                </div>
                              )}
                           </div>
@@ -325,52 +325,52 @@ const GestionStocks = () => {
       <AnimatePresence>
         {/* Modal Création */}
         {showModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-                className="w-full max-w-xl bg-white rounded-[2.5rem] p-10 shadow-2xl relative"
+                className="w-full max-w-lg bg-white rounded-2xl p-4 shadow-2xl relative"
             >
-              <button onClick={() => setShowModal(false)} className="absolute top-8 right-8 p-3 text-slate-400 hover:text-slate-900 transition-all"><X size={24} /></button>
-              <div className="mb-10">
-                  <h3 className="text-3xl font-bold text-slate-900 tracking-tight">Nouvel Article</h3>
-                  <p className="text-slate-500 font-medium mt-1">Ajoutez une référence à votre catalogue de vente.</p>
+              <button onClick={() => setShowModal(false)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-900 transition-all"><X size={18} /></button>
+              <div className="mb-6">
+                  <h3 className="text-xl font-bold text-slate-900 tracking-tight">Nouvel Article</h3>
+                  <p className="text-slate-500 font-medium mt-0.5 text-[10px]">Ajoutez une référence à votre catalogue de vente.</p>
               </div>
-              <form onSubmit={ajouterProduit} className="grid grid-cols-2 gap-6">
+              <form onSubmit={ajouterProduit} className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Désignation</label>
+                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Désignation</label>
                   <input type="text" value={nom} onChange={(e)=>setNom(e.target.value)} placeholder="Ex: Heineken 33cl" required 
-                    className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none focus:border-slate-900 transition-all font-bold text-slate-900" />
+                    className="w-full h-8 bg-slate-50 border border-slate-200 rounded-lg px-3 outline-none focus:border-slate-900 transition-all font-bold text-slate-900 text-xs" />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Catégorie</label>
-                  <select value={categorie} onChange={(e)=>setCategorie(e.target.value as any)} className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-4 outline-none font-bold text-slate-900">
-                    <option value="Boisson">🥤 Boissons / Alcools</option>
-                    <option value="Ingrédient">🍅 Ingrédients / Cuisine</option>
-                    <option value="A-Côté">🍿 Divers et Accessoires</option>
+                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Catégorie</label>
+                  <select value={categorie} onChange={(e)=>setCategorie(e.target.value as any)} className="w-full h-8 bg-slate-50 border border-slate-200 rounded-lg px-2 outline-none font-bold text-slate-900 text-[10px]">
+                    <option value="Boisson">🥤 Boissons</option>
+                    <option value="Ingrédient">🍅 Ingrédients</option>
+                    <option value="A-Côté">🍿 Divers</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Prix Vente</label>
-                  <input type="number" value={prix} onChange={(e)=>setPrix(Number(e.target.value))} required className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-bold text-slate-900" />
+                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Prix Vente</label>
+                  <input type="number" value={prix} onChange={(e)=>setPrix(Number(e.target.value))} required className="w-full h-8 bg-slate-50 border border-slate-200 rounded-lg px-3 outline-none font-bold text-slate-900 text-xs" />
                 </div>
                 {categorie === 'Boisson' && (
                   <div className="col-span-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Contenance (Unités par Casier)</label>
-                    <input type="number" value={unitesParCasier} onChange={(e)=>setUnitesParCasier(Number(e.target.value))} className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-bold text-slate-900" />
+                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Unités / Casier</label>
+                    <input type="number" value={unitesParCasier} onChange={(e)=>setUnitesParCasier(Number(e.target.value))} className="w-full h-8 bg-slate-50 border border-slate-200 rounded-lg px-3 outline-none font-bold text-slate-900 text-xs" />
                   </div>
                 )}
                 <div className="col-span-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Poste de Production (Routing)</label>
-                  <select value={destination} onChange={(e)=>setDestination(e.target.value as any)} className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-4 outline-none font-bold text-slate-900">
-                    <option value="cuisine">👨‍🍳 Cuisine Centrale</option>
-                    <option value="bar">🍺 Bar / Comptoir</option>
-                    <option value="pizzeria">🍕 Pizzeria / Four</option>
-                    <option value="grill">🥩 Grillades / Braises</option>
-                    <option value="chicha">💨 Espace Chicha</option>
+                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Poste de Production</label>
+                  <select value={destination} onChange={(e)=>setDestination(e.target.value as any)} className="w-full h-8 bg-slate-50 border border-slate-200 rounded-lg px-2 outline-none font-bold text-slate-900 text-[10px]">
+                    <option value="cuisine">👨‍🍳 Cuisine</option>
+                    <option value="bar">🍺 Bar</option>
+                    <option value="pizzeria">🍕 Pizzeria</option>
+                    <option value="grill">🥩 Grillades</option>
+                    <option value="chicha">💨 Chicha</option>
                   </select>
                 </div>
-                <div className="col-span-2 flex gap-4 mt-6">
-                  <button type="button" onClick={()=>setShowModal(false)} className="flex-1 py-5 text-slate-400 font-bold uppercase text-[11px] tracking-widest">Abandonner</button>
-                  <button type="submit" className="flex-1 py-5 rounded-2xl bg-slate-900 text-white font-bold uppercase text-[11px] tracking-[0.2em] shadow-xl shadow-slate-900/20 active:scale-95 transition-all">Enregistrer</button>
+                <div className="col-span-2 flex gap-3 mt-4">
+                  <button type="button" onClick={()=>setShowModal(false)} className="flex-1 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest">Abandonner</button>
+                  <button type="submit" className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-bold uppercase text-[9px] tracking-[0.2em] shadow-xl shadow-slate-900/20 active:scale-95 transition-all">Enregistrer</button>
                 </div>
               </form>
             </motion.div>
@@ -379,45 +379,45 @@ const GestionStocks = () => {
 
         {/* Modal Comptage Physique */}
         {showComptage && selectedProduct && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-                className="w-full max-w-lg bg-white rounded-[2.5rem] p-10 shadow-2xl relative"
+                className="w-full max-w-md bg-white rounded-2xl p-4 shadow-2xl relative"
              >
-                <div className="mb-8">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-2xl">{selectedProduct.emoji}</div>
+                <div className="mb-6">
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-xl">{selectedProduct.emoji}</div>
                         <div>
-                            <h3 className="text-2xl font-bold text-slate-900">{selectedProduct.nom}</h3>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Comptage de régularisation</p>
+                            <h3 className="text-lg font-bold text-slate-900">{selectedProduct.nom}</h3>
+                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Régularisation</p>
                         </div>
                     </div>
                 </div>
 
-                <div className="space-y-6">
-                    <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex justify-between items-center">
+                <div className="space-y-4">
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex justify-between items-center">
                         <div className="text-center flex-1">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Stock Théorique</p>
-                            <p className="text-2xl font-bold text-slate-900">{selectedProduct.stockTotal}</p>
+                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Théorique</p>
+                            <p className="text-xl font-bold text-slate-900">{selectedProduct.stockTotal}</p>
                         </div>
-                        <div className="w-px h-10 bg-slate-200" />
+                        <div className="w-px h-8 bg-slate-200" />
                         <div className="text-center flex-1">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Écart Calculé</p>
-                            <p className={`text-2xl font-bold ${stockReel - selectedProduct.stockTotal < 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Écart</p>
+                            <p className={`text-xl font-bold ${stockReel - selectedProduct.stockTotal < 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
                                 {stockReel - selectedProduct.stockTotal > 0 ? '+' : ''}{stockReel - selectedProduct.stockTotal}
                             </p>
                         </div>
                     </div>
 
                     <div>
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 px-1">Quantité Réelle Comptée (Unités)</label>
+                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Réelle Comptée</label>
                         <input type="number" autoFocus value={stockReel} onChange={(e) => setStockReel(Number(e.target.value))}
-                            className="w-full h-20 bg-slate-100 border-2 border-slate-200 rounded-3xl text-center text-4xl font-black text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                            className="w-full h-10 bg-slate-100 border-2 border-slate-200 rounded-xl text-center text-lg font-black text-slate-900 outline-none focus:border-slate-900 transition-all" />
                     </div>
 
-                    <div className="flex gap-4 pt-4">
-                        <button onClick={() => setShowComptage(false)} className="flex-1 py-5 text-slate-400 font-bold uppercase text-[11px] tracking-widest">Annuler</button>
-                        <button onClick={validerComptage} className="flex-1 py-5 rounded-2xl bg-emerald-600 text-white font-bold uppercase text-[11px] tracking-widest shadow-xl shadow-emerald-600/20 active:scale-95 transition-all">
-                            Régulariser
+                    <div className="flex gap-3 pt-2">
+                        <button onClick={() => setShowComptage(false)} className="flex-1 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest">Annuler</button>
+                        <button onClick={validerComptage} className="flex-1 py-3 rounded-xl bg-emerald-600 text-white font-bold uppercase text-[9px] tracking-widest shadow-xl shadow-emerald-600/20 active:scale-95 transition-all">
+                            Valider
                         </button>
                     </div>
                 </div>
@@ -429,7 +429,7 @@ const GestionStocks = () => {
         {showRecetteModal && selectedProduct && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-                className="w-full max-w-2xl bg-white rounded-[2.5rem] p-10 shadow-2xl relative"
+                className="w-full max-w-2xl bg-white rounded-3xl p-6 shadow-2xl relative"
              >
                 <button onClick={() => setShowRecetteModal(false)} className="absolute top-8 right-8 p-3 text-slate-400 hover:text-slate-900 transition-all"><X size={24} /></button>
                 
@@ -442,7 +442,7 @@ const GestionStocks = () => {
                   {/* Liste des ingrédients actuels */}
                   <div className="space-y-4">
                     <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Ingrédients de la recette</h4>
-                    <div className="bg-slate-50 rounded-3xl p-4 min-h-[200px] border border-slate-100">
+                    <div className="bg-slate-50 rounded-2xl p-3 min-h-[150px] border border-slate-100">
                       {((selectedProduct as any).recette || []).length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-slate-400 opacity-50">
                           <Plus size={32} className="mb-2" />
@@ -476,7 +476,7 @@ const GestionStocks = () => {
                         <select 
                           value={ingredientSelectionne} 
                           onChange={(e) => setIngredientSelectionne(e.target.value)}
-                          className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-4 outline-none font-bold text-slate-900"
+                          className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 outline-none font-bold text-slate-900 text-xs"
                         >
                           <option value="">Sélectionner...</option>
                           {produits.filter(p => p.categorie === 'Ingrédient').map(p => (
@@ -492,12 +492,12 @@ const GestionStocks = () => {
                             type="number" 
                             value={quantiteIngredient} 
                             onChange={(e) => setQuantiteIngredient(Number(e.target.value))}
-                            className="flex-1 h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-bold text-slate-900" 
+                            className="flex-1 h-10 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none font-bold text-slate-900 text-xs" 
                           />
                           <button 
                             onClick={ajouterIngredientRecette}
                             disabled={!ingredientSelectionne}
-                            className="h-14 px-6 bg-slate-900 text-white rounded-2xl font-bold text-[10px] uppercase tracking-widest disabled:opacity-30 transition-all"
+                            className="h-10 px-4 bg-slate-900 text-white rounded-xl font-bold text-[8px] uppercase tracking-widest disabled:opacity-30 transition-all"
                           >
                             Ajouter
                           </button>

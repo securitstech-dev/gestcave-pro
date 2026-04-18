@@ -165,6 +165,24 @@ const SelectionMode = () => {
     }
   };
 
+  // Ajout du support clavier
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!showPinModal || loading) return;
+      
+      if (e.key >= '0' && e.key <= '9') {
+        handleKeyPress(e.key);
+      } else if (e.key === 'Backspace') {
+        setPin(p => p.slice(0, -1));
+      } else if (e.key === 'Escape') {
+        setShowPinModal(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showPinModal, loading, pin]);
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 md:p-12 relative overflow-hidden">
       
@@ -240,29 +258,6 @@ const SelectionMode = () => {
       >
         <LogOut size={16} /> Changer d'établissement
       </motion.button>
-
-      <button 
-        onClick={async () => {
-          const tid = toast.loading("Initialisation du scénario...");
-          await runScenarioSeed();
-          toast.success("Scénario initialisé ! Redémarrez si besoin.", { id: tid });
-        }}
-        className="mt-4 px-4 py-2 text-[8px] font-black text-slate-300 hover:text-slate-900 uppercase tracking-widest opacity-20 hover:opacity-100 transition-all"
-      >
-        Initialiser le Scénario "Étoile du Congo"
-      </button>
-
-      <button 
-        onClick={async () => {
-          const tid = toast.loading("Simulation du scénario complet...");
-          const success = await runFullScenarioSimulation();
-          if (success) toast.success("Scénario simulé ! Allez dans Finance pour voir les rapports.", { id: tid });
-          else toast.error("Erreur simulation", { id: tid });
-        }}
-        className="mt-2 px-4 py-2 text-[8px] font-black text-slate-300 hover:text-slate-900 uppercase tracking-widest opacity-20 hover:opacity-100 transition-all"
-      >
-        Simuler la journée du 17 Juin 2025
-      </button>
 
       {/* Modal PIN - Version Claire */}
       <AnimatePresence>

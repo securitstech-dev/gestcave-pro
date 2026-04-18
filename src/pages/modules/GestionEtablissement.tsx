@@ -59,90 +59,90 @@ const GestionEtablissement = () => {
   if (loading) return <div className="p-20 text-center font-black animate-pulse text-slate-400">Chargement de la boutique...</div>;
 
   return (
-    <div className="space-y-10 pb-20 max-w-5xl mx-auto">
+    <div className="space-y-4 pb-10 max-w-5xl mx-auto">
       <header>
-        <h2 className="text-4xl font-display font-black text-slate-900 tracking-tight uppercase">Configuration Boutique</h2>
-        <p className="text-slate-500 font-medium mt-1">Personnalisez l'identité de votre établissement.</p>
+        <h2 className="text-lg font-bold text-slate-900 tracking-tight">Configuration Boutique</h2>
+        <p className="text-slate-500 font-medium text-[9px] mt-0.5">Personnalisez l'identité de votre établissement.</p>
       </header>
 
-      <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        <div className="lg:col-span-2 space-y-8">
+      <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 space-y-4">
             {/* Infos Générales */}
-            <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-8">
-                <div className="flex items-center gap-4 mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
-                        <Building2 size={20} />
+            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm space-y-4">
+                <div className="flex items-center gap-3 mb-1">
+                    <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center">
+                        <Building2 size={16} />
                     </div>
-                    <h3 className="text-lg font-black text-slate-900">IDENTITÉ</h3>
+                    <h3 className="text-xs font-black text-slate-900 uppercase">Identité</h3>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Nom de l'Etablissement</label>
+                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Nom de l'Etablissement</label>
                         <input type="text" value={formData.nom} onChange={e => setFormData({...formData, nom: e.target.value})}
-                          className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-bold text-slate-900" />
+                          className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none font-bold text-slate-900 text-xs" />
                     </div>
                     <div>
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Slogan ou Description courte</label>
+                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Slogan ou Description</label>
                         <input type="text" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})}
-                          className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-medium text-slate-600" />
+                          className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none font-medium text-slate-600 text-xs" />
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Email de contact</label>
+                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Email de contact</label>
                         <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}
-                          className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-medium text-slate-900" />
+                          className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none font-medium text-slate-900 text-xs" />
                     </div>
                     <div>
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Téléphone principal</label>
+                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Téléphone</label>
                         <input type="text" value={formData.telephone} onChange={e => setFormData({...formData, telephone: e.target.value})}
-                          className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-bold text-slate-900" />
+                          className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none font-bold text-slate-900 text-xs" />
                     </div>
                 </div>
 
                 <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Adresse Géographique</label>
+                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Adresse Géographique</label>
                     <input type="text" value={formData.adresse} onChange={e => setFormData({...formData, adresse: e.target.value})}
-                      className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-medium text-slate-900" />
+                      className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none font-medium text-slate-900 text-xs" />
                 </div>
             </div>
 
             {/* Extras */}
-            <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-8">
-                <div className="flex items-center gap-4 mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                        <Globe size={20} />
+            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm space-y-4">
+                <div className="flex items-center gap-3 mb-1">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                        <Globe size={16} />
                     </div>
-                    <h3 className="text-lg font-black text-slate-900">DÉTAILS OPÉRATIONNELS</h3>
+                    <h3 className="text-xs font-black text-slate-900 uppercase">Détails opérationnels</h3>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Horaires d'ouverture</label>
+                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Horaires d'ouverture</label>
                         <input type="text" value={formData.horaires} onChange={e => setFormData({...formData, horaires: e.target.value})}
                           placeholder="Ex: 08h00 - 02h00"
-                          className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-medium text-slate-900" />
+                          className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none font-medium text-slate-900 text-xs" />
                     </div>
                     <div>
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Site Web / Facebook</label>
+                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Site Web / Facebook</label>
                         <input type="text" value={formData.siteWeb} onChange={e => setFormData({...formData, siteWeb: e.target.value})}
-                          className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-medium text-slate-900" />
+                          className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none font-medium text-slate-900 text-xs" />
                     </div>
                 </div>
             </div>
         </div>
 
-        <aside className="space-y-8">
+        <aside className="space-y-4">
             {/* Logo Preview */}
-            <div className="bg-slate-900 p-10 rounded-[2.5rem] text-white text-center">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-8">Logo de l'établissement</p>
-                <div className="w-32 h-32 mx-auto rounded-[2rem] bg-white/10 flex items-center justify-center mb-8 overflow-hidden group border border-white/5">
+            <div className="bg-slate-900 p-6 rounded-2xl text-white text-center">
+                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-4">Logo établissement</p>
+                <div className="w-20 h-20 mx-auto rounded-2xl bg-white/10 flex items-center justify-center mb-4 overflow-hidden border border-white/5">
                     {formData.logo ? (
                         <img src={formData.logo} alt="Logo" className="w-full h-full object-cover" />
                     ) : (
-                        <Image size={40} className="text-slate-700" />
+                        <Image size={24} className="text-slate-700" />
                     )}
                 </div>
                 <input 
@@ -150,20 +150,20 @@ const GestionEtablissement = () => {
                   value={formData.logo} 
                   onChange={e => setFormData({...formData, logo: e.target.value})}
                   placeholder="URL du logo..."
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-xs font-medium outline-none text-slate-300 mb-4"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-[10px] font-medium outline-none text-slate-300 mb-2"
                 />
-                <p className="text-[9px] text-slate-500 italic">Collez l'URL de votre image pour l'afficher sur vos reçus.</p>
+                <p className="text-[8px] text-slate-500 italic leading-tight">Apparaîtra sur vos reçus.</p>
             </div>
 
-            <div className="bg-emerald-50 border border-emerald-100 p-8 rounded-[2.5rem]">
-                <div className="flex items-center gap-4 mb-4">
-                    <ShieldCheck size={24} className="text-emerald-500" />
-                    <h4 className="font-black text-slate-900 text-sm uppercase">Sécurité</h4>
+            <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl">
+                <div className="flex items-center gap-3 mb-2">
+                    <ShieldCheck size={18} className="text-emerald-500" />
+                    <h4 className="font-black text-slate-900 text-[10px] uppercase">Sécurité</h4>
                 </div>
-                <p className="text-xs text-slate-600 leading-relaxed mb-6">Seul l'administrateur peut modifier ces informations. Elles seront utilisées pour générer vos entêtes de <strong className="text-slate-900">Factures & Reçus</strong>.</p>
+                <p className="text-[9px] text-slate-600 leading-relaxed mb-4">Seul l'administrateur peut modifier ces informations.</p>
                 
-                <button type="submit" className="w-full h-16 rounded-2xl bg-emerald-600 text-white font-black uppercase tracking-widest text-[11px] shadow-xl shadow-emerald-600/20 active:scale-95 transition-all flex items-center justify-center gap-3">
-                    <Save size={18} /> Enregistrer
+                <button type="submit" className="w-full h-12 rounded-xl bg-emerald-600 text-white font-black uppercase tracking-widest text-[9px] shadow-xl shadow-emerald-600/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <Save size={14} /> Enregistrer
                 </button>
             </div>
         </aside>

@@ -101,41 +101,41 @@ const GestionAchats = () => {
     const dernierAchat = achats.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
 
     return (
-        <div className="space-y-10">
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="space-y-4">
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Approvisionnements</h2>
-                    <p className="text-slate-500 font-medium mt-1">Gérez vos arrivages stocks et les flux de trésorerie associés.</p>
+                    <h2 className="text-lg font-display font-black text-slate-900 tracking-tight uppercase">Approvisionnements</h2>
+                    <p className="text-slate-500 font-medium text-[10px]">Gérez vos arrivages stocks et les flux de trésorerie.</p>
                 </div>
                 {!showForm && (
                 <button onClick={() => setShowForm(true)}
-                    className="px-6 py-4 rounded-2xl bg-slate-900 text-white font-bold text-[11px] uppercase tracking-widest flex items-center gap-3 shadow-xl shadow-slate-900/20 active:scale-95 transition-all">
-                    <Plus size={18} /> Enregistrer un arrivage
+                    className="px-3 py-1.5 rounded-xl bg-slate-900 text-white font-bold text-[9px] uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-slate-900/20 active:scale-95 transition-all">
+                    <Plus size={14} /> Nouvel arrivage
                 </button>
                 )}
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <StatCard label="Dépenses (Mois)" valeur={`${depensesMois.toLocaleString()}`} suffix="F" color="slate" />
-                <StatCard label="Volumes Entrées" valeur={achats.length} subtext="Bons d'achats" color="slate" />
-                <StatCard label="Dernière Article" valeur={dernierAchat ? dernierAchat.produitNom : '-'} subtext={dernierAchat ? new Date(dernierAchat.date).toLocaleDateString() : 'Aucun'} color="slate" />
+                <StatCard label="Volumes Entrées" valeur={achats.length} color="slate" />
+                <StatCard label="Dernier Article" valeur={dernierAchat ? dernierAchat.produitNom : '-'} subtext={dernierAchat ? new Date(dernierAchat.date).toLocaleDateString() : 'Aucun'} color="slate" />
             </div>
 
             <AnimatePresence mode="wait">
                 {showForm ? (
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
-                        className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-2xl relative"
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                        className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xl relative"
                     >
-                        <button onClick={() => setShowForm(false)} className="absolute top-8 right-8 p-3 text-slate-400 hover:text-slate-900 transition-all"><X size={24} /></button>
-                        <div className="mb-10">
-                            <h3 className="text-3xl font-bold text-slate-900 tracking-tight">Nouveau Bon d'Achat</h3>
-                            <p className="text-slate-500 font-medium mt-1">Saisissez les détails de l'approvisionnement pour mettre à jour les stocks.</p>
+                        <button onClick={() => setShowForm(false)} className="absolute top-3 right-3 p-2 text-slate-400 hover:text-slate-900 transition-all"><X size={18} /></button>
+                        <div className="mb-4">
+                            <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase">Nouveau Bon d'Achat</h3>
+                            <p className="text-slate-500 font-medium text-[10px]">Saisissez les détails de l'approvisionnement.</p>
                         </div>
 
-                        <form onSubmit={enregistrerAchat} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <form onSubmit={enregistrerAchat} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="col-span-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Référence Article</label>
-                                <select className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none focus:border-slate-900 transition-all font-bold text-slate-900" 
+                                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Référence Article</label>
+                                <select className="w-full h-9 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none focus:border-slate-900 transition-all font-bold text-slate-900 text-sm" 
                                     value={produitId} onChange={(e) => setProduitId(e.target.value)} required>
                                     <option value="">Sélectionnez un produit...</option>
                                     {produits.map(p => <option key={p.id} value={p.id}>{p.nom} (Actuel: {p.stockTotal})</option>)}
@@ -143,79 +143,79 @@ const GestionAchats = () => {
                             </div>
 
                             <div className="col-span-2 md:col-span-1">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Unité de mesure</label>
-                                <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+                                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Unité</label>
+                                <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
                                     <button type="button" onClick={() => setModeAchat('casier')}
-                                        className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${modeAchat === 'casier' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>Casiers</button>
+                                        className={`flex-1 py-1 rounded-md text-[8px] font-black uppercase tracking-widest transition-all ${modeAchat === 'casier' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>Casiers</button>
                                     <button type="button" onClick={() => setModeAchat('bouteille')}
-                                        className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${modeAchat === 'bouteille' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>Unités</button>
+                                        className={`flex-1 py-1 rounded-md text-[8px] font-black uppercase tracking-widest transition-all ${modeAchat === 'bouteille' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>Unités</button>
                                 </div>
                             </div>
 
                             <div>
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Quantité à entrer</label>
+                                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Quantité</label>
                                 <input type="number" value={quantite} onChange={(e) => setQuantite(Number(e.target.value))}
-                                    className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-bold text-slate-900" min="1" required />
+                                    className="w-full h-9 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none font-bold text-slate-900 text-sm" min="1" required />
                             </div>
 
                             <div>
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Prix Achat unitaire (F)</label>
+                                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Prix Achat unitaire (F)</label>
                                 <input type="number" value={prixAchat} onChange={(e) => setPrixAchat(Number(e.target.value))}
-                                    className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-bold text-slate-900" required />
+                                    className="w-full h-9 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none font-bold text-slate-900 text-sm" required />
                             </div>
 
                             <div>
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Source / Fournisseur</label>
+                                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Source / Fournisseur</label>
                                 <input type="text" value={fournisseur} onChange={(e) => setFournisseur(e.target.value)}
-                                    className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-medium text-slate-600" placeholder="Ex: Bracingo..." />
+                                    className="w-full h-9 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none font-medium text-slate-600 text-sm" placeholder="Ex: Bracingo..." />
                             </div>
 
-                            <div className="col-span-2 bg-slate-50 p-6 rounded-3xl border border-slate-200 flex items-center justify-between">
+                            <div className="col-span-2 bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center justify-between">
                                  <div>
-                                     <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Coût d'acquisition Total</p>
-                                     <p className="text-3xl font-bold text-slate-900">{(quantite * prixAchat).toLocaleString()} <span className="text-sm font-black italic">F CFA</span></p>
+                                     <p className="text-[8px] text-slate-400 font-black uppercase tracking-widest">Coût Total</p>
+                                     <p className="text-lg font-black text-slate-900">{(quantite * prixAchat).toLocaleString()} <span className="text-[10px] italic">F</span></p>
                                  </div>
-                                 <button type="submit" className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase text-[11px] tracking-widest shadow-xl shadow-slate-900/20 active:scale-95 transition-all">Valider le Bon</button>
+                                 <button type="submit" className="px-4 py-2 bg-slate-900 text-white rounded-xl font-bold uppercase text-[9px] tracking-widest shadow-xl shadow-slate-900/20 active:scale-95 transition-all">Valider</button>
                             </div>
                         </form>
                     </motion.div>
                 ) : (
-                    <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-                        <div className="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                            <h3 className="font-bold text-slate-900 flex items-center gap-2 text-sm uppercase tracking-tight">Historique des entrées</h3>
-                            <button className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors">Voir l'archive complète</button>
+                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                        <div className="p-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                            <h3 className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Historique</h3>
+                            <button className="text-[8px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors">Archive</button>
                         </div>
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto no-scrollbar">
                             <table className="w-full text-left">
-                                <thead className="text-[10px] text-slate-400 font-black uppercase tracking-widest border-b border-slate-50">
+                                <thead className="text-[8px] text-slate-400 font-black uppercase tracking-widest border-b border-slate-50">
                                     <tr>
-                                        <th className="px-8 py-5">Date / Heure</th>
-                                        <th className="px-8 py-5">Article Flux</th>
-                                        <th className="px-8 py-5">Volume Entrant</th>
-                                        <th className="px-8 py-5 text-right">Dépense Associée</th>
+                                        <th className="px-4 py-2">Date</th>
+                                        <th className="px-4 py-2">Article</th>
+                                        <th className="px-4 py-2">Volume</th>
+                                        <th className="px-4 py-2 text-right">Montant</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
                                     {achats.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(achat => (
-                                        <tr key={achat.id} className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-8 py-5">
-                                                <p className="text-sm font-bold text-slate-900">{new Date(achat.date).toLocaleDateString()}</p>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase">{new Date(achat.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                                        <tr key={achat.id} className="hover:bg-slate-50/30 transition-colors">
+                                            <td className="px-4 py-1.5">
+                                                <p className="text-[10px] font-black text-slate-900 uppercase tracking-tight">{new Date(achat.date).toLocaleDateString()}</p>
+                                                <p className="text-[8px] text-slate-400 font-bold uppercase">{new Date(achat.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                                             </td>
-                                            <td className="px-8 py-5">
-                                                <p className="font-bold text-slate-900 text-base">{achat.produitNom}</p>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase">Source: {achat.fournisseur || '-'}</p>
+                                            <td className="px-4 py-1.5">
+                                                <p className="font-bold text-slate-900 text-[11px] uppercase">{achat.produitNom}</p>
+                                                <p className="text-[8px] text-slate-400 font-bold uppercase">{achat.fournisseur || '-'}</p>
                                             </td>
-                                            <td className="px-8 py-5">
+                                            <td className="px-4 py-1.5">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="bg-slate-100 text-slate-900 px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-slate-200">
+                                                    <span className="bg-slate-100 text-slate-900 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border border-slate-200">
                                                        +{achat.quantiteSaisie} {achat.modeAchat}
                                                     </span>
-                                                    <span className="text-[10px] text-slate-400 font-medium italic">({achat.quantiteUnites} unités net)</span>
+                                                    <span className="text-[8px] text-slate-400 font-bold italic uppercase">({achat.quantiteUnites} u)</span>
                                                 </div>
                                             </td>
-                                            <td className="px-8 py-5 text-right">
-                                                <span className="text-lg font-bold text-slate-900">{achat.total.toLocaleString()} F</span>
+                                            <td className="px-4 py-1.5 text-right">
+                                                <span className="text-sm font-black text-slate-900">{achat.total.toLocaleString()} F</span>
                                             </td>
                                         </tr>
                                     ))}
