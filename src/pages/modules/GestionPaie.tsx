@@ -51,36 +51,70 @@ const GestionPaie = () => {
   const [anneeSelectionnee, setAnneeSelectionnee] = useState(new Date().getFullYear());
 
   useEffect(() => {
-    if (!profil?.etablissement_id) return;
+    if (!profil?.etablissement_id) {
+      // Si pas d'établissement, on ne peut rien charger mais on arrête le chargement
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
 
     const debutMois = new Date(anneeSelectionnee, moisSelectionne - 1, 1);
     const finMois = new Date(anneeSelectionnee, moisSelectionne, 0, 23, 59, 59);
 
     const chargerEtablissement = async () => {
       try {
-        const docRef = doc(db, 'etablissements', profil.etablissement_id);
+        const docRef = doc(db, 'etablissements', profil.etablissement_id!);
         const snap = await getDoc(docRef);
         if (snap.exists()) setEtablissementNom(snap.data().nom || 'Mon Établissement');
-      } catch (e) {}
+      } catch (e) {
+        console.error("Erreur chargement établissement:", e);
+      }
     };
     chargerEtablissement();
 
+    // Système pour suivre le chargement de chaque flux
+    let ready = { emp: false, sessions: false, avances: false, trans: false };
+    const checkReady = () => {
+      if (ready.emp && ready.sessions && ready.avances && ready.trans) {
+        setLoading(false);
+      }
+    };
+
     // Charger les employés
     const qEmp = query(collection(db, 'employes'), where('etablissement_id', '==', profil.etablissement_id));
-    const unsubEmp = onSnapshot(qEmp, (snap) => {
-      setEmployes(snap.docs.map(d => ({ id: d.id, ...d.data() })) as Employe[]);
-    });
+    const unsubEmp = onSnapshot(qEmp, 
+      (snap) => {
+        setEmployes(snap.docs.map(d => ({ id: d.id, ...d.data() })) as Employe[]);
+        ready.emp = true;
+        checkReady();
+      },
+      (err) => {
+        console.error("Erreur employes:", err);
+        ready.emp = true;
+        checkReady();
+      }
+    );
 
-    // Charger les sessions de travail du mois
+    // Charger les sessions de travail du mois (sessions terminées ou en cours)
     const qSessions = query(
       collection(db, 'pointage_presence'), 
       where('etablissement_id', '==', profil.etablissement_id),
       where('debut', '>=', Timestamp.fromDate(debutMois)),
       where('debut', '<=', Timestamp.fromDate(finMois))
     );
-    const unsubSessions = onSnapshot(qSessions, (snap) => {
-      setSessions(snap.docs.map(d => ({ id: d.id, ...d.data() })) as SessionTravail[]);
-    });
+    const unsubSessions = onSnapshot(qSessions, 
+      (snap) => {
+        setSessions(snap.docs.map(d => ({ id: d.id, ...d.data() })) as SessionTravail[]);
+        ready.sessions = true;
+        checkReady();
+      },
+      (err) => {
+        console.error("Erreur sessions:", err);
+        ready.sessions = true;
+        checkReady();
+      }
+    );
 
     // Charger les avances du mois
     const qAvances = query(
@@ -89,9 +123,18 @@ const GestionPaie = () => {
       where('date', '>=', debutMois.toISOString()),
       where('date', '<=', finMois.toISOString())
     );
-    const unsubAvances = onSnapshot(qAvances, (snap) => {
-      setAvances(snap.docs.map(d => d.data()) as Avance[]);
-    });
+    const unsubAvances = onSnapshot(qAvances, 
+      (snap) => {
+        setAvances(snap.docs.map(d => d.data()) as Avance[]);
+        ready.avances = true;
+        checkReady();
+      },
+      (err) => {
+        console.error("Erreur avances:", err);
+        ready.avances = true;
+        checkReady();
+      }
+    );
 
     // Charger les transactions pour les commissions
     const qTrans = query(
@@ -100,12 +143,31 @@ const GestionPaie = () => {
       where('date', '>=', debutMois.toISOString()),
       where('date', '<=', finMois.toISOString())
     );
-    const unsubTrans = onSnapshot(qTrans, (snap) => {
-      setTransactions(snap.docs.map(d => d.data()));
-      setLoading(false);
-    });
+    const unsubTrans = onSnapshot(qTrans, 
+      (snap) => {
+        setTransactions(snap.docs.map(d => d.data()));
+        ready.trans = true;
+        checkReady();
+      },
+      (err) => {
+        console.error("Erreur transactions:", err);
+        ready.trans = true;
+        checkReady();
+      }
+    );
 
-    return () => { unsubEmp(); unsubSessions(); unsubAvances(); unsubTrans(); };
+    // Sécurité : si après 5 secondes on est toujours en chargement, on force l'affichage
+    const timeout = setTimeout(() => {
+      setLoading(false);
+    }, 5000);
+
+    return () => { 
+      unsubEmp(); 
+      unsubSessions(); 
+      unsubAvances(); 
+      unsubTrans(); 
+      clearTimeout(timeout);
+    };
   }, [profil?.etablissement_id, moisSelectionne, anneeSelectionnee]);
 
   const calculerBulletin = (emp: Employe) => {
