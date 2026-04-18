@@ -22,6 +22,7 @@ interface Produit {
   stockAlerte: number;
   emoji?: string;
   uniteMesure?: string;
+  destination_production?: 'cuisine' | 'bar' | 'pizzeria' | 'grill' | 'chicha';
 }
 
 const GestionStocks = () => {
@@ -43,6 +44,7 @@ const GestionStocks = () => {
   const [stockAlerte, setStockAlerte] = useState(10);
   const [emoji, setEmoji] = useState('🥤');
   const [uniteMesure, setUniteMesure] = useState('bouteilles');
+  const [destination, setDestination] = useState<'cuisine' | 'bar' | 'pizzeria' | 'grill' | 'chicha'>('cuisine');
 
   useEffect(() => {
     if (!profil?.etablissement_id) return;
@@ -66,6 +68,7 @@ const GestionStocks = () => {
         stockTotal: 0,
         stockAlerte: Number(stockAlerte),
         emoji,
+        destination_production: destination,
         etablissement_id: profil.etablissement_id,
         dateCreation: new Date().toISOString()
       });
@@ -294,6 +297,16 @@ const GestionStocks = () => {
                     <input type="number" value={unitesParCasier} onChange={(e)=>setUnitesParCasier(Number(e.target.value))} className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-bold text-slate-900" />
                   </div>
                 )}
+                <div className="col-span-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Poste de Production (Routing)</label>
+                  <select value={destination} onChange={(e)=>setDestination(e.target.value as any)} className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-4 outline-none font-bold text-slate-900">
+                    <option value="cuisine">👨‍🍳 Cuisine Centrale</option>
+                    <option value="bar">🍺 Bar / Comptoir</option>
+                    <option value="pizzeria">🍕 Pizzeria / Four</option>
+                    <option value="grill">🥩 Grillades / Braises</option>
+                    <option value="chicha">💨 Espace Chicha</option>
+                  </select>
+                </div>
                 <div className="col-span-2 flex gap-4 mt-6">
                   <button type="button" onClick={()=>setShowModal(false)} className="flex-1 py-5 text-slate-400 font-bold uppercase text-[11px] tracking-widest">Abandonner</button>
                   <button type="submit" className="flex-1 py-5 rounded-2xl bg-slate-900 text-white font-bold uppercase text-[11px] tracking-[0.2em] shadow-xl shadow-slate-900/20 active:scale-95 transition-all">Enregistrer</button>

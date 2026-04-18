@@ -111,6 +111,7 @@ export interface LigneCommande {
   statut: 'en_attente' | 'en_preparation' | 'pret' | 'servi';
   note?: string;
   heureEnvoi?: string;
+  destination?: 'cuisine' | 'bar' | 'pizzeria' | 'grill' | 'chicha';
 }
 
 export interface Commande {
@@ -155,6 +156,7 @@ export interface Produit {
   unitesParCasier?: number;
   unite?: string;
   emoji?: string;
+  destination_production?: 'cuisine' | 'bar' | 'pizzeria' | 'grill' | 'chicha';
 }
 
 interface PosState {
@@ -177,6 +179,7 @@ interface PosState {
   supprimerLigne: (commandeId: string, ligneId: string) => Promise<void>;
   envoyerCuisine: (commandeId: string) => Promise<void>;
   marquerLignePrete: (commandeId: string, ligneId: string) => Promise<void>;
+  marquerLigneEnPreparation: (commandeId: string, ligneId: string) => Promise<void>;
   marquerCommandeServie: (commandeId: string) => Promise<void>;
   encaisserCommande: (commandeId: string, modePaiement: 'comptant' | 'credit', clientNom: string, montantRemise?: number, montantPaye?: number, clientContact?: string, refPaiement?: string) => Promise<void>;
   annulerCommande: (commandeId: string) => Promise<void>;
@@ -305,7 +308,8 @@ export const usePOSStore = create<PosState>((set, get) => ({
           id: Math.random().toString(36).substr(2, 9),
           produitId: produit.id, produitNom: produit.nom,
           quantite: 1, prixUnitaire: Number(produit.prix),
-          sousTotal: Number(produit.prix), statut: 'en_attente'
+          sousTotal: Number(produit.prix), statut: 'en_attente',
+          destination: produit.destination_production || (produit.categorie === 'Boisson' ? 'bar' : 'cuisine')
         });
       }
 
@@ -367,11 +371,21 @@ export const usePOSStore = create<PosState>((set, get) => ({
         }
     });
 
-    const nvele = lignes.map(l => l.statut === 'en_attente' ? { ...l, statut: 'pret', heureEnvoi: mtn } : l);
+    // Les lignes restent en 'en_attente' (du point de vue cuisine) mais avec une heure d'envoi
+    const nvele = lignes.map(l => l.statut === 'en_attente' ? { ...l, heureEnvoi: mtn } : l);
     batch.update(commandeRef, { statut: 'envoyee', lignes: nvele });
     await batch.commit();
     await get().refreshCommande(commandeId);
     toast.success("Tournée validée !");
+  },
+
+  marquerLigneEnPreparation: async (commandeId, ligneId) => {
+    const ref = doc(db, 'commandes', commandeId);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return;
+    const nvelles = (snap.data().lignes || []).map((l:any) => l.id === ligneId ? {...l, statut: 'en_preparation'} : l);
+    await updateDoc(ref, { lignes: nvelles });
+    await get().refreshCommande(commandeId);
   },
 
   marquerLignePrete: async (commandeId, ligneId) => {
