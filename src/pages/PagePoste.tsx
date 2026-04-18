@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Smartphone, ChefHat, Receipt, LayoutDashboard, Key, Wifi, WifiOff, Zap, X, Clock } from 'lucide-react';
+import { Smartphone, ChefHat, Receipt, LayoutDashboard, Key, Wifi, WifiOff, Zap, X, Clock, Shield } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc, addDoc } from 'firebase/firestore';
 import { usePOSStore } from '../store/posStore';
@@ -53,6 +53,15 @@ const PagePoste = () => {
       role: 'caissier',
       route: '/caisse',
       couleur: 'emerald',
+    },
+    {
+      id: 'manager',
+      titre: 'TERMINAL GÉRANT',
+      description: 'Finance, RH, Salaires & Stocks',
+      icon: <Shield size={32} />,
+      role: 'gerant',
+      route: `/manager/${etablissementId}`,
+      couleur: 'rose',
     },
   ];
 

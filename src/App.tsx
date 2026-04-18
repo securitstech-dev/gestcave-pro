@@ -14,6 +14,7 @@ import PageActivation from './pages/PageActivation';
 import PagePoste from './pages/PagePoste';
 import PageDemoScenario from './pages/PageDemoScenario';
 import PagePointage from './pages/PagePointage';
+import PageTerminalManager from './pages/PageTerminalManager';
 import RoleGuard from './components/auth/RoleGuard';
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
           <Route path="/" element={<PageAccueil />} />
           <Route path="/demo-scenario" element={<PageDemoScenario />} />
           <Route path="/pointage/:etablissementId" element={<PagePointage />} />
+          <Route path="/manager/:etablissementId" element={<PageTerminalManager />} />
           <Route path="/connexion" element={<PageConnexion />} />
           <Route path="/activation" element={<PageActivation />} />
           
