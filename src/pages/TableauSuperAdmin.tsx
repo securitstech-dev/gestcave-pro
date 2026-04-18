@@ -210,6 +210,21 @@ const TableauSuperAdmin = () => {
     }
   };
 
+  const reinitialiserMotDePasse = async (email: string, nomEtab: string) => {
+    if (!window.confirm(`Envoyer un e-mail de réinitialisation de mot de passe à l'administrateur de ${nomEtab} (${email}) ?`)) return;
+    const toastId = toast.loading('Envoi de la demande...');
+    try {
+        const { getAuth, sendPasswordResetEmail } = await import('firebase/auth');
+        const auth = getAuth();
+        await sendPasswordResetEmail(auth, email);
+        toast.dismiss(toastId);
+        toast.success(`E-mail de réinitialisation envoyé à ${email} !`);
+    } catch (err: any) {
+        toast.dismiss(toastId);
+        toast.error(`Erreur : ${err.message}`);
+    }
+  };
+
   const viderBase = async () => {
     if (!window.confirm("ATTENTION : Supprimer TOUTES LES DONNÉES ? Seul le Super Admin sera conservé.")) return;
     const collectionsAVider = ['demandes_acces', 'etablissements', 'invitations', 'tables', 'produits', 'commandes', 'transactions_pos', 'paiements', 'employes', 'achats', 'utilisateurs'];
@@ -525,7 +540,10 @@ const TableauSuperAdmin = () => {
                           <button onClick={() => setModalEtabDetails(etab)} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-900 transition-colors border border-slate-200" title="Informations Clients">
                             <Info size={14} />
                           </button>
-                          <button onClick={() => regenererInvitation(etab)} className="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-500 rounded-lg border border-indigo-200 transition-colors" title="Régénérer lien de connexion">
+                          <button onClick={() => reinitialiserMotDePasse(etab.email_contact, etab.nom)} className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-500 rounded-lg border border-blue-200 transition-colors" title="Réinitialiser Mot de Passe (Email)">
+                            <Shield size={14} />
+                          </button>
+                          <button onClick={() => regenererInvitation(etab)} className="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-500 rounded-lg border border-indigo-200 transition-colors" title="Régénérer lien d'activation (Nouveau Client)">
                             <Key size={14} />
                           </button>
                           <button 

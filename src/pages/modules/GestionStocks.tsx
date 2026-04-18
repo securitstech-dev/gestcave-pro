@@ -23,6 +23,11 @@ interface Produit {
   emoji?: string;
   uniteMesure?: string;
   destination_production?: 'cuisine' | 'bar' | 'pizzeria' | 'grill' | 'chicha';
+  recette?: {
+    ingredientId: string;
+    nom: string;
+    quantite: number;
+  }[];
 }
 
 const GestionStocks = () => {
@@ -33,8 +38,11 @@ const GestionStocks = () => {
   const [filtreCategorie, setFiltreCategorie] = useState<string>('Tous');
   const [showModal, setShowModal] = useState(false);
   const [showComptage, setShowComptage] = useState(false);
+  const [showRecetteModal, setShowRecetteModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Produit | null>(null);
   const [stockReel, setStockReel] = useState<number>(0);
+  const [ingredientSelectionne, setIngredientSelectionne] = useState('');
+  const [quantiteIngredient, setQuantiteIngredient] = useState(1);
 
   // Formulaire Nouvel Article
   const [nom, setNom] = useState('');
@@ -122,6 +130,48 @@ const GestionStocks = () => {
         setShowComptage(false);
     } catch (e) {
         toast.error("Erreur de régularisation");
+    }
+  };
+
+  const ajouterIngredientRecette = async () => {
+    if (!selectedProduct || !ingredientSelectionne) return;
+    
+    const ingredient = produits.find(p => p.id === ingredientSelectionne);
+    if (!ingredient) return;
+
+    const nouvelleRecette = [
+      ...(selectedProduct as any).recette || [],
+      {
+        ingredientId: ingredient.id,
+        nom: ingredient.nom,
+        quantite: quantiteIngredient
+      }
+    ];
+
+    try {
+      await updateDoc(doc(db, 'produits', selectedProduct.id), {
+        recette: nouvelleRecette
+      });
+      toast.success(`Ingredient ajouté à la recette`);
+      setIngredientSelectionne('');
+      setQuantiteIngredient(1);
+    } catch (e) {
+      toast.error("Erreur de mise à jour");
+    }
+  };
+
+  const supprimerIngredientRecette = async (idx: number) => {
+    if (!selectedProduct) return;
+    const nouvelleRecette = [...((selectedProduct as any).recette || [])];
+    nouvelleRecette.splice(idx, 1);
+
+    try {
+      await updateDoc(doc(db, 'produits', selectedProduct.id), {
+        recette: nouvelleRecette
+      });
+      toast.success("Ingredient retiré");
+    } catch (e) {
+      toast.error("Erreur de mise à jour");
     }
   };
 
@@ -241,6 +291,17 @@ const GestionStocks = () => {
                              >
                                <Archive size={14} /> Inventaire
                              </button>
+                             {p.categorie !== 'Ingrédient' && (
+                               <button 
+                                 onClick={() => {
+                                     setSelectedProduct(p);
+                                     setShowRecetteModal(true);
+                                 }}
+                                 className="px-4 py-2 border border-indigo-200 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all flex items-center gap-2"
+                               >
+                                 <Plus size={14} /> Recette
+                               </button>
+                             )}
                              <div className="flex bg-slate-100 rounded-xl p-1 border border-slate-200">
                                 <button onClick={() => ajusterStock(p, -1, 'unite')} className="p-2 text-slate-400 hover:text-slate-900"><Minus size={14} /></button>
                                 <button onClick={() => ajusterStock(p, 1, 'unite')} className="p-2 text-slate-900"><Plus size={14} /></button>
@@ -359,6 +420,106 @@ const GestionStocks = () => {
                             Régulariser
                         </button>
                     </div>
+                </div>
+             </motion.div>
+          </div>
+        )}
+
+        {/* Modal Configuration Recette */}
+        {showRecetteModal && selectedProduct && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                className="w-full max-w-2xl bg-white rounded-[2.5rem] p-10 shadow-2xl relative"
+             >
+                <button onClick={() => setShowRecetteModal(false)} className="absolute top-8 right-8 p-3 text-slate-400 hover:text-slate-900 transition-all"><X size={24} /></button>
+                
+                <div className="mb-8">
+                    <h3 className="text-2xl font-bold text-slate-900">Composition : {selectedProduct.nom}</h3>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Définissez les ingrédients consommés lors de la vente</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Liste des ingrédients actuels */}
+                  <div className="space-y-4">
+                    <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Ingrédients de la recette</h4>
+                    <div className="bg-slate-50 rounded-3xl p-4 min-h-[200px] border border-slate-100">
+                      {((selectedProduct as any).recette || []).length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full text-slate-400 opacity-50">
+                          <Plus size={32} className="mb-2" />
+                          <p className="text-[10px] font-bold uppercase">Aucun ingrédient</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {((selectedProduct as any).recette || []).map((item: any, idx: number) => (
+                            <div key={idx} className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                              <div>
+                                <p className="font-bold text-slate-900 text-sm">{item.nom}</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{item.quantite} unité(s)</p>
+                              </div>
+                              <button onClick={() => supprimerIngredientRecette(idx)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-all">
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Ajout d'un ingrédient */}
+                  <div className="space-y-6">
+                    <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Ajouter un élément</h4>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Choisir Ingrédient</label>
+                        <select 
+                          value={ingredientSelectionne} 
+                          onChange={(e) => setIngredientSelectionne(e.target.value)}
+                          className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-4 outline-none font-bold text-slate-900"
+                        >
+                          <option value="">Sélectionner...</option>
+                          {produits.filter(p => p.categorie === 'Ingrédient').map(p => (
+                            <option key={p.id} value={p.id}>{p.nom}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Quantité à déduire</label>
+                        <div className="flex items-center gap-4">
+                          <input 
+                            type="number" 
+                            value={quantiteIngredient} 
+                            onChange={(e) => setQuantiteIngredient(Number(e.target.value))}
+                            className="flex-1 h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-bold text-slate-900" 
+                          />
+                          <button 
+                            onClick={ajouterIngredientRecette}
+                            disabled={!ingredientSelectionne}
+                            className="h-14 px-6 bg-slate-900 text-white rounded-2xl font-bold text-[10px] uppercase tracking-widest disabled:opacity-30 transition-all"
+                          >
+                            Ajouter
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl">
+                      <div className="flex gap-3">
+                        <AlertCircle className="text-amber-600 shrink-0" size={18} />
+                        <p className="text-[10px] font-bold text-amber-700 leading-relaxed uppercase">
+                          Le stock des ingrédients sera déduit automatiquement à chaque validation de commande en cuisine.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-10 pt-8 border-t border-slate-100 flex justify-end">
+                    <button onClick={() => setShowRecetteModal(false)} className="px-10 py-5 bg-slate-900 text-white rounded-2xl font-bold uppercase text-[11px] tracking-widest shadow-xl shadow-slate-900/20 active:scale-95 transition-all">
+                        Terminer la configuration
+                    </button>
                 </div>
              </motion.div>
           </div>

@@ -5,7 +5,8 @@ import {
   Settings, LogOut, ChevronRight, Package, CreditCard, 
   Layout, LayoutDashboard, Zap, Activity, ShieldCheck, Shield,
   Calendar, ArrowUpRight, ArrowDownRight, MoreVertical, DollarSign,
-  Bell, Search, Menu, X, PlusCircle, Globe, History, ArrowRight, ArrowLeft, Receipt, Clock
+  Bell, Search, Menu, X, PlusCircle, Globe, History, ArrowRight, ArrowLeft, Receipt, Clock,
+  ChefHat, Flame, Timer
 } from 'lucide-react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -267,78 +268,112 @@ const DashboardAccueil = ({ profil, navigate }: any) => {
     setTimeout(() => setLienCopie(false), 3000);
   };
 
+  const { sessionActive } = usePOSStore();
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-12 pb-20">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 px-2">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 px-2">
         <div>
           <div className="flex items-center gap-2 mb-2">
              <span className="px-3 py-1 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest rounded-full">Vue Patron</span>
              <span className="text-[10px] text-slate-400 font-bold">• Temps Réel Actif</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter">Tableau de Bord</h1>
+          <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter uppercase">Executive Suite</h1>
+          <p className="text-slate-500 font-medium mt-1">Supervision globale et performance opérationnelle.</p>
         </div>
         
         <div className="flex gap-4 w-full md:w-auto">
-             <button
-               onClick={copierLienPoste}
-               className={`flex-1 md:flex-none py-4 px-8 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-3 border shadow-sm ${
-                 lienCopie ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-               }`}
-             >
-               {lienCopie ? <ShieldCheck size={18} /> : <Globe size={18} />}
-               Accès Personnel
-             </button>
+             {sessionActive ? (
+               <div className="bg-emerald-50 border border-emerald-100 px-6 py-4 rounded-3xl flex items-center gap-4">
+                  <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse" />
+                  <div>
+                     <p className="text-[10px] font-black text-emerald-800 uppercase tracking-widest">Caisse Active</p>
+                     <p className="text-xs font-bold text-emerald-600">{sessionActive.caissierNom}</p>
+                  </div>
+               </div>
+             ) : (
+               <div className="bg-rose-50 border border-rose-100 px-6 py-4 rounded-3xl flex items-center gap-4 shadow-sm shadow-rose-100">
+                  <div className="w-3 h-3 bg-rose-500 rounded-full" />
+                  <div>
+                     <p className="text-[10px] font-black text-rose-800 uppercase tracking-widest">Caisse Fermée</p>
+                     <p className="text-xs font-bold text-rose-600">Transactions bloquées</p>
+                  </div>
+               </div>
+             )}
              <button 
                onClick={() => navigate('/tableau-de-bord/achats')}
-               className="flex-1 md:flex-none py-4 px-8 rounded-2xl bg-slate-900 font-black text-[10px] text-white uppercase tracking-widest shadow-xl shadow-slate-950/20 hover:bg-slate-800 transition-all flex items-center justify-center gap-3"
+               className="hidden md:flex py-4 px-8 rounded-2xl bg-slate-900 font-black text-[10px] text-white uppercase tracking-widest shadow-xl shadow-slate-950/20 hover:bg-slate-800 transition-all items-center justify-center gap-3"
              >
                <PlusCircle size={18} /> Approvisionner
              </button>
         </div>
       </div>
+      
+      {/* Quick Actions / Configuration Focus */}
+      <div className="bg-white border border-slate-200 rounded-[2.5rem] p-6 shadow-sm flex flex-wrap gap-4 items-center">
+         <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-r border-slate-100 pr-6 mr-2">Accès Rapides</p>
+         <button 
+           onClick={() => navigate('/tableau-de-bord/tables')}
+           className="px-6 py-3 rounded-2xl bg-indigo-50 text-indigo-700 font-black text-[10px] uppercase tracking-widest hover:bg-indigo-100 transition-all flex items-center gap-3 border border-indigo-100"
+         >
+           <LayoutDashboard size={16} /> Configurer les Tables
+         </button>
+         <button 
+           onClick={() => navigate('/tableau-de-bord/plan-salles')}
+           className="px-6 py-3 rounded-2xl bg-slate-50 text-slate-700 font-black text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center gap-3 border border-slate-200"
+         >
+           <Layout size={16} /> Plan de Salle
+         </button>
+         <button 
+           onClick={() => navigate('/tableau-de-bord/stocks')}
+           className="px-6 py-3 rounded-2xl bg-amber-50 text-amber-700 font-black text-[10px] uppercase tracking-widest hover:bg-amber-100 transition-all flex items-center gap-3 border border-amber-200"
+         >
+           <Package size={16} /> Gestion Stocks
+         </button>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 px-2">
         <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm relative overflow-hidden group">
             <div className="relative z-10 flex flex-col h-full justify-between">
                 <div className="flex justify-between items-start mb-4">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center"><TrendingUp size={24} /></div>
-                    <span className="text-[10px] font-black text-emerald-600 bg-emerald-100/50 px-2 py-1 rounded-full">+12.4%</span>
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center"><TrendingUp size={24} /></div>
+                    <span className="text-[10px] font-black text-indigo-600 bg-indigo-100/50 px-2 py-1 rounded-full">+LIVE</span>
                 </div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Caisse Totale</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Caisse Totale (Théo)</p>
                 <h3 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">{ventesDuJour.toLocaleString()} <span className="text-xs">F</span></h3>
             </div>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-700" />
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-700" />
+        </div>
+
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm relative overflow-hidden group">
+            <div className="relative z-10 flex flex-col h-full justify-between">
+                <div className="flex justify-between items-start mb-4">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center"><DollarSign size={24} /></div>
+                </div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Espèces en Caisse</p>
+                <h3 className="text-3xl font-black text-emerald-600 tracking-tighter uppercase">{especes.toLocaleString()} <span className="text-xs">F</span></h3>
+            </div>
         </div>
 
         <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm relative overflow-hidden group">
             <div className="relative z-10 flex flex-col h-full justify-between">
                 <div className="flex justify-between items-start mb-4">
                     <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center"><Zap size={24} /></div>
-                    <span className="text-[10px] font-black text-blue-600 bg-blue-100/50 px-2 py-1 rounded-full">LIVE</span>
+                    <span className="text-[10px] font-black text-blue-600 bg-blue-100/50 px-2 py-1 rounded-full">{tablesOccupees} Salles</span>
                 </div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Activité Salles</p>
-                <h3 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">{tablesOccupees} <span className="text-xs">Occupées</span></h3>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Occupation Live</p>
+                <h3 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">{tablesOccupees} <span className="text-xs">Tables</span></h3>
             </div>
         </div>
 
         <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm relative overflow-hidden group">
             <div className="relative z-10 flex flex-col h-full justify-between">
                 <div className="flex justify-between items-start mb-4">
-                    <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center"><Users size={24} /></div>
-                    <span className="text-[10px] font-black text-amber-600 bg-amber-100/50 px-2 py-1 rounded-full">{tablesAttente} Notes</span>
-                </div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Encours Clients</p>
-                <h3 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">{commandes.filter(c => c.statut !== 'payee').length} <span className="text-xs">Cmds</span></h3>
-            </div>
-        </div>
-
-        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm relative overflow-hidden group">
-            <div className="relative z-10 flex flex-col h-full justify-between">
-                <div className="flex justify-between items-start mb-4">
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center"><CreditCard size={24} /></div>
+                    <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center"><CreditCard size={24} /></div>
+                    <span className="text-[10px] font-black text-rose-600 bg-rose-100/50 px-2 py-1 rounded-full">Alertes</span>
                 </div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Dettes À Recouvrer</p>
-                <h3 className="text-3xl font-black text-indigo-900 tracking-tighter uppercase">{dettes.toLocaleString()} <span className="text-xs">F</span></h3>
+                <h3 className="text-3xl font-black text-rose-900 tracking-tighter uppercase">{dettes.toLocaleString()} <span className="text-xs">F</span></h3>
             </div>
         </div>
       </div>
@@ -385,6 +420,9 @@ const DashboardAccueil = ({ profil, navigate }: any) => {
                 })}
              </div>
           </div>
+
+          {/* Performances Cuisine */}
+          <PerformanceCuisine commandes={commandes} />
 
           <div className="bg-white border border-slate-200 rounded-[3rem] overflow-hidden shadow-sm">
             <div className="p-10 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
@@ -498,6 +536,108 @@ const DashboardAccueil = ({ profil, navigate }: any) => {
         </div>
       </div>
     </motion.div>
+  );
+};
+
+const PerformanceCuisine = ({ commandes }: { commandes: any[] }) => {
+  const stats = useMemo(() => {
+    const data: Record<string, { totalTime: number, count: number }> = {};
+    let totalGlobalTime = 0;
+    let totalGlobalCount = 0;
+    
+    commandes.forEach(c => {
+      c.lignes.forEach(l => {
+        if (l.datePreparationStart && l.datePret) {
+          const start = new Date(l.datePreparationStart).getTime();
+          const end = new Date(l.datePret).getTime();
+          const diff = Math.max(1, Math.floor((end - start) / 60000)); // minutes (min 1m)
+          
+          const cat = l.produitCategorie || 'AUTRES';
+          if (!data[cat]) data[cat] = { totalTime: 0, count: 0 };
+          data[cat].totalTime += diff;
+          data[cat].count += 1;
+          
+          totalGlobalTime += diff;
+          totalGlobalCount += 1;
+        }
+      });
+    });
+    
+    const categories = Object.entries(data).map(([cat, s]) => ({
+      name: cat,
+      avg: Math.round(s.totalTime / s.count),
+      count: s.count
+    })).sort((a, b) => b.count - a.count);
+
+    return {
+        categories,
+        avgGlobal: totalGlobalCount > 0 ? Math.round(totalGlobalTime / totalGlobalCount) : 0,
+        totalCount: totalGlobalCount
+    };
+  }, [commandes]);
+
+  return (
+     <div className="bg-white border border-slate-200 rounded-[3rem] p-10 shadow-sm relative overflow-hidden">
+        <div className="flex justify-between items-center mb-10">
+            <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-200">
+                    <ChefHat size={24} />
+                </div>
+                <div>
+                    <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase">Performances Cuisine</h3>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">KPIs de production en temps réel</p>
+                </div>
+            </div>
+            <div className="flex gap-4">
+                <div className="text-right">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Temps Moyen</p>
+                    <p className="text-2xl font-black text-indigo-600 tracking-tighter">{stats.avgGlobal} MIN</p>
+                </div>
+                <div className="w-[1px] h-10 bg-slate-100" />
+                <div className="text-right">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Articles Servis</p>
+                    <p className="text-2xl font-black text-slate-900 tracking-tighter">{stats.totalCount}</p>
+                </div>
+            </div>
+        </div>
+
+        {stats.categories.length === 0 ? (
+            <div className="py-12 text-center bg-slate-50 rounded-[2rem] border border-dashed border-slate-200">
+                <Timer size={32} className="mx-auto text-slate-300 mb-3" />
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">En attente de données de préparation...</p>
+            </div>
+        ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {stats.categories.map((cat, idx) => (
+                    <div key={idx} className="p-6 rounded-[2rem] bg-slate-50/50 border border-slate-100 flex items-center justify-between group hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-500">
+                        <div className="flex items-center gap-4">
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xs ${
+                                cat.avg > 15 ? 'bg-rose-100 text-rose-600' : 
+                                cat.avg > 8 ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'
+                            }`}>
+                                {cat.avg}'
+                            </div>
+                            <div>
+                                <h4 className="font-black text-slate-900 text-xs uppercase tracking-tight">{cat.name}</h4>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{cat.count} Articles</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                             {cat.avg > 15 ? (
+                                <span className="flex items-center gap-1 text-[8px] font-black text-rose-500 uppercase bg-rose-50 px-2 py-1 rounded-full border border-rose-100">
+                                    <Flame size={10} /> Lent
+                                </span>
+                             ) : (
+                                <span className="flex items-center gap-1 text-[8px] font-black text-emerald-500 uppercase bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
+                                    <Zap size={10} /> Optimal
+                                </span>
+                             )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        )}
+     </div>
   );
 };
 

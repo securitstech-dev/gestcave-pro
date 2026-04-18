@@ -5,7 +5,8 @@ import {
   CheckCircle2, Users, Clock, ShoppingBag, Wine,
   LogOut, ArrowRight, ShieldCheck, Wallet, 
   TrendingUp, History as HistoryIcon, User, X, Info, Calculator, ArrowLeft, ChevronLeft,
-  History, Zap, Phone, UserPlus, AlertCircle, Search
+  History, Zap, Phone, UserPlus, AlertCircle, Search,
+  Lock, Unlock, ShieldAlert
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePOSStore, imprimerTicket } from '../../store/posStore';
@@ -15,7 +16,10 @@ import { useNavigate } from 'react-router-dom';
 import type { LigneCommande } from '../../store/posStore';
 
 const InterfaceCaissier = () => {
-  const { tables, commandes, encaisserCommande, ouvrirVenteEmporter } = usePOSStore();
+  const { 
+    tables, commandes, encaisserCommande, ouvrirVenteEmporter,
+    sessionActive, ouvrirSession, fermerSession 
+  } = usePOSStore();
   const { nomEmploye, etablissementId, quitterPoste } = usePosteSession();
   const navigate = useNavigate();
   
@@ -26,6 +30,10 @@ const InterfaceCaissier = () => {
   const [contactClient, setContactClient] = useState('');
   const [remise, setRemise] = useState(0);
   const [refPaiement, setRefPaiement] = useState('');
+  
+  const [showOuvertureModal, setShowOuvertureModal] = useState(false);
+  const [showClotureModal, setShowClotureModal] = useState(false);
+  const [fondsSaisi, setFondsSaisi] = useState('0');
 
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -147,12 +155,23 @@ const InterfaceCaissier = () => {
                 </div>
               </div>
             </div>
-            <button 
-              onClick={quitterPoste}
-              className="p-4 rounded-xl hover:bg-red-50 text-slate-300 hover:text-red-500 transition-all border border-transparent hover:border-red-100"
-            >
-              <LogOut size={20} />
-            </button>
+            <div className="flex flex-col gap-1">
+               <button 
+                onClick={quitterPoste}
+                className="p-4 rounded-xl hover:bg-red-50 text-slate-300 hover:text-red-500 transition-all border border-transparent hover:border-red-100"
+              >
+                <LogOut size={20} />
+              </button>
+              {sessionActive && (
+                <button 
+                  onClick={() => setShowClotureModal(true)}
+                  className="p-4 rounded-xl hover:bg-amber-50 text-slate-300 hover:text-amber-600 transition-all border border-transparent hover:border-amber-100"
+                  title="Clôturer la caisse"
+                >
+                  <Lock size={20} />
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -225,6 +244,87 @@ const InterfaceCaissier = () => {
           )}
         </div>
       </aside>
+      
+      {/* Overlay Ouverture de Caisse */}
+      {!sessionActive && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-xl flex items-center justify-center p-6">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-md bg-white rounded-[3rem] p-12 shadow-2xl text-center"
+          >
+            <div className="w-24 h-24 bg-indigo-50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 text-indigo-600">
+              <Unlock size={40} />
+            </div>
+            <h2 className="text-3xl font-black uppercase tracking-tight mb-2">Ouverture de Caisse</h2>
+            <p className="text-slate-400 text-sm mb-10">Veuillez saisir le fonds de caisse initial pour démarrer la session.</p>
+            
+            <div className="bg-slate-50 p-8 rounded-[2rem] mb-8">
+               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Fonds Initial (FCFA)</p>
+               <input 
+                type="number"
+                value={fondsSaisi}
+                onChange={e => setFondsSaisi(e.target.value)}
+                className="w-full text-center text-4xl font-black outline-none bg-transparent"
+                autoFocus
+               />
+            </div>
+
+            <button 
+              onClick={() => ouvrirSession(Number(fondsSaisi))}
+              className="w-full h-20 bg-slate-950 text-white rounded-[2rem] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl shadow-indigo-500/10"
+            >
+              Démarrer la Session
+            </button>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Modal Clôture de Caisse */}
+      {showClotureModal && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-xl flex items-center justify-center p-6">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-md bg-white rounded-[3rem] p-12 shadow-2xl text-center"
+          >
+            <div className="w-24 h-24 bg-amber-50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 text-amber-600">
+              <Lock size={40} />
+            </div>
+            <h2 className="text-3xl font-black uppercase tracking-tight mb-2">Clôture de Caisse</h2>
+            <p className="text-slate-400 text-sm mb-10">Confirmez le montant total présent en caisse (espèces + autres) pour clôturer.</p>
+            
+            <div className="bg-slate-50 p-8 rounded-[2rem] mb-8">
+               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Montant de Clôture (FCFA)</p>
+               <input 
+                type="number"
+                value={fondsSaisi}
+                onChange={e => setFondsSaisi(e.target.value)}
+                className="w-full text-center text-4xl font-black outline-none bg-transparent"
+                autoFocus
+               />
+            </div>
+
+            <div className="flex gap-4">
+              <button 
+                onClick={() => setShowClotureModal(false)}
+                className="flex-1 h-20 bg-slate-100 text-slate-400 rounded-[2rem] font-black uppercase tracking-widest"
+              >
+                Annuler
+              </button>
+              <button 
+                onClick={async () => {
+                  await fermerSession(Number(fondsSaisi));
+                  setShowClotureModal(false);
+                }}
+                className="flex-1 h-20 bg-red-600 text-white rounded-[2rem] font-black uppercase tracking-widest shadow-xl shadow-red-500/20"
+              >
+                Clôturer
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Main Panel : Encaissement */}
       <main className="flex-1 flex flex-col bg-slate-50 relative overflow-hidden">

@@ -10,6 +10,7 @@ import {
   increment,
   writeBatch,
   getDoc,
+  getDocs,
   deleteDoc
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -112,6 +113,9 @@ export interface LigneCommande {
   note?: string;
   heureEnvoi?: string;
   destination?: 'cuisine' | 'bar' | 'pizzeria' | 'grill' | 'chicha';
+  produitCategorie?: string;
+  datePreparationStart?: string;
+  datePret?: string;
 }
 
 export interface Commande {
@@ -157,6 +161,25 @@ export interface Produit {
   unite?: string;
   emoji?: string;
   destination_production?: 'cuisine' | 'bar' | 'pizzeria' | 'grill' | 'chicha';
+  is_ingredient?: boolean;
+  recette?: { ingredientId: string; quantite: number; nom?: string }[];
+}
+
+export interface SessionCaisse {
+  id: string;
+  etablissement_id: string;
+  caissierId: string;
+  caissierNom: string;
+  dateOuverture: string;
+  dateFermeture?: string;
+  fondsInitial: number;
+  fondsFinalSaisi?: number;
+  totalVentesTheorique: number;
+  totalEspeces?: number;
+  totalMobile?: number;
+  totalCarte?: number;
+  totalCredit?: number;
+  statut: 'ouverte' | 'fermee';
 }
 
 interface PosState {
@@ -164,14 +187,18 @@ interface PosState {
   tables: TablePlan[];
   produits: Produit[];
   commandes: Commande[];
+  sessionActive: SessionCaisse | null;
+  historiqueSessions: SessionCaisse[];
   loading: boolean;
   unsubs: (() => void)[];
-  
+
   initPOS: (etablissementId: string) => void;
   initialiserTempsReel: (etablissementId: string) => void;
   arreterTempsReel: () => void;
   
   refreshCommande: (id: string) => Promise<void>;
+  ouvrirSession: (fondsInitial: number) => Promise<void>;
+  fermerSession: (fondsFinal: number) => Promise<void>;
   ouvrirTable: (tableId: string, serveurId: string, serveurNom: string, nombreCouverts: number) => Promise<string>;
   ouvrirVenteEmporter: (serveurId: string, serveurNom: string) => Promise<string>;
   ajouterLigne: (commandeId: string, produit: Produit) => Promise<void>;
@@ -179,7 +206,9 @@ interface PosState {
   supprimerLigne: (commandeId: string, ligneId: string) => Promise<void>;
   envoyerCuisine: (commandeId: string) => Promise<void>;
   marquerLignePrete: (commandeId: string, ligneId: string) => Promise<void>;
+  marquerToutesLignesPretes: (commandeId: string, posteId: string) => Promise<void>;
   marquerLigneEnPreparation: (commandeId: string, ligneId: string) => Promise<void>;
+  marquerToutesLignesEnPreparation: (commandeId: string, posteId: string) => Promise<void>;
   marquerCommandeServie: (commandeId: string) => Promise<void>;
   encaisserCommande: (commandeId: string, modePaiement: 'comptant' | 'credit', clientNom: string, montantRemise?: number, montantPaye?: number, clientContact?: string, refPaiement?: string) => Promise<void>;
   annulerCommande: (commandeId: string) => Promise<void>;
@@ -190,6 +219,8 @@ export const usePOSStore = create<PosState>((set, get) => ({
   tables: [],
   produits: [],
   commandes: [],
+  sessionActive: null,
+  historiqueSessions: [],
   loading: false,
   unsubs: [],
 
@@ -210,6 +241,19 @@ export const usePOSStore = create<PosState>((set, get) => ({
       set({ produits: snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Produit)) });
     }));
 
+    // SESSIONS
+    unsubs.push(onSnapshot(query(collection(db, 'sessions_caisse'), where('etablissement_id', '==', etablissementId), where('statut', '==', 'ouverte')), (snap) => {
+      if (!snap.empty) {
+        set({ sessionActive: { id: snap.docs[0].id, ...snap.docs[0].data() } as SessionCaisse });
+      } else {
+        set({ sessionActive: null });
+      }
+    }));
+
+    unsubs.push(onSnapshot(query(collection(db, 'sessions_caisse'), where('etablissement_id', '==', etablissementId), where('statut', '==', 'fermee')), (snap) => {
+      set({ historiqueSessions: snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SessionCaisse)) });
+    }));
+
     // COMMANDES (DOUBLE ÉCOUTE POUR RÉTROCOMPATIBILITÉ etablissementId / etablissement_id)
     const handleCommandes = (snap: any) => {
       const newItems = snap.docs.map((d:any) => ({ id: d.id, ...d.data() } as Commande));
@@ -226,6 +270,11 @@ export const usePOSStore = create<PosState>((set, get) => ({
 
     unsubs.push(onSnapshot(query(collection(db, 'commandes'), where('etablissement_id', '==', etablissementId), where('statut', '!=', 'payee')), handleCommandes));
     unsubs.push(onSnapshot(query(collection(db, 'commandes'), where('etablissementId', '==', etablissementId), where('statut', '!=', 'payee')), handleCommandes));
+
+    // SESSIONS
+    unsubs.push(onSnapshot(query(collection(db, 'sessions_caisse'), where('etablissement_id', '==', etablissementId), where('statut', '==', 'ouverte')), (snap) => {
+      set({ sessionActive: snap.docs[0] ? { id: snap.docs[0].id, ...snap.docs[0].data() } as SessionCaisse : null });
+    }));
 
     set({ loading: false, unsubs });
   },
@@ -251,6 +300,67 @@ export const usePOSStore = create<PosState>((set, get) => ({
               }
           });
       }
+  },
+
+  ouvrirSession: async (fondsInitial) => {
+    const profile = useAuthStore.getState().profil;
+    if (!profile) return;
+    const session = {
+      etablissement_id: profile.etablissement_id,
+      caissierId: profile.id || 'unknown',
+      caissierNom: profile.nom || 'Caissier',
+      dateOuverture: new Date().toISOString(),
+      fondsInitial: Number(fondsInitial),
+      totalVentesTheorique: 0,
+      statut: 'ouverte' as const
+    };
+    await addDoc(collection(db, 'sessions_caisse'), session);
+    toast.success("Session de caisse ouverte !");
+  },
+
+  fermerSession: async (fondsFinal) => {
+    const session = get().sessionActive;
+    if (!session) return;
+    
+    const toastId = toast.loading("Calcul des totaux et clôture...");
+    
+    try {
+      const q = query(
+        collection(db, 'transactions_pos'), 
+        where('etablissement_id', '==', session.etablissement_id),
+        where('date', '>=', session.dateOuverture)
+      );
+      
+      const snap = await getDocs(q);
+      let totalE = 0, totalM = 0, totalC = 0, totalCred = 0;
+      
+      snap.docs.forEach((d) => {
+        const t = d.data();
+        if (t.modePaiement === 'especes' || t.modePaiement === 'comptant') totalE += (t.total || 0);
+        else if (t.modePaiement === 'mobile') totalM += (t.total || 0);
+        else if (t.modePaiement === 'carte') totalC += (t.total || 0);
+        else if (t.modePaiement === 'credit') totalCred += (t.total || 0);
+      });
+
+      const totalTheorique = totalE + totalM + totalC + totalCred;
+
+      await updateDoc(doc(db, 'sessions_caisse', session.id), {
+        statut: 'fermee',
+        dateFermeture: new Date().toISOString(),
+        fondsFinalSaisi: Number(fondsFinal),
+        totalVentesTheorique: totalTheorique,
+        totalEspeces: totalE,
+        totalMobile: totalM,
+        totalCarte: totalC,
+        totalCredit: totalCred
+      });
+
+      toast.success("Caisse clôturée avec succès !", { id: toastId });
+      set({ sessionActive: null });
+    } catch (err: any) {
+      toast.error("Erreur lors de la clôture", { id: toastId });
+      console.error(err);
+    }
   },
 
   ouvrirTable: async (tableId, serveurId, serveurNom, nombreCouverts) => {
@@ -309,7 +419,8 @@ export const usePOSStore = create<PosState>((set, get) => ({
           produitId: produit.id, produitNom: produit.nom,
           quantite: 1, prixUnitaire: Number(produit.prix),
           sousTotal: Number(produit.prix), statut: 'en_attente',
-          destination: produit.destination_production || (produit.categorie === 'Boisson' ? 'bar' : 'cuisine')
+          destination: produit.destination_production || (produit.categorie === 'Boisson' ? 'bar' : 'cuisine'),
+          produitCategorie: produit.categorie
         });
       }
 
@@ -367,7 +478,16 @@ export const usePOSStore = create<PosState>((set, get) => ({
     
     lignes.forEach(l => {
         if (l.statut === 'en_attente') {
-            batch.update(doc(db, 'produits', l.produitId), { stockTotal: increment(-l.quantite) });
+            const produit = get().produits.find(p => p.id === l.produitId);
+            if (produit?.recette && produit.recette.length > 0) {
+              // Décrémenter les ingrédients
+              produit.recette.forEach(ing => {
+                batch.update(doc(db, 'produits', ing.ingredientId), { stockTotal: increment(-(ing.quantite * l.quantite)) });
+              });
+            } else {
+              // Comportement standard
+              batch.update(doc(db, 'produits', l.produitId), { stockTotal: increment(-l.quantite) });
+            }
         }
     });
 
@@ -383,7 +503,10 @@ export const usePOSStore = create<PosState>((set, get) => ({
     const ref = doc(db, 'commandes', commandeId);
     const snap = await getDoc(ref);
     if (!snap.exists()) return;
-    const nvelles = (snap.data().lignes || []).map((l:any) => l.id === ligneId ? {...l, statut: 'en_preparation'} : l);
+    const cmd = { id: snap.id, ...snap.data() } as Commande;
+    const nvelles = cmd.lignes.map(l => 
+          l.id === ligneId ? { ...l, statut: 'en_preparation' as const, datePreparationStart: new Date().toISOString() } : l
+        );
     await updateDoc(ref, { lignes: nvelles });
     await get().refreshCommande(commandeId);
   },
@@ -392,7 +515,35 @@ export const usePOSStore = create<PosState>((set, get) => ({
     const ref = doc(db, 'commandes', commandeId);
     const snap = await getDoc(ref);
     if (!snap.exists()) return;
-    const nvelles = (snap.data().lignes || []).map((l:any) => l.id === ligneId ? {...l, statut: 'pret'} : l);
+    const cmd = { id: snap.id, ...snap.data() } as Commande;
+    const nvelles = cmd.lignes.map(l => 
+          l.id === ligneId ? { ...l, statut: 'pret' as const, datePret: new Date().toISOString() } : l
+        );
+    await updateDoc(ref, { lignes: nvelles });
+    await get().refreshCommande(commandeId);
+  },
+  
+  marquerToutesLignesPretes: async (commandeId, posteId) => {
+    const ref = doc(db, 'commandes', commandeId);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return;
+    const nvelles = (snap.data().lignes || []).map((l:any) => 
+        (posteId === 'tous' || l.destination === posteId) && l.statut !== 'servi' ? {...l, statut: 'pret', datePret: new Date().toISOString()} : l
+    );
+    await updateDoc(ref, { lignes: nvelles });
+    await get().refreshCommande(commandeId);
+  },
+
+  marquerToutesLignesEnPreparation: async (commandeId, posteId) => {
+    const ref = doc(db, 'commandes', commandeId);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return;
+    const cmd = { id: snap.id, ...snap.data() } as Commande;
+    const nvelles = cmd.lignes.map(l => 
+          (posteId === 'tous' || l.destination === posteId) && l.statut === 'en_attente'
+            ? { ...l, statut: 'en_preparation' as const, datePreparationStart: new Date().toISOString() }
+            : l
+        );
     await updateDoc(ref, { lignes: nvelles });
     await get().refreshCommande(commandeId);
   },

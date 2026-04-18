@@ -5,7 +5,8 @@ import {
   Wine, LogOut, Zap, UtensilsCrossed, 
   Search, AlertCircle, Timer, ChevronRight, X, LayoutDashboard,
   Flame, History, Play, CheckCircle, MoreHorizontal, Info,
-  Volume2, VolumeX, Printer, RotateCcw, Filter, Utensils
+  Volume2, VolumeX, Printer, RotateCcw, Filter, Utensils,
+  User, Hash, MapPin, Scissors
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePOSStore } from '../../store/posStore';
@@ -31,6 +32,8 @@ const InterfaceCuisine = () => {
   const [view, setView] = useState<'kds' | 'historique'>('kds');
   const [now, setNow] = useState(Date.now());
   const [highlightItem, setHighlightItem] = useState<string | null>(null);
+  const [activePrintCmd, setActivePrintCmd] = useState<Commande | null>(null);
+  const printRef = useRef<HTMLDivElement>(null);
   const prevCommandesCount = useRef(0);
 
   // Rafraîchir le temps
@@ -101,9 +104,13 @@ const InterfaceCuisine = () => {
     return Object.entries(counts).sort((a, b) => b[1] - a[1]);
   }, [commandesKDS, posteId]);
 
-  // Simulation d'impression du bon
+  // Fonction d'impression
   const imprimerBon = (cmd: Commande) => {
-    toast.success(`Impression du bon ${cmd.tableNom} lancée...`, { icon: '🖨️' });
+    setActivePrintCmd(cmd);
+    setTimeout(() => {
+        window.print();
+        setActivePrintCmd(null);
+    }, 500);
   };
 
   if (showPosteSelector) {
@@ -204,6 +211,29 @@ const InterfaceCuisine = () => {
           </div>
       </header>
 
+      {/* Zone d'impression masquée */}
+      <div className="hidden">
+        <div id="section-to-print" ref={printRef} className="p-8 text-black bg-white w-[80mm] font-mono">
+            {activePrintCmd && <PrintableBon commande={activePrintCmd} posteId={posteId} />}
+        </div>
+      </div>
+
+      <style>{`
+        @media print {
+            body * { visibility: hidden; }
+            #section-to-print, #section-to-print * { visibility: visible; }
+            #section-to-print { 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                width: 80mm;
+                padding: 0;
+                margin: 0;
+            }
+            @page { size: 80mm auto; margin: 0; }
+        }
+      `}</style>
+
       {/* Recapitulatif Interactif */}
       <div className="bg-[#161922] border-b border-slate-800/30 flex-shrink-0">
           <div className="px-8 py-4 flex items-center gap-8">
@@ -256,6 +286,7 @@ const InterfaceCuisine = () => {
                     minutes={minutesEcoulees(cmd.dateOuverture)}
                     highlightItem={highlightItem}
                     onPrint={() => imprimerBon(cmd)}
+                    posteId={posteId}
                    />
                 ))}
               </KDSColumn>
@@ -276,6 +307,7 @@ const InterfaceCuisine = () => {
                     minutes={minutesEcoulees(cmd.dateOuverture)}
                     highlightItem={highlightItem}
                     onPrint={() => imprimerBon(cmd)}
+                    posteId={posteId}
                    />
                 ))}
               </KDSColumn>
@@ -296,6 +328,7 @@ const InterfaceCuisine = () => {
                     minutes={minutesEcoulees(cmd.dateOuverture)}
                     highlightItem={highlightItem}
                     onPrint={() => imprimerBon(cmd)}
+                    posteId={posteId}
                    />
                 ))}
               </KDSColumn>
@@ -384,11 +417,31 @@ const KDSColumn = ({ title, subtitle, count, children, color, bg }: any) => (
   </div>
 );
 
-const KDSTicket = ({ commande, filterLigne, minutes, highlightItem, onPrint }: any) => {
-  const { marquerLignePrete, marquerLigneEnPreparation, marquerCommandeServie } = usePOSStore();
+const KDSTicket = ({ commande, filterLigne, minutes, highlightItem, onPrint, posteId }: any) => {
+  const { 
+    marquerLignePrete, 
+    marquerLigneEnPreparation, 
+    marquerToutesLignesPretes,
+    marquerToutesLignesEnPreparation,
+    marquerCommandeServie 
+  } = usePOSStore();
   
   const lignesFiltrees = commande.lignes.filter(filterLigne);
+  
+  // Groupement par catégorie pour une meilleure organisation
+  const categories = useMemo(() => {
+    const groups: Record<string, any[]> = {};
+    lignesFiltrees.forEach(l => {
+      const cat = l.produitCategorie || 'AUTRES';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(l);
+    });
+    return groups;
+  }, [lignesFiltrees]);
+
   const toutPret = lignesFiltrees.every(l => l.statut === 'pret');
+  const aPreparer = lignesFiltrees.some(l => l.statut === 'en_attente');
+  const enPrep = lignesFiltrees.some(l => l.statut === 'en_preparation');
   
   const urgenceClass = minutes >= 20 ? 'border-rose-500 shadow-rose-500/20' : minutes >= 12 ? 'border-amber-500 shadow-amber-500/20' : 'border-slate-800 shadow-xl';
   const headerBg = minutes >= 20 ? 'bg-rose-500/20' : minutes >= 12 ? 'bg-amber-500/20' : 'bg-slate-900/80';
@@ -407,10 +460,12 @@ const KDSTicket = ({ commande, filterLigne, minutes, highlightItem, onPrint }: a
           <div className="flex items-center gap-3">
             <h4 className="text-2xl font-black text-white tracking-tighter uppercase italic">{commande.tableNom}</h4>
             <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${commande.type === 'a_emporter' ? 'bg-amber-500 text-slate-900' : 'bg-indigo-600 text-white'}`}>
-              {commande.type === 'a_emporter' ? 'A EMPORTER' : 'DINE-IN'}
+              {commande.type === 'a_emporter' ? 'A EMPORTER' : 'SUR PLACE'}
             </span>
           </div>
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1.5 opacity-60">Ticket #{commande.id.slice(-6).toUpperCase()} • Serveur: {commande.serveurNom}</p>
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1.5 opacity-60">
+            #{commande.id.slice(-4).toUpperCase()} • {commande.serveurNom}
+          </p>
         </div>
         <div className="flex flex-col items-end gap-2">
             <div className={`px-4 py-2 rounded-xl flex items-center gap-2 font-black text-sm border shadow-lg ${
@@ -420,96 +475,169 @@ const KDSTicket = ({ commande, filterLigne, minutes, highlightItem, onPrint }: a
             }`}>
               <Timer size={16} /> {minutes}'
             </div>
-            <button 
-                onClick={onPrint}
-                className="p-2 rounded-lg bg-slate-800/50 text-slate-500 hover:text-white transition-all"
-            >
-                <Printer size={14} />
-            </button>
         </div>
       </div>
 
-      {/* Lignes du Ticket */}
-      <div className="p-5 space-y-2.5">
-        {lignesFiltrees.map((ligne: any) => {
-          const isHighlighted = highlightItem === ligne.produitNom;
-          
-          return (
-            <div key={ligne.id} className={`p-4 rounded-[1.25rem] border-2 flex items-center gap-4 transition-all duration-300 ${
-              ligne.statut === 'pret' ? 'bg-emerald-500/10 border-emerald-500/10 opacity-40' : 
-              ligne.statut === 'en_preparation' ? 'bg-amber-500/10 border-amber-500/30' : 
-              isHighlighted ? 'bg-indigo-600 border-indigo-400 shadow-lg scale-[1.02]' : 'bg-slate-900/40 border-slate-800'
-            }`}>
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xl transition-all ${
-                 ligne.statut === 'pret' ? 'text-emerald-500 bg-emerald-500/10' : 
-                 ligne.statut === 'en_preparation' ? 'text-amber-500 bg-amber-500/10' : 
-                 isHighlighted ? 'text-white bg-indigo-500' : 'text-white bg-slate-800 border border-slate-700'
-              }`}>
-                {ligne.quantite}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className={`font-black text-sm uppercase tracking-tight truncate ${
-                    ligne.statut === 'pret' ? 'line-through text-slate-600' : 
-                    isHighlighted ? 'text-white' : 'text-slate-200'
-                }`}>
-                  {ligne.produitNom}
-                </p>
-                {ligne.note && (
-                  <div className={`flex items-center gap-1.5 mt-1 px-2 py-0.5 rounded-md w-fit ${isHighlighted ? 'bg-white/10 text-white' : 'bg-rose-500/10 text-rose-400'}`}>
-                    <Info size={10} strokeWidth={3} />
-                    <span className="text-[10px] font-black uppercase tracking-tight">{ligne.note}</span>
-                  </div>
-                )}
-              </div>
-              <div className="flex gap-1.5">
-                {ligne.statut === 'en_attente' && (
-                  <button 
-                    onClick={() => marquerLigneEnPreparation(commande.id, ligne.id)}
-                    className="w-10 h-10 rounded-xl bg-slate-800 text-slate-400 hover:bg-amber-500 hover:text-white flex items-center justify-center transition-all shadow-md active:scale-90"
-                  >
-                    <Play size={16} fill="currentColor" />
-                  </button>
-                )}
-                {ligne.statut !== 'pret' && (
-                  <button 
-                    onClick={() => marquerLignePrete(commande.id, ligne.id)}
-                    className="w-10 h-10 rounded-xl bg-indigo-600 text-white hover:bg-emerald-600 flex items-center justify-center transition-all shadow-lg shadow-indigo-600/20 active:scale-90"
-                  >
-                    <Check size={20} strokeWidth={4} />
-                  </button>
-                )}
-                {ligne.statut === 'pret' && (
-                  <div className="w-10 h-10 flex items-center justify-center text-emerald-500">
-                     <CheckCircle2 size={24} strokeWidth={3} />
-                  </div>
-                )}
-              </div>
+      {/* Lignes du Ticket groupées par Catégorie */}
+      <div className="p-5 flex-1 space-y-6">
+        {Object.entries(categories).map(([cat, lignes]) => (
+          <div key={cat} className="space-y-2">
+            <div className="flex items-center gap-2 px-1">
+              <div className="h-[1px] flex-1 bg-slate-800"></div>
+              <span className="text-[8px] font-black text-slate-600 uppercase tracking-[0.3em]">{cat}</span>
+              <div className="h-[1px] flex-1 bg-slate-800"></div>
             </div>
-          );
-        })}
+            
+            <div className="space-y-2">
+              {lignes.map((ligne: any) => {
+                const isHighlighted = highlightItem === ligne.produitNom;
+                return (
+                  <motion.div 
+                    layout
+                    key={ligne.id} 
+                    onClick={() => {
+                      if (ligne.statut === 'en_attente') marquerLigneEnPreparation(commande.id, ligne.id);
+                      else if (ligne.statut === 'en_preparation') marquerLignePrete(commande.id, ligne.id);
+                    }}
+                    className={`p-4 rounded-[1.25rem] border-2 flex items-center gap-4 cursor-pointer transition-all duration-300 group ${
+                      ligne.statut === 'pret' ? 'bg-emerald-500/10 border-emerald-500/10 opacity-40' : 
+                      ligne.statut === 'en_preparation' ? 'bg-amber-500/10 border-amber-500/30 animate-pulse' : 
+                      isHighlighted ? 'bg-indigo-600 border-indigo-400 shadow-lg scale-[1.02]' : 'bg-slate-900/40 border-slate-800 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xl transition-all ${
+                       ligne.statut === 'pret' ? 'text-emerald-500 bg-emerald-500/10' : 
+                       ligne.statut === 'en_preparation' ? 'text-amber-500 bg-amber-500/10' : 
+                       isHighlighted ? 'text-white bg-indigo-500' : 'text-white bg-slate-800 border border-slate-700 group-hover:border-slate-500'
+                    }`}>
+                      {ligne.quantite}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className={`font-black uppercase tracking-tight truncate ${ligne.statut === 'pret' ? 'text-emerald-500/50 line-through' : 'text-white text-lg italic'}`}>
+                          {ligne.produitNom}
+                        </p>
+                        {ligne.statut === 'en_preparation' && <Flame size={14} className="text-amber-500" />}
+                        {ligne.statut === 'pret' && <CheckCircle size={14} className="text-emerald-500" />}
+                      </div>
+                      {ligne.note && (
+                        <p className="text-[10px] text-rose-400 font-bold mt-1 uppercase bg-rose-400/10 px-2 py-0.5 rounded inline-block">
+                          {ligne.note}
+                        </p>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Footer / Action de Sortie */}
-      <div className="p-5 mt-auto bg-slate-950/20 border-t border-white/5">
-        <button
-          onClick={() => {
-            marquerCommandeServie(commande.id, posteId && posteId !== 'tous' ? posteId : undefined);
-            toast.success(`${commande.tableNom} ENVOYÉ !`, {
-              style: { background: '#10b981', color: '#fff', fontWeight: 'black', borderRadius: '1rem' }
-            });
-          }}
-          disabled={!toutPret}
-          className={`w-full py-5 rounded-2xl font-black text-[11px] uppercase tracking-[0.25em] flex items-center justify-center gap-3 transition-all duration-500 ${
-            toutPret 
-              ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-500/20 active:scale-95 hover:bg-emerald-500' 
-              : 'bg-slate-900/50 text-slate-700 border border-slate-800 cursor-not-allowed grayscale'
-          }`}
+      {/* Actions de bas de Ticket */}
+      <div className="p-4 bg-slate-950/40 border-t border-white/5 grid grid-cols-2 gap-3">
+        {aPreparer && (
+          <button 
+            onClick={() => marquerToutesLignesEnPreparation(commande.id, posteId)}
+            className="col-span-2 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 font-black text-[10px] uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all flex items-center justify-center gap-2"
+          >
+            <Flame size={14} /> Lancer Toute la Tournée
+          </button>
+        )}
+        
+        {!toutPret && !aPreparer && enPrep && (
+          <button 
+            onClick={() => marquerToutesLignesPretes(commande.id, posteId)}
+            className="col-span-2 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 font-black text-[10px] uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center gap-2"
+          >
+            <Check size={14} /> Tout Marquer Prêt
+          </button>
+        )}
+
+        {toutPret && (
+          <button 
+            onClick={() => marquerCommandeServie(commande.id)}
+            className="col-span-2 py-4 rounded-2xl bg-emerald-600 text-white font-black text-xs uppercase tracking-[0.2em] hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-3 animate-bounce"
+          >
+            <CheckCircle2 size={18} /> Appeler Serveur
+          </button>
+        )}
+
+        <button 
+          onClick={onPrint}
+          className="py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-500 hover:text-white transition-all flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest"
         >
-          {toutPret ? <><Bell size={18} className="animate-bounce" /> COMMANDÉ PRÊTE</> : 'PREPARATION EN COURS...'}
+          <Printer size={14} /> Bon
+        </button>
+        
+        <button 
+          className="py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-500 hover:text-white transition-all flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest"
+        >
+          <Info size={14} /> Détails
         </button>
       </div>
     </motion.div>
   );
+};
+
+// Composant pour l'impression thermique (80mm)
+const PrintableBon = ({ commande, posteId }: { commande: Commande, posteId: string | null }) => {
+    const lignes = commande.lignes.filter(l => posteId === 'tous' || l.destination === posteId);
+    
+    // Groupement par catégorie
+    const categories: Record<string, LigneCommande[]> = {};
+    lignes.forEach(l => {
+        const cat = l.produitCategorie || 'AUTRES';
+        if (!categories[cat]) categories[cat] = [];
+        categories[cat].push(l);
+    });
+
+    return (
+        <div className="text-black font-mono">
+            <div className="text-center border-b-2 border-black pb-2 mb-2">
+                <h2 className="text-xl font-bold uppercase tracking-widest">BON DE COMMANDE</h2>
+                <div className="text-[10px] mt-1">
+                    {new Date().toLocaleDateString()} - {new Date().toLocaleTimeString()}
+                </div>
+            </div>
+
+            <div className="flex justify-between mb-2 text-sm font-bold">
+                <span>TABLE: {commande.tableNom?.toUpperCase()}</span>
+                <span>#{commande.id.slice(-4).toUpperCase()}</span>
+            </div>
+
+            <div className="text-[10px] mb-4 border-b border-black pb-2">
+                <div>SERVEUR: {commande.serveurNom.toUpperCase()}</div>
+                <div>STATION: {posteId?.toUpperCase()}</div>
+                <div>TYPE: {commande.type.toUpperCase()}</div>
+            </div>
+
+            <div className="space-y-4">
+                {Object.entries(categories).map(([cat, lines]) => (
+                    <div key={cat}>
+                        <div className="text-[10px] font-bold border-b border-black/20 mb-1">{cat}</div>
+                        {lines.map(l => (
+                            <div key={l.id} className="mb-2">
+                                <div className="flex justify-between items-start">
+                                    <span className="text-lg font-bold mr-2">{l.quantite}x</span>
+                                    <span className="flex-1 text-sm font-bold">{l.produitNom.toUpperCase()}</span>
+                                </div>
+                                {l.note && (
+                                    <div className="ml-8 text-[10px] italic font-bold">
+                                        *** NOTE: {l.note.toUpperCase()} ***
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                ))}
+            </div>
+
+            <div className="mt-6 pt-2 border-t-2 border-black text-center text-[8px] font-bold">
+                GESTCAVE PRO - SYSTÈME KDS
+            </div>
+        </div>
+    );
 };
 
 export default InterfaceCuisine;

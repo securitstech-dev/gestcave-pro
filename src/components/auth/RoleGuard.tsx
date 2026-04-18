@@ -25,7 +25,9 @@ const RoleGuard = ({ children, allowedRoles }: RoleGuardProps) => {
   }
 
   // Vérifier le rôle (avec Bypass spécial pour le compte maître ou rôle super_admin)
-  const estSuperAdmin = utilisateur?.email?.toLowerCase() === 'securitstech@gmail.com' || profil?.role === 'super_admin';
+  const masterEmail = 'securitstech@gmail.com';
+  const estMaster = utilisateur?.email?.toLowerCase() === masterEmail;
+  const estSuperAdmin = estMaster || profil?.role === 'super_admin';
 
   if (estSuperAdmin) {
     return <>{children}</>;
