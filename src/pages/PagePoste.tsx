@@ -63,6 +63,15 @@ const PagePoste = () => {
       route: `/manager/${etablissementId}`,
       couleur: 'rose',
     },
+    {
+      id: 'pointage',
+      titre: 'POINTEUR HR',
+      description: 'Arrivées, Départs & Pauses',
+      icon: <Clock size={32} />,
+      role: 'any', // Spécial : pas de PIN requis pour entrer dans le terminal de pointage (il sera requis dedans)
+      route: `/pointage/${etablissementId}`,
+      couleur: 'emerald',
+    },
   ];
 
   useEffect(() => {
@@ -90,6 +99,10 @@ const PagePoste = () => {
   }, [etablissementId, initialiserTempsReel]);
 
   const gererSelection = (mode: any) => {
+    if (mode.id === 'pointage') {
+      navigate(mode.route);
+      return;
+    }
     setSelectedMode(mode);
     setShowPinModal(true);
     setPin('');
@@ -218,7 +231,7 @@ const PagePoste = () => {
       </motion.div>
 
       {/* Roles Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-5xl w-full relative z-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl w-full relative z-10">
         {modes.map((mode, i) => (
           <motion.button
             key={mode.id}
@@ -250,22 +263,15 @@ const PagePoste = () => {
       {/* Corporate Label */}
       <motion.div 
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}
-        className="mt-24 text-center cursor-default"
+        className="mt-24 text-center cursor-default pb-12"
       >
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em] mb-4">
           GESTCAVE PRO · ECOSYSTÈME SaaS SÉCURISÉ
         </p>
-        <p className="max-w-xs text-slate-500 text-[9px] font-bold uppercase tracking-widest leading-loose mb-6">
+        <p className="max-w-xs text-slate-500 text-[9px] font-bold uppercase tracking-widest leading-loose">
           Cette interface est dédiée aux terminaux de service (TabS, iPads, TPE). <br/>
           Les serveurs, cuisiniers et caissiers se connectent via leur PIN personnel.
         </p>
-        <a 
-          href={`/pointage/${etablissementId}`} 
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-slate-100 text-slate-600 font-black text-[9px] uppercase tracking-widest hover:bg-slate-200 transition-all border border-slate-200 shadow-sm"
-        >
-          <Clock size={14} className="text-emerald-500" />
-          Ouvrir le Pointeur de Présence
-        </a>
       </motion.div>
 
       {/* Pin Modal - Premium Version */}
