@@ -15,6 +15,7 @@ const PageAccueil = () => {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annually'>('monthly');
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -224,28 +225,39 @@ const PageAccueil = () => {
       {/* Pricing Section */}
       <section id="abonnements" className="py-32 bg-slate-50">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center space-y-4 mb-20">
-            <h2 className="text-xs font-black text-[#1E3A8A] uppercase tracking-[0.4em]">Plans d'Abonnement</h2>
-            <p className="text-4xl font-extrabold text-[#1E3A8A] tracking-tight">Investissez dans votre croissance.</p>
+          <div className="flex items-center justify-center gap-6 mb-16">
+            <span className={`text-sm font-bold ${billingCycle === 'monthly' ? 'text-[#1E3A8A]' : 'text-slate-400'}`}>Mensuel</span>
+            <button 
+              onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'annually' : 'monthly')}
+              className="w-16 h-8 bg-[#1E3A8A]/10 rounded-full p-1 relative transition-colors"
+            >
+              <div className={`w-6 h-6 bg-[#1E3A8A] rounded-full shadow-lg transition-transform duration-300 ${billingCycle === 'annually' ? 'translate-x-8' : 'translate-x-0'}`} />
+            </button>
+            <span className={`text-sm font-bold flex items-center gap-2 ${billingCycle === 'annually' ? 'text-[#1E3A8A]' : 'text-slate-400'}`}>
+              Annuel <span className="bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-tight">-20%</span>
+            </span>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
             <PriceCard 
               name="Starter" 
-              price="30.000" 
+              price={billingCycle === 'monthly' ? "30.000" : "300.000"} 
+              duration={billingCycle === 'monthly' ? "MOIS" : "AN"}
               features={['1 Établissement', 'Gestion Stocks de base', '100 Commandes/jour', 'Support Email']}
               onClick={() => document.getElementById('inscription')?.scrollIntoView({ behavior: 'smooth' })}
             />
             <PriceCard 
               name="Premium" 
-              price="55.000" 
+              price={billingCycle === 'monthly' ? "55.000" : "550.000"} 
+              duration={billingCycle === 'monthly' ? "MOIS" : "AN"}
               isRecommended 
               features={['3 Établissements', 'Stocks avancés + Ingrédients', 'Commandes illimitées', 'Rapports PDF exports', 'Support 24/7']}
               onClick={() => document.getElementById('inscription')?.scrollIntoView({ behavior: 'smooth' })}
             />
             <PriceCard 
               name="Business" 
-              price="95.000" 
+              price={billingCycle === 'monthly' ? "95.000" : "950.000"} 
+              duration={billingCycle === 'monthly' ? "MOIS" : "AN"}
               features={['Établissements illimités', 'Gestion Multi-niveaux', 'Salaires & RH auto', 'Audit complet', 'Support Prioritaire']}
               onClick={() => document.getElementById('inscription')?.scrollIntoView({ behavior: 'smooth' })}
             />
