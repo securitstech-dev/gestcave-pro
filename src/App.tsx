@@ -16,6 +16,7 @@ import PageDemoScenario from './pages/PageDemoScenario';
 import PagePointage from './pages/PagePointage';
 import PageTerminalManager from './pages/PageTerminalManager';
 import RoleGuard from './components/auth/RoleGuard';
+import LocalAdminSetup from './pages/LocalAdminSetup';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
           <Route path="/manager/:etablissementId" element={<PageTerminalManager />} />
           <Route path="/connexion" element={<PageConnexion />} />
           <Route path="/activation" element={<PageActivation />} />
+          <Route path="/setup-local-admin" element={<LocalAdminSetup />} />
           
           {/* Sélection de rôle après connexion */}
           <Route path="/choisir-role" element={<SelectionMode />} />

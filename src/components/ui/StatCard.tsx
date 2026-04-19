@@ -31,17 +31,17 @@ const StatCard = ({ label, valeur, suffix = "", subtext, icon, color, tendance, 
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group"
+      className="card-sovereign p-6 transition-all duration-300 group"
     >
       <div className="flex justify-between items-start mb-4">
         {icon && (
-          <div className={`p-3 rounded-xl border ${styles} group-hover:scale-105 transition-transform duration-300`}>
+          <div className={`p-3 border-none bg-white text-primary-sovereign group-hover:bg-surface-highest transition-colors duration-300`}>
             {icon}
           </div>
         )}
         {tendance && (
-          <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${
-            isPositive ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-100 text-slate-600 border border-slate-200'
+          <div className={`flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold ${
+            isPositive ? 'bg-emerald-100 text-emerald-700' : 'bg-surface-highest text-slate-600'
           }`}>
             {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
             {tendance}
@@ -50,14 +50,14 @@ const StatCard = ({ label, valeur, suffix = "", subtext, icon, color, tendance, 
       </div>
 
       <div>
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
+        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-2">{label}</p>
         <div className="flex items-baseline gap-1">
-          <h4 className={`text-2xl font-bold tracking-tight ${important ? 'text-red-600' : 'text-slate-900'}`}>
+          <h4 className={`text-2xl font-bold tracking-tight ${important ? 'text-accent-sovereign' : 'text-primary-sovereign'}`}>
             {valeur}
           </h4>
           {suffix && <span className="text-sm font-bold text-slate-400">{suffix}</span>}
         </div>
-        {subtext && <p className="text-[11px] font-medium text-slate-500 mt-1">{subtext}</p>}
+        {subtext && <p className="text-[11px] font-medium text-slate-400 mt-1 uppercase tracking-wider">{subtext}</p>}
       </div>
     </motion.div>
   );

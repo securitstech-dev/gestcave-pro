@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Layout, Plus, Trash2, Edit3, Move, 
   Save, Grid, MapPin, Users, X, 
-  ChevronRight, Crown, Sun
+  ChevronRight, Crown, Sun, Sparkles,
+  Map, Activity, ArrowRight, Info, Coffee
 } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
@@ -14,7 +15,7 @@ interface Table {
   id: string;
   nom: string;
   capacite: number;
-  zone: 'salle' | 'terrasse' | 'vip';
+  zone: 'salle' | 'terrasse' | 'vip' | 'comptoir';
   statut: 'libre' | 'occupee' | 'en_attente_paiement';
   x: number;
   y: number;
@@ -47,20 +48,20 @@ const GestionTables = () => {
         nom, capacite: Number(capacite), zone, statut: 'libre', x: 50, y: 50,
         etablissement_id: profil.etablissement_id, created_at: new Date().toISOString()
       });
-      toast.success(`Table ${nom} créée`);
+      toast.success(`Table ${nom} ajoutée avec succès`);
       setShowModal(false); setNom(''); setCapacite(4);
     } catch {
-      toast.error("Erreur de création");
+      toast.error("Erreur lors de l'ajout");
     }
   };
 
   const supprimerTable = async (id: string, nomTable: string) => {
-    if (window.confirm(`Supprimer la table ${nomTable} ?`)) {
+    if (window.confirm(`Supprimer la table ${nomTable}?`)) {
       try {
         await deleteDoc(doc(db, 'tables', id));
-        toast.success("Table retirée du plan");
+        toast.success("Table supprimée");
       } catch {
-        toast.error("Échec de suppression");
+        toast.error("Erreur lors de la suppression");
       }
     }
   };
@@ -70,143 +71,157 @@ const GestionTables = () => {
       salle: tables.filter(t => t.zone === 'salle').length,
       terrasse: tables.filter(t => t.zone === 'terrasse').length,
       vip: tables.filter(t => t.zone === 'vip').length,
+      comptoir: tables.filter(t => t.zone === 'comptoir').length,
   };
 
   const zoneStyle = (z: string) => {
-    if (z === 'vip') return { badge: 'bg-amber-50 text-amber-700 border-amber-200', icon: 'bg-amber-50 text-amber-600', card: 'border-amber-200' };
-    if (z === 'terrasse') return { badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: 'bg-emerald-50 text-emerald-600', card: 'border-emerald-200' };
-    return { badge: 'bg-blue-50 text-blue-700 border-blue-200', icon: 'bg-blue-50 text-blue-600', card: 'border-slate-200' };
+    if (z === 'vip') return { badge: 'bg-[#FF7A00] text-white', icon: 'bg-orange-50 text-[#FF7A00]', card: 'hover:border-orange-200' };
+    if (z === 'terrasse') return { badge: 'bg-[#1E3A8A] text-white', icon: 'bg-blue-50 text-[#1E3A8A]', card: 'hover:border-blue-200' };
+    if (z === 'comptoir') return { badge: 'bg-slate-900 text-white', icon: 'bg-slate-100 text-slate-900', card: 'hover:border-slate-900/10' };
+    return { badge: 'bg-emerald-500 text-white', icon: 'bg-emerald-50 text-emerald-500', card: 'hover:border-emerald-200' };
   };
 
   return (
-    <div className="space-y-4">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Configuration Salle</h2>
-          <p className="text-slate-500 font-medium text-[8px] mt-0.5">Définissez la topologie de votre établissement et gérez vos zones.</p>
+    <div className="space-y-10 pb-20 animate-in fade-in duration-700">
+      <header className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-xl shadow-blue-900/5 relative overflow-hidden border border-slate-100 flex flex-col md:flex-row justify-between items-end gap-8">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-[80px] -mr-32 -mt-32 opacity-50" />
+        
+        <div className="relative z-10">
+           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-50 rounded-full text-[#1E3A8A] text-xs font-bold uppercase tracking-widest mb-6">
+              <Map size={14} />
+              Architecture des Salles
+           </div>
+           <h1 className="text-4xl md:text-5xl font-extrabold text-[#1E3A8A] tracking-tight leading-tight mb-4">
+              Gestion des <span className="text-[#FF7A00]">Tables</span>
+           </h1>
+           <p className="text-slate-500 font-medium text-lg max-w-md">Organisez vos zones de service, gérez la capacité d'accueil et la topologie de votre salle.</p>
         </div>
+
         <button onClick={() => setShowModal(true)}
-          className="px-3 py-2 rounded-xl bg-slate-900 text-white font-bold text-[8px] uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-slate-900/20 active:scale-95 transition-all">
-          <Plus size={14} /> Nouvelle Table
+          className="px-8 h-20 bg-[#1E3A8A] text-white rounded-[2rem] font-bold uppercase tracking-widest text-sm hover:bg-blue-800 transition-all flex items-center gap-4 shadow-2xl shadow-blue-900/20 relative z-10">
+          <Plus size={20} /> Ajouter une Table
         </button>
       </header>
 
-      {/* Stats Capacité */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="col-span-2 md:col-span-1 bg-slate-900 p-4 rounded-2xl text-white shadow-2xl shadow-slate-900/20">
-              <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Capacité Totale</p>
-              <p className="text-2xl font-bold mt-1">{totalCapacite}</p>
-              <p className="text-[10px] font-medium text-slate-400">places assises</p>
+      {/* Resource Metrics */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="bg-[#1E3A8A] p-10 rounded-[3rem] text-white shadow-2xl shadow-blue-900/20 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -mr-16 -mt-16" />
+              <p className="text-[11px] font-bold text-white/40 uppercase tracking-widest mb-6 px-1">Capacité Totale</p>
+              <div className="flex items-baseline gap-4">
+                <span className="text-5xl font-black tracking-tighter">{totalCapacite}</span>
+                <span className="text-sm font-bold uppercase text-white/30 tracking-tight">Places</span>
+              </div>
           </div>
           {[
-            { label: 'SALLE', val: tablesParZone.salle, icon: <Grid size={16} />, color: 'text-blue-600 bg-blue-50' },
-            { label: 'TERRASSE', val: tablesParZone.terrasse, icon: <Sun size={16} />, color: 'text-emerald-600 bg-emerald-50' },
-            { label: 'VIP', val: tablesParZone.vip, icon: <Crown size={16} />, color: 'text-amber-600 bg-amber-50' },
+            { label: 'SALLE PRINCIPALE', val: tablesParZone.salle, icon: <Grid size={24} />, color: 'bg-emerald-50 text-emerald-500' },
+            { label: 'TERRASSE', val: tablesParZone.terrasse, icon: <Sun size={24} />, color: 'bg-blue-50 text-[#1E3A8A]' },
+            { label: 'ZONE VIP', val: tablesParZone.vip, icon: <Crown size={24} />, color: 'bg-orange-50 text-[#FF7A00]' },
           ].map(s => (
-            <div key={s.label} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                <div className={`w-8 h-8 rounded-lg ${s.color} flex items-center justify-center mb-2`}>{s.icon}</div>
-                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{s.label}</p>
-                <p className="text-xl font-bold text-slate-900 mt-0.5">{s.val}</p>
-                <p className="text-[10px] text-slate-400 font-medium">tables</p>
+            <div key={s.label} className="bg-white p-10 rounded-[3rem] border border-slate-100 flex flex-col justify-between shadow-xl shadow-blue-900/5 group hover:scale-[1.02] transition-all">
+                <div className="flex justify-between items-start">
+                    <div className={`w-14 h-14 ${s.color} rounded-2xl shadow-inner flex items-center justify-center transition-transform group-hover:scale-110`}>{s.icon}</div>
+                    <p className="text-4xl font-black text-[#1E3A8A] tracking-tighter">{s.val}</p>
+                </div>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-8 px-1">{s.label}</p>
             </div>
           ))}
       </div>
 
-      {/* Grille des Tables */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-        <AnimatePresence>
+      {/* Node Registry */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {tables.map((table) => {
               const s = zoneStyle(table.zone);
               return (
-                <motion.div layout key={table.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
-                  className={`bg-white p-4 rounded-2xl border-2 ${s.card} hover:shadow-lg transition-all group relative`}
+                <div key={table.id}
+                  className={`bg-white p-8 rounded-[3rem] border border-slate-100 ${s.card} transition-all group relative shadow-xl shadow-blue-900/5 flex flex-col justify-between`}
                 >
-                  <div className="flex justify-between items-start mb-4">
-                    <div className={`w-8 h-8 rounded-xl ${s.icon} flex items-center justify-center`}>
-                      <Layout size={16} />
+                  <div className="flex justify-between items-start mb-10">
+                    <div className={`w-14 h-14 ${s.icon} rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform`}>
+                      <Coffee size={24} />
                     </div>
-                    <span className={`text-[7px] font-black px-2 py-0.5 rounded-full border uppercase tracking-widest ${s.badge}`}>
+                    <span className={`text-[9px] font-bold px-4 py-2 rounded-full uppercase tracking-widest ${s.badge} shadow-sm`}>
                       {table.zone}
                     </span>
                   </div>
 
-                  <div className="mb-4">
-                      <h3 className="text-lg font-bold text-slate-900">{table.nom}</h3>
-                      <div className="flex items-center gap-1.5 text-slate-400 text-[9px] font-bold uppercase tracking-widest mt-0.5">
-                          <Users size={10} /> {table.capacite} pers.
+                  <div className="mb-10 px-2">
+                      <h3 className="text-2xl font-black text-[#1E3A8A] uppercase tracking-tight">{table.nom}</h3>
+                      <div className="flex items-center gap-3 text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-4">
+                          <Users size={14} className="text-blue-200" /> {table.capacite} Personnes
                       </div>
                   </div>
 
-                  <div className="flex gap-2 pt-3 border-t border-slate-100 opacity-0 group-hover:opacity-100 transition-all">
-                    <button className="flex-1 py-1.5 text-slate-500 bg-slate-50 hover:bg-slate-100 rounded-lg text-[8px] font-bold uppercase tracking-widest border border-slate-200 transition-all">
+                  <div className="flex gap-2 pt-8 border-t border-slate-50">
+                    <button className="flex-1 h-14 bg-slate-50 text-[#1E3A8A] rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-[#1E3A8A] hover:text-white transition-all">
                       Modifier
                     </button>
                     <button onClick={() => supprimerTable(table.id, table.nom)}
-                      className="p-1.5 bg-white border border-slate-200 rounded-lg text-slate-300 hover:text-rose-500 hover:border-rose-200 transition-all">
-                      <Trash2 size={14} />
+                      className="w-14 h-14 bg-white border border-slate-100 text-slate-300 hover:text-rose-500 hover:bg-rose-50 hover:border-rose-100 rounded-2xl transition-all flex items-center justify-center">
+                      <Trash2 size={20} />
                     </button>
                   </div>
-                </motion.div>
+                </div>
               );
             })}
-        </AnimatePresence>
 
         {tables.length === 0 && !loading && (
-          <div className="col-span-full py-24 text-center bg-white rounded-3xl border-2 border-dashed border-slate-200">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
-              <MapPin size={36} className="text-slate-200" />
+          <div className="col-span-full py-40 text-center bg-slate-50 rounded-[4rem] border-4 border-dashed border-slate-100">
+            <div className="w-24 h-24 bg-white rounded-[2.5rem] flex items-center justify-center mx-auto mb-10 shadow-inner">
+              <MapPin size={48} className="text-slate-100" />
             </div>
-            <h3 className="text-lg font-bold text-slate-400 uppercase tracking-widest">Plan vierge</h3>
-            <p className="text-slate-400 font-medium mt-2">Cliquez sur "Nouvelle Table" pour configurer votre établissement.</p>
+            <h3 className="text-3xl font-black text-slate-300 uppercase tracking-widest">Aucune Table</h3>
+            <p className="text-slate-400 font-bold mt-4 uppercase tracking-[0.2em] text-[11px]">Cliquez sur "Ajouter une Table" pour commencer la configuration.</p>
           </div>
         )}
       </div>
 
-      {/* Modal Création Table */}
-      <AnimatePresence>
-          {showModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-                className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl relative"
-              >
-                <button onClick={() => setShowModal(false)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-900"><X size={18} /></button>
-                <div className="mb-6">
-                    <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center mb-4"><Layout size={20} /></div>
-                    <h3 className="text-xl font-bold text-slate-900 tracking-tight">Nouvelle Table</h3>
-                    <p className="text-slate-500 font-medium text-xs mt-0.5">Ajoutez une zone d'assise à votre plan de salle.</p>
-                </div>
-
-                <form onSubmit={ajouterTable} className="space-y-4">
-                  <div>
-                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Nom / Numéro</label>
-                    <input type="text" value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Ex: Table 7" required
-                      className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none focus:border-slate-900 transition-all font-bold text-slate-900 text-xs" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Capacité</label>
-                      <input type="number" value={capacite} onChange={(e) => setCapacite(Number(e.target.value))} min="1" required
-                        className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none font-bold text-slate-900 text-center text-lg" />
-                    </div>
-                    <div>
-                      <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Zone</label>
-                      <select value={zone} onChange={(e) => setZone(e.target.value as any)}
-                        className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 outline-none font-bold text-slate-900 text-xs">
-                        <option value="salle">🏠 Salle</option>
-                        <option value="terrasse">🌿 Terrasse</option>
-                        <option value="vip">👑 VIP</option>
-                        <option value="comptoir">🍺 Comptoir</option>
-                      </select>
-                    </div>
-                  </div>
-                  <button type="submit" className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold uppercase tracking-widest text-[9px] shadow-xl shadow-slate-900/20 active:scale-95 transition-all mt-2">
-                    Créer la Table
-                  </button>
-                </form>
-              </motion.div>
+      {/* Protocol Registration Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 md:p-12">
+          <div onClick={() => setShowModal(false)} className="absolute inset-0 bg-[#1E3A8A]/90 backdrop-blur-xl" />
+          <div className="w-full max-w-xl bg-white rounded-[3.5rem] p-12 md:p-16 shadow-2xl relative animate-in zoom-in-95 duration-500 border border-white/20">
+            <button onClick={() => setShowModal(false)} className="absolute top-10 right-10 p-4 bg-slate-50 text-slate-400 hover:text-[#1E3A8A] rounded-2xl transition-all"><X size={24} /></button>
+            <div className="mb-12">
+                <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-10 shadow-inner"><Layout size={32} className="text-[#1E3A8A]" /></div>
+                <h3 className="text-4xl font-extrabold text-[#1E3A8A] tracking-tight uppercase leading-none">Nouvelle Table</h3>
+                <p className="text-slate-500 font-medium text-lg mt-4">Définissez les propriétés de votre nouvel emplacement.</p>
             </div>
-          )}
-      </AnimatePresence>
+
+            <form onSubmit={ajouterTable} className="space-y-8">
+              <div>
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-4 px-1">Identifiant / Nom</label>
+                <input type="text" value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Ex: Table 01, VIP 02..." required
+                  className="w-full h-16 bg-slate-50 border border-slate-100 rounded-2xl px-8 outline-none focus:ring-4 focus:ring-blue-100 transition-all font-bold text-[#1E3A8A] text-sm uppercase tracking-widest shadow-sm placeholder:text-slate-200" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-4 px-1">Nombre de places</label>
+                  <input type="number" value={capacite} onChange={(e) => setCapacite(Number(e.target.value))} min="1" required
+                    className="w-full h-16 bg-slate-50 border border-slate-100 rounded-2xl px-8 outline-none font-black text-[#1E3A8A] text-center text-3xl shadow-sm" />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-4 px-1">Zone de service</label>
+                  <select value={zone} onChange={(e) => setZone(e.target.value as any)}
+                    className="w-full h-16 bg-slate-50 border border-slate-100 rounded-2xl px-6 outline-none font-bold text-[#1E3A8A] text-xs uppercase tracking-widest shadow-sm">
+                    <option value="salle">Salle Principale</option>
+                    <option value="terrasse">Terrasse</option>
+                    <option value="vip">Zone VIP</option>
+                    <option value="comptoir">Comptoir</option>
+                  </select>
+                </div>
+              </div>
+              <button type="submit" className="w-full h-20 bg-[#1E3A8A] text-white rounded-[2rem] font-bold uppercase tracking-widest text-sm shadow-2xl shadow-blue-900/20 hover:bg-blue-800 transition-all flex items-center justify-center gap-4 mt-6">
+                Enregistrer la table <ArrowRight size={20} />
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+      
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+      `}</style>
     </div>
   );
 };

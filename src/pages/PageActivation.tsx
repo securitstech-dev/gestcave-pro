@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ShieldCheck, Lock, Mail, Loader2, CheckCircle2 } from 'lucide-react';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { ShieldCheck, Lock, Mail, Loader2, CheckCircle2, ShieldAlert, Key, Sparkles, ChevronLeft, ArrowRight, User } from 'lucide-react';
 import { db, auth } from '../lib/firebase';
 import { collection, query, where, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import toast from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
 
 const PageActivation = () => {
     const [searchParams] = useSearchParams();
@@ -21,7 +20,7 @@ const PageActivation = () => {
     useEffect(() => {
         const verifierToken = async () => {
             if (!token) {
-                toast.error("Lien invalide");
+                toast.error("Lien d'activation invalide");
                 navigate('/');
                 return;
             }
@@ -31,7 +30,7 @@ const PageActivation = () => {
                 const snap = await getDocs(q);
 
                 if (snap.empty) {
-                    toast.error("Lien expiré ou invalide");
+                    toast.error("Lien expiré ou déjà utilisé");
                     navigate('/');
                     return;
                 }
@@ -40,8 +39,7 @@ const PageActivation = () => {
                 setInvitation({ id: snap.docs[0].id, ...data });
                 setEtape('formulaire');
             } catch (err: any) {
-                console.error("DEBUG ACTIVATION:", err);
-                toast.error(`Erreur de vérification: ${err.message || 'Inconnue'}`);
+                toast.error("Erreur de connexion au registre");
             } finally {
                 setChargement(false);
             }
@@ -52,7 +50,7 @@ const PageActivation = () => {
 
     const finaliserActivation = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (motDePasse.length < 6) return toast.error("Le mot de passe doit faire 6 caractères minimum");
+        if (motDePasse.length < 6) return toast.error("Minimum 6 caractères requis");
         if (motDePasse !== confirmPassword) return toast.error("Les mots de passe ne correspondent pas");
 
         setChargement(true);
@@ -91,124 +89,153 @@ const PageActivation = () => {
             
             setTimeout(() => {
                 navigate('/connexion');
-            }, 3000);
+            }, 4000);
 
         } catch (err: any) {
-            console.error(err);
             if (err.code === 'auth/email-already-in-use') {
-                toast.error("Votre compte est déjà activé ! Connectez-vous.");
+                toast.error("Compte déjà actif — Redirection...");
                 setTimeout(() => navigate('/connexion'), 2000);
                 return;
             }
-            toast.error(err.message || "Erreur lors de l'activation");
+            toast.error("Échec de l'activation");
         } finally {
             setChargement(false);
         }
     };
 
-    if (chargement && etape === 'verification') {
-        return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-                <Loader2 className="animate-spin text-indigo-600" size={40} />
-            </div>
-        );
-    }
-
     return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 relative overflow-hidden">
-             {/* Background Effects */}
-             <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-100/50 blur-[120px] rounded-full" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-100/50 blur-[120px] rounded-full" />
+        <div className="min-h-screen bg-slate-50 font-['Inter',sans-serif] flex items-center justify-center p-6 relative overflow-hidden selection:bg-blue-100">
+            {/* Background decoration */}
+            <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
+                <div className="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] bg-blue-100 rounded-full blur-[120px] opacity-40" />
+                <div className="absolute -bottom-[10%] -right-[10%] w-[50%] h-[50%] bg-orange-100 rounded-full blur-[120px] opacity-40" />
             </div>
 
-            <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-md relative z-10"
-            >
-                {/* Header */}
-                <div className="flex flex-col items-center mb-10 text-center">
-                    <div className="w-20 h-20 rounded-[2rem] bg-white border border-slate-200 flex items-center justify-center shadow-xl shadow-slate-200/50 mb-8">
-                        <ShieldCheck className="text-indigo-600" size={40} />
+            <div className="max-w-4xl w-full bg-white rounded-[3.5rem] shadow-[0_40px_100px_-20px_rgba(30,58,138,0.15)] overflow-hidden relative z-10 border border-white flex flex-col md:flex-row">
+                
+                {/* Left Side: Identity Check */}
+                <div className="md:w-[40%] bg-[#1E3A8A] p-12 text-white flex flex-col justify-between relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl -mr-32 -mt-32" />
+                    
+                    <div className="space-y-10 relative z-10">
+                        <div className="flex items-center gap-4">
+                            <img src="/logo_gestcave.png" alt="Logo" className="w-12 h-12 object-contain" />
+                            <h1 className="text-xl font-black tracking-tight uppercase">GestCave Pro</h1>
+                        </div>
                     </div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase mb-2">Activation Compte</h1>
-                    <p className="text-slate-500 font-medium">Finalisez la configuration de votre espace GestCave Pro.</p>
+
+                    <div className="space-y-6 relative z-10">
+                        <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/10 shadow-lg text-[#FF7A00]">
+                            <Key size={24} />
+                        </div>
+                        <h2 className="text-4xl font-black leading-tight tracking-tight uppercase">
+                            Activation de <br/>
+                            <span className="text-[#FF7A00]">votre accès.</span>
+                        </h2>
+                        <p className="text-blue-100/60 leading-relaxed font-medium">
+                            Sécurisez votre espace administrateur en configurant votre clé de sécurité personnelle.
+                        </p>
+                    </div>
+
+                    <div className="pt-8 border-t border-white/10 flex items-center gap-4 relative z-10">
+                        <div className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center text-emerald-400">
+                            <ShieldCheck size={18} />
+                        </div>
+                        <span className="text-[10px] font-black text-blue-100/40 uppercase tracking-[0.2em]">Sécurité de Grade Bancaire</span>
+                    </div>
                 </div>
 
-                <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-10 border border-white shadow-2xl shadow-slate-200/60">
+                {/* Right Side: Process Area */}
+                <div className="md:w-[60%] p-12 md:p-20 bg-white">
+                    {etape === 'verification' && (
+                        <div className="h-full flex flex-col items-center justify-center text-center space-y-8 animate-in fade-in duration-700">
+                            <Loader2 size={64} className="text-[#1E3A8A] animate-spin" />
+                            <div>
+                                <h3 className="text-2xl font-black text-[#1E3A8A] uppercase tracking-tight mb-2">Vérification du lien</h3>
+                                <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Liaison avec le serveur sécurisé...</p>
+                            </div>
+                        </div>
+                    )}
+
                     {etape === 'formulaire' && (
-                        <form onSubmit={finaliserActivation} className="space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Adresse Email</label>
-                                <div className="relative">
-                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                                    <input 
-                                        type="email" 
-                                        disabled 
-                                        value={invitation?.email} 
-                                        className="w-full h-14 bg-slate-100/50 border border-slate-200 rounded-2xl pl-12 font-bold text-slate-400 cursor-not-allowed opacity-60" 
-                                    />
+                        <div className="space-y-10 animate-in slide-in-from-right duration-500">
+                            <div className="space-y-4">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-full text-[#1E3A8A] text-[10px] font-black uppercase tracking-widest border border-blue-100">
+                                   <User size={12} className="text-[#FF7A00]" /> Vérifié
                                 </div>
+                                <h3 className="text-3xl font-black text-[#1E3A8A] tracking-tighter uppercase leading-none">Bonjour {invitation.nom}</h3>
+                                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Configurez votre mot de passe pour {invitation.email}</p>
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Définir un mot de passe</label>
-                                <div className="relative">
-                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                                    <input 
-                                        required
-                                        type="password" 
-                                        value={motDePasse}
-                                        onChange={(e) => setMotDePasse(e.target.value)}
-                                        placeholder="••••••••"
-                                        className="w-full h-14 bg-white border border-slate-200 rounded-2xl pl-12 outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/5 transition-all font-bold" 
-                                    />
+                            <form onSubmit={finaliserActivation} className="space-y-6">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Clé de Sécurité (Mot de Passe)</label>
+                                    <div className="relative group">
+                                        <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#1E3A8A] transition-all">
+                                            <Lock size={22} />
+                                        </div>
+                                        <input 
+                                            required 
+                                            type="password" 
+                                            value={motDePasse} 
+                                            onChange={e => setMotDePasse(e.target.value)}
+                                            placeholder="Minimum 6 caractères"
+                                            className="w-full h-18 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] pl-16 pr-8 outline-none focus:border-[#1E3A8A] focus:bg-white transition-all font-bold text-[#1E3A8A] shadow-sm" 
+                                        />
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Confirmer le mot de passe</label>
-                                <div className="relative">
-                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                                    <input 
-                                        required
-                                        type="password" 
-                                        value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
-                                        placeholder="••••••••"
-                                        className="w-full h-14 bg-white border border-slate-200 rounded-2xl pl-12 outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/5 transition-all font-bold" 
-                                    />
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Confirmation de la Clé</label>
+                                    <div className="relative group">
+                                        <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#1E3A8A] transition-all">
+                                            <ShieldCheck size={22} />
+                                        </div>
+                                        <input 
+                                            required 
+                                            type="password" 
+                                            value={confirmPassword} 
+                                            onChange={e => setConfirmPassword(e.target.value)}
+                                            placeholder="Confirmez votre mot de passe"
+                                            className="w-full h-18 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] pl-16 pr-8 outline-none focus:border-[#1E3A8A] focus:bg-white transition-all font-bold text-[#1E3A8A] shadow-sm" 
+                                        />
+                                    </div>
                                 </div>
-                            </div>
 
-                            <button 
-                                type="submit" 
-                                disabled={chargement}
-                                className="w-full h-16 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-xl shadow-slate-900/20 active:scale-95 transition-all flex items-center justify-center gap-3 mt-4"
-                            >
-                                {chargement ? <Loader2 className="animate-spin" size={20} /> : "Activer mon espace maintenant"}
-                            </button>
-                        </form>
+                                <button 
+                                    type="submit" 
+                                    disabled={chargement}
+                                    className="w-full h-20 bg-[#1E3A8A] text-white rounded-[2rem] font-black uppercase tracking-widest text-sm shadow-2xl shadow-blue-900/20 hover:bg-blue-800 transition-all flex items-center justify-center gap-4 group active:scale-[0.98]"
+                                >
+                                    {chargement ? <Loader2 className="animate-spin" /> : (
+                                        <>
+                                            Activer mon espace
+                                            <ArrowRight size={22} className="group-hover:translate-x-2 transition-transform text-[#FF7A00]" />
+                                        </>
+                                    )}
+                                </button>
+                            </form>
+                        </div>
                     )}
 
                     {etape === 'succes' && (
-                        <div className="text-center py-6">
-                            <div className="w-24 h-24 bg-emerald-50 text-emerald-600 rounded-[2rem] flex items-center justify-center mx-auto mb-8">
+                        <div className="h-full flex flex-col items-center justify-center text-center space-y-8 animate-in zoom-in-95 duration-700">
+                            <div className="w-24 h-24 bg-emerald-50 text-emerald-500 rounded-[2.5rem] flex items-center justify-center shadow-xl shadow-emerald-500/10">
                                 <CheckCircle2 size={48} />
                             </div>
-                            <h2 className="text-3xl font-black text-slate-900 mb-2 uppercase tracking-tight">C'est prêt !</h2>
-                            <p className="text-slate-500 font-medium mb-10 px-4">Votre établissement est configuré. Votre code PIN d'accès par défaut est :</p>
-                            
-                            <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-200 mb-10 inline-block px-12">
-                                <span className="text-5xl font-black text-indigo-600 tracking-[0.4em]">0000</span>
+                            <div className="space-y-4">
+                                <h3 className="text-3xl font-black text-[#1E3A8A] uppercase tracking-tighter">Accès Activé !</h3>
+                                <p className="text-slate-400 font-medium text-lg leading-relaxed max-w-[300px]">
+                                    Votre espace est désormais prêt. Redirection vers la page de connexion...
+                                </p>
                             </div>
-                            
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Redirection automatique...</p>
+                            <button onClick={() => navigate('/connexion')} className="w-full h-16 bg-[#1E3A8A] text-white rounded-[1.5rem] font-black uppercase tracking-widest text-xs">
+                                Se connecter maintenant
+                            </button>
                         </div>
                     )}
                 </div>
-            </motion.div>
+            </div>
         </div>
     );
 };

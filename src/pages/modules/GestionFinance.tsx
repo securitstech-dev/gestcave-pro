@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { 
   DollarSign, TrendingUp, CreditCard, 
   FileText, Calendar, Filter, ArrowUpRight, 
   ArrowDownRight, PieChart as PieChartIcon, 
   ShieldCheck, Calculator, Activity, ArrowRight, X, Download,
-  Wallet, ShoppingCart, Users, AlertCircle, History, Receipt, Trash2, Search, RefreshCcw
+  Wallet, ShoppingCart, Users, AlertCircle, History, Receipt, Trash2, Search, RefreshCcw,
+  Sparkles, TrendingDown, Landmark, ReceiptText, Smartphone
 } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
@@ -15,7 +15,6 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, 
   Tooltip, ResponsiveContainer 
 } from 'recharts';
-import StatCard from '../../components/ui/StatCard';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import ModalRapportFiscal from '../../components/modals/ModalRapportFiscal';
@@ -36,7 +35,8 @@ interface Transaction {
 }
 
 const GestionFinance = () => {
-  const { profil } = useAuthStore();
+  const { profil, etablissementSimuleId } = useAuthStore();
+  const etablissementId = etablissementSimuleId || profil?.etablissement_id;
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'journal' | 'dettes' | 'charges' | 'recurrentes'>('journal');
@@ -50,25 +50,30 @@ const GestionFinance = () => {
   const [showFiscalModal, setShowFiscalModal] = useState(false);
 
   useEffect(() => {
-    const q = query(collection(db, 'transactions_pos'), where('etablissement_id', '==', profil.etablissement_id));
+    if (!etablissementId) {
+      setLoading(false);
+      return;
+    }
+    
+    const q = query(collection(db, 'transactions_pos'), where('etablissement_id', '==', etablissementId));
     const unsub = onSnapshot(q, (snap) => {
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Transaction[];
       setTransactions(data.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
       setLoading(false);
     });
 
-    const qCharges = query(collection(db, 'charges_fixes'), where('etablissement_id', '==', profil.etablissement_id));
+    const qCharges = query(collection(db, 'charges_fixes'), where('etablissement_id', '==', etablissementId));
     const unsubCharges = onSnapshot(qCharges, (snap) => {
       setCharges(snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[]);
     });
 
-    const qRecur = query(collection(db, 'charges_recurrentes'), where('etablissement_id', '==', profil.etablissement_id));
+    const qRecur = query(collection(db, 'charges_recurrentes'), where('etablissement_id', '==', etablissementId));
     const unsubRecur = onSnapshot(qRecur, (snap) => {
       setChargesRecurrentes(snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[]);
     });
 
     return () => { unsub(); unsubCharges(); unsubRecur(); };
-  }, [profil?.etablissement_id]);
+  }, [etablissementId]);
 
   const ajouterCharge = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,11 +83,11 @@ const GestionFinance = () => {
         montant: Number(nouveauMontantCharge),
         motif: nouveauMotifCharge,
         date: new Date().toISOString(),
-        etablissement_id: profil.etablissement_id
+        etablissement_id: etablissementId
       });
-      toast.success("Charge enregistrée !");
+      toast.success("Charge enregistrée");
       setNouveauMontantCharge(''); setNouveauMotifCharge(''); setShowChargeModal(false);
-    } catch { toast.error("Erreur charge"); }
+    } catch { toast.error("Erreur système"); }
   };
 
   const ajouterChargeRecurrente = async (e: React.FormEvent) => {
@@ -92,19 +97,19 @@ const GestionFinance = () => {
       await addDoc(collection(db, 'charges_recurrentes'), {
         montant: Number(nouveauMontantCharge),
         motif: nouveauMotifCharge,
-        etablissement_id: profil.etablissement_id
+        etablissement_id: etablissementId
       });
-      toast.success("Charge récurrente programmée !");
+      toast.success("Charge récurrente activée");
       setNouveauMontantCharge(''); setNouveauMotifCharge(''); setShowRecurenteModal(false);
-    } catch { toast.error("Erreur"); }
+    } catch { toast.error("Erreur système"); }
   };
 
   const supprimerCharge = async (id: string, collectionName: string = 'charges_fixes') => {
-    if (!window.confirm("Supprimer cet élément ?")) return;
+    if (!window.confirm("Confirmer la suppression ?")) return;
     try {
       await deleteDoc(doc(db, collectionName, id));
-      toast.success("Supprimé !");
-    } catch { toast.error("Échec"); }
+      toast.success("Enregistrement supprimé");
+    } catch { toast.error("Erreur système"); }
   };
 
   const encaisserDette = async (transactionId: string, montant: number) => {
@@ -122,19 +127,17 @@ const GestionFinance = () => {
         modePaiement: nouveauRestant <= 0 ? 'comptant' : 'credit'
       });
 
-      toast.success(`Encaissement de ${montant.toLocaleString()} F réussi !`);
+      toast.success(`Recouvrement : ${montant.toLocaleString()} XAF`);
     } catch (error) {
-      toast.error("Erreur lors de l'encaissement");
+      toast.error("Erreur système");
       console.error(error);
     }
   };
 
-  // Calculs Financiers
   const totalEncaisse = transactions.filter(t => t.type !== 'depense').reduce((acc, t) => acc + (t.montantRecu || t.total), 0);
   const dettesClients = transactions.filter(t => t.type !== 'depense').reduce((acc, t) => acc + (t.montantRestant || 0), 0);
   const depensesAchats = transactions.filter(t => t.type === 'depense').reduce((acc, t) => acc + t.total, 0);
   
-  // Total des charges fixes du mois + charges récurrentes automatiques
   const totalChargesPonctuelles = charges.reduce((acc, c) => acc + c.montant, 0);
   const totalChargesRecurrentes = chargesRecurrentes.reduce((acc, c) => acc + c.montant, 0);
   const totalCharges = totalChargesPonctuelles + totalChargesRecurrentes;
@@ -156,192 +159,225 @@ const GestionFinance = () => {
         const key = t.date.split('T')[0];
         if (dataMap[key] !== undefined && t.type !== 'depense') dataMap[key] += t.montantRecu || t.total;
     });
-    return last7Days.map(day => ({ name: day.label, revenue: dataMap[day.key] }));
+    return last7Days.map(day => ({ name: day.label.toUpperCase(), revenue: dataMap[day.key] }));
   })();
 
   const genererRapportPDF = () => {
     const docPdf = new jsPDF();
     const date = new Date().toLocaleDateString('fr-FR');
-    docPdf.setFontSize(22); docPdf.setTextColor(15, 23, 42); docPdf.text("GESTCAVE PRO", 14, 20);
-    docPdf.setFontSize(10); docPdf.setTextColor(100, 116, 139); docPdf.text(`Livre de Caisse - Rapport du Patron (${profil?.nom || 'Propriétaire'})`, 14, 28);
+    docPdf.setFontSize(22); docPdf.setTextColor(30, 58, 138); docPdf.text("GESTCAVE PRO - FINANCE", 14, 20);
+    docPdf.setFontSize(10); docPdf.setTextColor(100, 116, 139); docPdf.text(`Rapport Financier (${profil?.nom || 'Admin'}) - ${date}`, 14, 28);
     
     autoTable(docPdf, {
       startY: 40,
-      head: [['Date', 'Opération', 'Détail / Client', 'Mode', 'Entrée', 'Sortie']],
+      head: [['DATE', 'OPÉRATION', 'ENTITÉ', 'PAIEMENT', 'ENTRÉE', 'SORTIE']],
       body: transactions.map(t => [
         new Date(t.date).toLocaleDateString(),
-        t.type === 'depense' ? 'ACHAT STOCK' : 'VENTE POS',
-        t.clientNom || t.tableNom || t.description || 'DIRECT',
-        t.modePaiement?.toUpperCase() || 'CASH',
-        t.type !== 'depense' ? `${(t.montantRecu || t.total).toLocaleString()} F` : '-',
-        t.type === 'depense' ? `${t.total.toLocaleString()} F` : '-'
+        t.type === 'depense' ? 'ACHAT' : 'VENTE',
+        (t.clientNom || t.tableNom || t.description || 'COMPTOIR').toUpperCase(),
+        t.modePaiement?.toUpperCase() || 'COMPTANT',
+        t.type !== 'depense' ? `${(t.montantRecu || t.total).toLocaleString()} XAF` : '-',
+        t.type === 'depense' ? `${t.total.toLocaleString()} XAF` : '-'
       ]),
-      headStyles: { fillColor: [15, 23, 42], fontSize: 8 }, 
+      headStyles: { fillColor: [30, 58, 138], fontSize: 8 }, 
       alternateRowStyles: { fillColor: [248, 250, 252] },
-      styles: { fontSize: 7 }
+      styles: { fontSize: 7, font: 'helvetica' }
     });
 
     let currentY = (docPdf as any).lastAutoTable.finalY + 15;
     
     if (charges.length > 0) {
-        docPdf.setFontSize(10); docPdf.setTextColor(225, 29, 72); docPdf.text("CHARGES & FRAIS FIXES", 14, currentY);
+        docPdf.setFontSize(10); docPdf.setTextColor(255, 122, 0); docPdf.text("CHARGES & FRAIS", 14, currentY);
         autoTable(docPdf, {
             startY: currentY + 5,
-            head: [['Date', 'Motif / Désignation', 'Montant']],
-            body: charges.map(c => [new Date(c.date).toLocaleDateString(), c.motif, `${c.montant.toLocaleString()} F`]),
-            headStyles: { fillColor: [225, 29, 72] },
+            head: [['DATE', 'MOTIF', 'MONTANT']],
+            body: charges.map(c => [new Date(c.date).toLocaleDateString(), c.motif.toUpperCase(), `${c.montant.toLocaleString()} XAF`]),
+            headStyles: { fillColor: [255, 122, 0] },
             styles: { fontSize: 7 }
         });
         currentY = (docPdf as any).lastAutoTable.finalY + 15;
     }
 
-    docPdf.setFontSize(10); docPdf.setTextColor(15, 23, 42);
-    docPdf.text(`CAISSE BRUTE (Ventes): ${totalEncaisse.toLocaleString()} F`, 14, currentY);
-    docPdf.text(`TOTAL ACHATS STOCK: -${depensesAchats.toLocaleString()} F`, 14, currentY + 7);
-    docPdf.text(`TOTAL CHARGES FIXES: -${totalCharges.toLocaleString()} F`, 14, currentY + 14);
+    docPdf.setFontSize(10); docPdf.setTextColor(30, 58, 138);
+    docPdf.text(`TOTAL ENCAISSÉ : ${totalEncaisse.toLocaleString()} XAF`, 14, currentY);
+    docPdf.text(`TOTAL ACHATS : -${depensesAchats.toLocaleString()} XAF`, 14, currentY + 7);
+    docPdf.text(`TOTAL CHARGES : -${totalCharges.toLocaleString()} XAF`, 14, currentY + 14);
     
-    docPdf.setFontSize(14); docPdf.setTextColor(5, 150, 105);
-    docPdf.text(`RÉSULTAT NET RÉEL: ${resultatNet.toLocaleString()} F`, 14, currentY + 28);
+    docPdf.setFontSize(14); docPdf.setTextColor(255, 122, 0);
+    docPdf.text(`BÉNÉFICE NET : ${resultatNet.toLocaleString()} XAF`, 14, currentY + 28);
 
-    docPdf.save(`Rapport_Finance_${date}.pdf`);
-    toast.success("Rapport financier complet généré !");
+    docPdf.save(`Rapport_Financier_${date}.pdf`);
+    toast.success("Rapport PDF généré");
   };
 
-  if (loading) return <div className="p-20 text-center font-black animate-pulse text-slate-400 uppercase tracking-widest">Calcul des finances...</div>;
+  if (loading) return <div className="p-40 text-center font-bold text-[#1E3A8A] uppercase tracking-widest animate-pulse">Analyse financière...</div>;
 
   return (
-    <div className="space-y-4 pb-20">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-lg font-display font-black text-slate-900 tracking-tight uppercase">Comptabilité Patron</h2>
-          <p className="text-slate-500 font-medium text-[10px]">Surveillez l'argent encaissé, les dettes et les sorties de stock.</p>
+    <div className="space-y-10 pb-20 animate-in fade-in duration-700">
+      <header className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-xl shadow-blue-900/5 relative overflow-hidden border border-slate-100 flex flex-col md:flex-row justify-between items-end gap-8">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-[80px] -mr-32 -mt-32 opacity-50" />
+        
+        <div className="relative z-10">
+           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-50 rounded-full text-[#1E3A8A] text-xs font-bold uppercase tracking-widest mb-6">
+              <Landmark size={14} />
+              Trésorerie & Finance
+           </div>
+           <h1 className="text-4xl md:text-5xl font-extrabold text-[#1E3A8A] tracking-tight leading-tight mb-4">
+              Gestion de <span className="text-[#FF7A00]">Trésorerie</span>
+           </h1>
+           <p className="text-slate-500 font-medium text-lg max-w-md">Contrôlez vos flux de revenus, vos charges et la rentabilité nette.</p>
         </div>
-        <div className="flex gap-2">
-            <button onClick={() => setShowChargeModal(true)} className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-bold text-[9px] uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-all">
-              <Calculator size={14} /> Charge
+
+        <div className="flex flex-wrap gap-3 relative z-10">
+            <button onClick={() => setShowChargeModal(true)} className="px-6 py-4 bg-white border border-slate-200 text-[#1E3A8A] rounded-2xl font-bold text-xs flex items-center gap-3 hover:bg-slate-50 transition-all shadow-sm">
+              <Calculator size={18} /> Charge ponctuelle
             </button>
-            <button onClick={() => setShowRecurenteModal(true)} className="px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 font-bold text-[9px] uppercase tracking-widest flex items-center gap-2 hover:bg-indigo-100 transition-all">
-              <RefreshCcw size={14} /> Récurrente
+            <button onClick={() => setShowRecurenteModal(true)} className="px-6 py-4 bg-white border border-slate-200 text-[#1E3A8A] rounded-2xl font-bold text-xs flex items-center gap-3 hover:bg-slate-50 transition-all shadow-sm">
+              <RefreshCcw size={18} /> Charge récurrente
             </button>
-            <button onClick={genererRapportPDF} className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-bold text-[9px] uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-all">
-              <Download size={14} /> Journal
+            <button onClick={genererRapportPDF} className="px-6 py-4 bg-slate-900 text-white rounded-2xl font-bold text-xs flex items-center gap-3 hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20">
+              <Download size={18} /> Exporter PDF
             </button>
-            <button onClick={() => setShowFiscalModal(true)} className="px-3 py-1.5 rounded-xl bg-slate-900 text-white font-bold text-[9px] uppercase tracking-widest flex items-center gap-2 shadow-2xl shadow-slate-900/20 active:scale-95 transition-all">
-              <Calculator size={14} /> Fiscal
+            <button onClick={() => setShowFiscalModal(true)} className="px-6 py-4 bg-[#FF7A00] text-white rounded-2xl font-bold text-xs flex items-center gap-3 hover:bg-orange-600 transition-all shadow-lg shadow-orange-900/20">
+              <Activity size={18} /> Bilan Fiscal
             </button>
         </div>
       </header>
 
-      {/* Résumé des flux */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <StatCard label="Encaissé" valeur={`${totalEncaisse.toLocaleString()}`} suffix="F" color="emerald" important />
-          <StatCard label="Dettes" valeur={`${dettesClients.toLocaleString()}`} suffix="F" color="rose" important={dettesClients > 0} icon={<AlertCircle size={14}/>} />
-          <StatCard label="Achats" valeur={`${depensesAchats.toLocaleString()}`} suffix="F" color="slate" />
-          <StatCard label="Caisse Nette" valeur={`${resultatNet.toLocaleString()}`} suffix="F" color="slate" subtext="Réel" />
+      {/* Metrics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl shadow-blue-900/5 group hover:scale-[1.02] transition-all">
+            <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-[#1E3A8A] mb-6"><TrendingUp size={24} /></div>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Chiffre d'Affaires</p>
+            <p className="text-3xl font-extrabold text-[#1E3A8A] tracking-tight">{totalEncaisse.toLocaleString()} <span className="text-sm font-bold opacity-30">XAF</span></p>
+          </div>
+          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl shadow-blue-900/5 group hover:scale-[1.02] transition-all">
+            <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-[#FF7A00] mb-6"><AlertCircle size={24} /></div>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Dettes Clients</p>
+            <p className="text-3xl font-extrabold text-[#FF7A00] tracking-tight">{dettesClients.toLocaleString()} <span className="text-sm font-bold opacity-30">XAF</span></p>
+          </div>
+          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl shadow-blue-900/5 group hover:scale-[1.02] transition-all">
+            <div className="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-500 mb-6"><TrendingDown size={24} /></div>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Total Achats</p>
+            <p className="text-3xl font-extrabold text-[#1E3A8A] tracking-tight">{depensesAchats.toLocaleString()} <span className="text-sm font-bold opacity-30">XAF</span></p>
+          </div>
+          <div className={`p-8 rounded-[2rem] shadow-xl transition-all group hover:scale-[1.02] relative overflow-hidden ${resultatNet >= 0 ? 'bg-emerald-500 shadow-emerald-900/20' : 'bg-rose-500 shadow-rose-900/20'}`}>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -mr-16 -mt-16" />
+            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-white mb-6"><PieChartIcon size={24} /></div>
+            <p className="text-xs font-bold text-white/60 uppercase tracking-widest mb-2">Bénéfice Net</p>
+            <p className="text-3xl font-extrabold text-white tracking-tight">{resultatNet.toLocaleString()} <span className="text-sm font-bold opacity-30">XAF</span></p>
+          </div>
       </div>
 
-      {/* Onglets */}
-      <div className="flex bg-slate-100 p-0.5 rounded-xl w-fit">
-          <button 
-            onClick={() => setActiveTab('journal')}
-            className={`px-3 py-1.5 rounded-lg font-black text-[8px] uppercase tracking-widest transition-all ${activeTab === 'journal' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            Journal
-          </button>
-          <button 
-            onClick={() => setActiveTab('dettes')}
-            className={`px-3 py-1.5 rounded-lg font-black text-[8px] uppercase tracking-widest transition-all ${activeTab === 'dettes' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            Dettes ({transactionsDettes.length})
-          </button>
-          <button 
-            onClick={() => setActiveTab('charges')}
-            className={`px-3 py-1.5 rounded-lg font-black text-[8px] uppercase tracking-widest transition-all ${activeTab === 'charges' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            Charges ({charges.length})
-          </button>
-          <button 
-            onClick={() => setActiveTab('recurrentes')}
-            className={`px-3 py-1.5 rounded-lg font-black text-[8px] uppercase tracking-widest transition-all ${activeTab === 'recurrentes' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            Récurrentes ({chargesRecurrentes.length})
-          </button>
+      {/* Tabs */}
+      <div className="flex bg-slate-100 p-1.5 rounded-[1.5rem] border border-slate-200">
+          {[
+            { id: 'journal', label: 'Journal des Flux', icon: <History size={16} /> },
+            { id: 'dettes', label: 'Crédits & Dettes', icon: <Users size={16} /> },
+            { id: 'charges', label: 'Charges Ponctuelles', icon: <Receipt size={16} /> },
+            { id: 'recurrentes', label: 'Charges Fixes', icon: <RefreshCcw size={16} /> }
+          ].map(tab => (
+            <button 
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex-1 py-4 flex items-center justify-center gap-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-[#1E3A8A] text-white shadow-lg shadow-blue-900/20' : 'text-slate-500 hover:text-[#1E3A8A] hover:bg-white'}`}
+            >
+              {tab.icon}
+              {tab.label}
+              {tab.id === 'dettes' && dettesClients > 0 && (
+                <span className="bg-[#FF7A00] text-white px-2 py-0.5 rounded-full text-[9px]">{transactionsDettes.length}</span>
+              )}
+            </button>
+          ))}
       </div>
 
-      <AnimatePresence mode="wait">
+      {/* Main Content Area */}
+      <div className="space-y-10">
         {activeTab === 'journal' ? (
-          <motion.div key="journal" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* Graphique de Performance */}
-                <div className="lg:col-span-2 bg-white p-3 lg:p-4 rounded-xl border border-slate-100 shadow-sm">
-                  <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Évolution (7j)</h3>
-                      <TrendingUp size={14} className="text-emerald-500" />
+          <div className="space-y-10 animate-in fade-in duration-500">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2 bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl shadow-blue-900/5">
+                  <div className="flex justify-between items-center mb-12">
+                      <div>
+                        <h3 className="text-xl font-extrabold text-[#1E3A8A] tracking-tight">Performance 7 Jours</h3>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">Volume des ventes quotidiennes</p>
+                      </div>
+                      <div className="p-3 bg-blue-50 text-[#1E3A8A] rounded-2xl">
+                         <Activity size={24} />
+                      </div>
                   </div>
-                  <div className="h-[200px]">
+                  <div className="h-[350px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={chartData}>
                         <defs>
                           <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#0f172a" stopOpacity={0.1}/>
-                            <stop offset="95%" stopColor="#0f172a" stopOpacity={0}/>
+                            <stop offset="5%" stopColor="#1E3A8A" stopOpacity={0.15}/>
+                            <stop offset="95%" stopColor="#1E3A8A" stopOpacity={0}/>
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 8, fontWeight: 700}} dy={5} />
-                        <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 8, fontWeight: 700}} dx={-5} />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 10, fontWeight: 700}} dy={15} />
+                        <YAxis axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 10, fontWeight: 700}} dx={-15} />
                         <Tooltip 
-                          contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '8px'}}
-                          itemStyle={{fontWeight: 800, color: '#0f172a', fontSize: '10px'}}
+                          contentStyle={{borderRadius: '1.5rem', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '20px'}}
+                          itemStyle={{fontWeight: 800, color: '#1E3A8A', fontSize: '14px'}}
+                          cursor={{stroke: '#1E3A8A', strokeWidth: 2, strokeDasharray: '4 4'}}
                         />
-                        <Area type="monotone" dataKey="revenue" stroke="#0f172a" strokeWidth={2} fillOpacity={1} fill="url(#colorRevenue)" />
+                        <Area type="monotone" dataKey="revenue" stroke="#1E3A8A" strokeWidth={4} fillOpacity={1} fill="url(#colorRevenue)" />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
 
-                {/* Alertes et Info */}
-                <div className="bg-slate-900 rounded-xl p-4 text-white shadow-2xl overflow-hidden relative">
-                    <div className="absolute top-0 right-0 p-4 opacity-10">
-                        <Calculator size={60} />
-                    </div>
-                    <h3 className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-4">Conseil</h3>
-                    <div className="space-y-2 relative z-10">
-                        <div className="flex gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                                <TrendingUp size={16} />
+                <div className="bg-[#1E3A8A] p-10 rounded-[3rem] text-white relative flex flex-col justify-between shadow-2xl shadow-blue-900/20 overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-32 -mt-32" />
+                    
+                    <div className="relative z-10">
+                        <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center text-[#FF7A00] mb-8 border border-white/10 shadow-inner">
+                            <ShieldCheck size={32} />
+                        </div>
+                        <h3 className="text-3xl font-black uppercase tracking-tighter mb-6 leading-tight">Santé de la Trésorerie</h3>
+                        <p className="text-blue-100/60 text-sm font-medium leading-relaxed mb-10">L'intégrité de vos flux est actuellement optimale. Toutes les transactions sont tracées et sécurisées.</p>
+                        
+                        <div className="space-y-6">
+                            <div className="flex gap-4 p-4 bg-white/5 rounded-2xl border border-white/10">
+                                <TrendingUp size={20} className="text-emerald-400 shrink-0" />
+                                <div>
+                                    <p className="text-xs font-bold text-white uppercase tracking-widest mb-1">Liquidités</p>
+                                    <p className="text-[10px] text-white/40 uppercase font-medium">Positions vérifiées sur tous les postes.</p>
+                                </div>
                             </div>
-                            <p className="text-[11px] text-slate-300 leading-tight"><span className="text-white font-bold">Encaissements :</span> Argent réel disponible.</p>
-                        </div>
-                        <div className="flex gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-white/10 text-white flex items-center justify-center shrink-0">
-                                <History size={16} />
+                            <div className="flex gap-4 p-4 bg-white/5 rounded-2xl border border-white/10">
+                                <ReceiptText size={20} className="text-orange-400 shrink-0" />
+                                <div>
+                                    <p className="text-xs font-bold text-white uppercase tracking-widest mb-1">Passifs</p>
+                                    <p className="text-[10px] text-white/40 uppercase font-medium">Dettes fournisseurs sous contrôle.</p>
+                                </div>
                             </div>
-                            <p className="text-[11px] text-slate-300 leading-tight"><span className="text-white font-bold">Dettes :</span> Suivez les remboursements.</p>
                         </div>
                     </div>
-                    <div className="mt-4 pt-3 border-t border-white/10">
-                        <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest text-slate-500 mb-1.5">
-                            <span>Rentabilité</span>
-                            <span className="text-emerald-400">{totalEncaisse > 0 ? Math.round((resultatNet / totalEncaisse) * 100) : 0}%</span>
+
+                    <div className="mt-12 relative z-10">
+                        <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-white/40 mb-3">
+                            <span>Marge Opérationnelle</span>
+                            <span className="text-[#FF7A00]">{totalEncaisse > 0 ? Math.round((resultatNet / totalEncaisse) * 100) : 0}%</span>
                         </div>
-                        <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                            <motion.div initial={{ width: 0 }} animate={{ width: `${totalEncaisse > 0 ? (resultatNet / totalEncaisse) * 100 : 0}%` }} className="h-full bg-emerald-500" />
+                        <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                            <div style={{ width: `${totalEncaisse > 0 ? Math.min(100, (resultatNet / totalEncaisse) * 100) : 0}%` }} className="h-full bg-[#FF7A00] rounded-full shadow-lg shadow-orange-900/50" />
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Livre de Caisse */}
-            <div className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm">
-                <div className="p-3 border-b border-slate-100 flex items-center justify-between">
-                    <h3 className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Journal</h3>
-                    <div className="flex items-center gap-2">
-                        <Search size={12} className="text-slate-400" />
+            <div className="bg-white rounded-[3rem] border border-slate-100 shadow-xl shadow-blue-900/5 overflow-hidden">
+                <div className="p-8 md:p-10 border-b border-slate-100 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <h3 className="text-xl font-extrabold text-[#1E3A8A] uppercase tracking-tight">Journal des Transactions</h3>
+                    <div className="flex items-center gap-4 bg-slate-50 px-6 py-3 rounded-2xl border border-slate-100 w-full md:w-auto">
+                        <Search size={18} className="text-slate-300" />
                         <input 
                           type="text" 
-                          placeholder="CLIENT..." 
-                          className="bg-transparent border-none outline-none text-[8px] font-black uppercase tracking-widest w-32"
+                          placeholder="Rechercher une transaction..." 
+                          className="bg-transparent border-none outline-none text-xs font-bold uppercase tracking-widest w-full md:w-64 text-[#1E3A8A] placeholder:text-slate-300"
                           value={clientRecherche}
                           onChange={(e) => setClientRecherche(e.target.value)}
                         />
@@ -349,41 +385,43 @@ const GestionFinance = () => {
                 </div>
                 <div className="overflow-x-auto no-scrollbar">
                     <table className="w-full text-left">
-                        <thead>
-                            <tr className="bg-slate-50/50">
-                                <th className="px-4 py-2 text-[8px] font-black text-slate-400 uppercase tracking-widest">Opération</th>
-                                <th className="px-4 py-2 text-[8px] font-black text-slate-400 uppercase tracking-widest">Client</th>
-                                <th className="px-4 py-2 text-[8px] font-black text-slate-400 uppercase tracking-widest">Flux</th>
-                                <th className="px-4 py-2 text-[8px] font-black text-slate-400 uppercase tracking-widest text-right">Montant</th>
+                        <thead className="bg-slate-50 text-slate-400">
+                            <tr>
+                                <th className="px-10 py-5 text-[10px] font-bold uppercase tracking-widest">Opération</th>
+                                <th className="px-10 py-5 text-[10px] font-bold uppercase tracking-widest">Entité / Motif</th>
+                                <th className="px-10 py-5 text-[10px] font-bold uppercase tracking-widest">Flux</th>
+                                <th className="px-10 py-5 text-[10px] font-bold uppercase tracking-widest text-right">Volume</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                             {transactions
-                              .filter(t => !clientRecherche || (t.clientNom?.toLowerCase().includes(clientRecherche.toLowerCase())))
+                              .filter(t => !clientRecherche || (t.clientNom?.toLowerCase().includes(clientRecherche.toLowerCase()) || t.description?.toLowerCase().includes(clientRecherche.toLowerCase())))
                               .map(t => (
-                                <tr key={t.id} className="hover:bg-slate-50/30 transition-all group">
-                                    <td className="px-4 py-1.5">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${t.type === 'depense' ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-500'}`}>
-                                                {t.type === 'depense' ? <ShoppingCart size={14} /> : <Receipt size={14} />}
+                                <tr key={t.id} className="hover:bg-slate-50 transition-all group">
+                                    <td className="px-10 py-6">
+                                        <div className="flex items-center gap-6">
+                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 ${t.type === 'depense' ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-500'}`}>
+                                                {t.type === 'depense' ? <ShoppingCart size={20} /> : <Receipt size={20} />}
                                             </div>
                                             <div>
-                                                <p className="text-[10px] font-black text-slate-900 uppercase tracking-tight">{t.type === 'depense' ? 'ACHAT' : 'VENTE'}</p>
-                                                <p className="text-[8px] text-slate-400 font-bold uppercase">{new Date(t.date).toLocaleDateString()}</p>
+                                                <p className="text-sm font-bold text-[#1E3A8A] tracking-tight">{t.type === 'depense' ? 'ACHAT' : 'VENTE'}</p>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">{new Date(t.date).toLocaleDateString()}</p>
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-1.5">
-                                        <p className="font-bold text-slate-600 text-[10px] uppercase">{t.clientNom || t.tableNom || t.description || 'DIRECT'}</p>
+                                    <td className="px-10 py-6">
+                                        <p className="font-bold text-slate-600 text-sm">{t.clientNom || t.tableNom || t.description || 'COMPTOIR'}</p>
                                     </td>
-                                    <td className="px-4 py-1.5">
-                                        <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md ${t.type === 'depense' ? 'text-rose-600 bg-rose-50' : 'text-emerald-600 bg-emerald-50'}`}>
+                                    <td className="px-10 py-6">
+                                        <span className={`text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg border ${t.type === 'depense' ? 'text-rose-500 bg-rose-50 border-rose-100' : 'text-emerald-500 bg-emerald-50 border-emerald-100'}`}>
                                             {t.type === 'depense' ? 'SORTIE' : 'ENTRÉE'}
                                         </span>
                                     </td>
-                                    <td className="px-4 py-1.5 text-right">
-                                        <p className="font-display font-black text-slate-900 text-xs">{t.type === 'depense' ? '-' : '+'}{(t.montantRecu || t.total).toLocaleString()} F</p>
-                                        {t.montantRestant! > 0 && <p className="text-[8px] font-black text-rose-500 uppercase">Reste: {t.montantRestant?.toLocaleString()} F</p>}
+                                    <td className="px-10 py-6 text-right">
+                                        <p className={`font-black text-xl tracking-tighter ${t.type === 'depense' ? 'text-rose-500' : 'text-[#1E3A8A]'}`}>
+                                          {t.type === 'depense' ? '-' : '+'}{(t.montantRecu || t.total).toLocaleString()} <span className="text-[10px] opacity-30">XAF</span>
+                                        </p>
+                                        {t.montantRestant! > 0 && <p className="text-[10px] font-bold text-[#FF7A00] uppercase mt-1 tracking-widest">Dette : {t.montantRestant?.toLocaleString()}</p>}
                                     </td>
                                 </tr>
                             ))}
@@ -391,190 +429,191 @@ const GestionFinance = () => {
                     </table>
                 </div>
             </div>
-          </motion.div>
+          </div>
         ) : activeTab === 'dettes' ? (
-          <motion.div key="dettes" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {transactionsDettes.length === 0 ? (
-                  <div className="col-span-full py-20 text-center bg-white border border-dashed border-slate-200 rounded-xl">
-                      <ShieldCheck size={48} className="mx-auto text-emerald-500 mb-4" />
-                      <h3 className="text-lg font-display font-black text-slate-900 uppercase">AUCUNE DETTE EN COURS</h3>
-                      <p className="text-slate-400 font-medium">Félicitations, tous vos clients sont à jour !</p>
-                  </div>
-                ) : (
-                  transactionsDettes.map(t => (
-                    <div key={t.id} className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all border-b-4 border-b-rose-500">
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
-                                <Users size={20} />
-                            </div>
-                            <div className="text-right">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dette Totale</p>
-                                <p className="text-xl font-display font-black text-rose-600 leading-tight">{t.montantRestant?.toLocaleString()} F</p>
-                            </div>
-                        </div>
-
-                        <div className="space-y-2 mb-4">
-                            <div>
-                                <h4 className="font-black text-slate-900 uppercase text-xs tracking-tight">{t.clientNom || 'Client Inconnu'}</h4>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-2">
-                                    <Calendar size={12} /> Pris le {new Date(t.date).toLocaleDateString()}
-                                </p>
-                            </div>
-                            {t.clientContact && (
-                                <div className="flex items-center gap-2 text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-lg w-fit">
-                                    <CreditCard size={12} /> {t.clientContact}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="pt-4 border-t border-slate-50 space-y-3">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Encaisser un remboursement</p>
-                            <div className="grid grid-cols-2 gap-3">
-                                <button 
-                                  onClick={() => encaisserDette(t.id, t.montantRestant!)}
-                                  className="py-2 rounded-xl bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all"
-                                >
-                                  Totalité
-                                </button>
-                                <button 
-                                  onClick={() => {
-                                    const m = prompt("Montant du remboursement partiel (F) ?");
-                                    if (m) encaisserDette(t.id, parseInt(m));
-                                  }}
-                                  className="py-3 rounded-xl bg-slate-100 text-slate-600 text-[9px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
-                                >
-                                  Partiel
-                                </button>
-                            </div>
-                        </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in slide-in-from-bottom-10 duration-500">
+              {transactionsDettes.length === 0 ? (
+                <div className="col-span-full py-32 text-center bg-white rounded-[3rem] border-2 border-dashed border-slate-100">
+                    <div className="w-24 h-24 bg-emerald-50 rounded-[2rem] flex items-center justify-center mx-auto mb-8 text-emerald-500">
+                       <ShieldCheck size={64} />
                     </div>
-                  ))
-                )}
-            </div>
-          </motion.div>
+                    <h3 className="text-2xl font-extrabold text-[#1E3A8A] tracking-tight">Aucun Crédit En Cours</h3>
+                    <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.4em] mt-4">Toutes les positions sont soldées.</p>
+                </div>
+              ) : (
+                transactionsDettes.map(t => (
+                  <div key={t.id} className="bg-white rounded-[3rem] border border-slate-100 p-10 shadow-xl shadow-blue-900/5 relative overflow-hidden group hover:border-orange-200 transition-all">
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-orange-50 rounded-full blur-3xl -mr-12 -mt-12 opacity-50" />
+                      
+                      <div className="flex justify-between items-start mb-8 relative z-10">
+                          <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center text-[#FF7A00] shadow-inner">
+                              <Users size={32} />
+                          </div>
+                          <div className="text-right">
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Solde dû</p>
+                              <p className="text-3xl font-black text-[#FF7A00] tracking-tighter mt-1">{t.montantRestant?.toLocaleString()} <span className="text-xs opacity-30">XAF</span></p>
+                          </div>
+                      </div>
+
+                      <div className="space-y-6 mb-10 relative z-10">
+                          <div>
+                              <h4 className="font-extrabold text-[#1E3A8A] text-xl tracking-tight uppercase">{t.clientNom || 'CLIENT INCONNU'}</h4>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2 mt-3">
+                                  <Calendar size={14} /> Depuis le {new Date(t.date).toLocaleDateString()}
+                              </p>
+                          </div>
+                          {t.clientContact && (
+                              <div className="flex items-center gap-3 text-[10px] font-bold text-[#1E3A8A] bg-blue-50 px-4 py-2 rounded-xl w-fit uppercase tracking-widest">
+                                  <Smartphone size={14} /> {t.clientContact}
+                              </div>
+                          )}
+                      </div>
+
+                      <div className="pt-8 border-t border-slate-100 grid grid-cols-2 gap-3 relative z-10">
+                          <button 
+                            onClick={() => encaisserDette(t.id, t.montantRestant!)}
+                            className="h-14 bg-[#1E3A8A] text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-blue-800 transition-all shadow-lg shadow-blue-900/10"
+                          >
+                            Tout solder
+                          </button>
+                          <button 
+                            onClick={() => {
+                              const m = prompt("MONTANT DU VERSEMENT PARTIEL (XAF) ?");
+                              if (m) encaisserDette(t.id, parseInt(m));
+                            }}
+                            className="h-14 bg-white border border-slate-200 text-[#1E3A8A] rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-slate-50 transition-all"
+                          >
+                            Versement
+                          </button>
+                      </div>
+                  </div>
+                ))
+              )}
+          </div>
         ) : activeTab === 'recurrentes' ? (
-          <motion.div key="recurrentes" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="space-y-4">
-            <div className="bg-indigo-600 rounded-2xl p-6 text-white mb-6 flex justify-between items-center shadow-xl shadow-indigo-200">
-               <div>
-                 <h3 className="text-xl font-black uppercase tracking-tight mb-2">Frais Fixes Automatiques</h3>
-                 <p className="text-indigo-100 text-[10px] font-bold uppercase tracking-widest">Le loyer et autres charges programmées sont déduits chaque mois du bénéfice net.</p>
+          <div className="space-y-10 animate-in fade-in duration-500">
+            <div className="bg-[#1E3A8A] p-10 md:p-16 rounded-[3.5rem] text-white flex flex-col md:flex-row justify-between items-center shadow-2xl relative overflow-hidden group">
+               <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-[100px] -mr-32 -mt-32" />
+               <div className="absolute bottom-0 left-0 w-64 h-64 bg-orange-500/10 rounded-full blur-[100px] -ml-32 -mb-32" />
+               
+               <div className="relative z-10 text-center md:text-left mb-8 md:mb-0">
+                 <h3 className="text-4xl font-black uppercase tracking-tighter mb-4">Protocoles Récurrents</h3>
+                 <p className="text-blue-100/60 text-sm font-medium uppercase tracking-widest max-w-sm">Dépenses fixes prévisibles déduites mensuellement.</p>
                </div>
-               <div className="text-right">
-                  <p className="text-[10px] font-black text-indigo-300 uppercase mb-1">Total Mensuel</p>
-                  <p className="text-3xl font-black tracking-tighter">{totalChargesRecurrentes.toLocaleString()} F</p>
+               <div className="text-center md:text-right relative z-10">
+                  <p className="text-xs font-bold text-orange-400 uppercase tracking-widest mb-3">Volume Mensuel Prévu</p>
+                  <p className="text-6xl font-black tracking-tighter">{totalChargesRecurrentes.toLocaleString()} <span className="text-2xl opacity-30">XAF</span></p>
                </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {chargesRecurrentes.map(c => (
-                  <div key={c.id} className="bg-white border border-slate-100 rounded-xl p-5 shadow-sm hover:shadow-md transition-all flex justify-between items-center group">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-900">
-                          <RefreshCcw size={18} />
+                  <div key={c.id} className="bg-white rounded-[2.5rem] border border-slate-100 p-8 flex justify-between items-center group shadow-xl shadow-blue-900/5 hover:border-blue-200 transition-all">
+                      <div className="flex items-center gap-6">
+                        <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-[#1E3A8A] shadow-inner group-hover:bg-blue-100 transition-colors">
+                          <RefreshCcw size={24} />
                         </div>
                         <div>
-                          <h4 className="font-black text-slate-900 text-xs uppercase tracking-tight">{c.motif}</h4>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Prélèvement Mensuel</p>
+                          <h4 className="font-bold text-[#1E3A8A] text-sm uppercase tracking-tight">{c.motif}</h4>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Protocole Actif</p>
                         </div>
                       </div>
-                      <div className="text-right flex items-center gap-4">
-                        <p className="font-black text-slate-900 text-sm tracking-tight">{c.montant.toLocaleString()} F</p>
-                        <button onClick={() => supprimerCharge(c.id, 'charges_recurrentes')} className="p-2 text-slate-200 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100">
-                           <Trash2 size={16} />
+                      <div className="text-right flex items-center gap-6">
+                        <p className="font-black text-[#1E3A8A] text-xl tracking-tighter">{c.montant.toLocaleString()} <span className="text-xs opacity-20 font-bold uppercase">XAF</span></p>
+                        <button onClick={() => supprimerCharge(c.id, 'charges_recurrentes')} className="p-3 text-slate-200 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
+                           <Trash2 size={20} />
                         </button>
                       </div>
                   </div>
                 ))}
+                {chargesRecurrentes.length === 0 && (
+                   <div className="col-span-full py-16 text-center text-slate-300 font-bold uppercase tracking-widest text-sm">Aucun protocole récurrent actif.</div>
+                )}
             </div>
-          </motion.div>
+          </div>
         ) : (
-          <motion.div key="charges" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
-            <div className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm">
-                <div className="p-4 border-b border-slate-100">
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Liste des charges & frais d'exploitation</h3>
-                </div>
-                <div className="overflow-x-auto no-scrollbar">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="bg-slate-50/50">
-                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
-                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Désignation</th>
-                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Montant</th>
-                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {charges.map(c => (
-                                <tr key={c.id} className="hover:bg-slate-50/30 transition-all">
-                                    <td className="px-4 py-3 text-[11px] font-bold text-slate-400">
-                                        {new Date(c.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <p className="font-black text-slate-900 text-xs uppercase tracking-tight">{c.motif}</p>
-                                    </td>
-                                    <td className="px-4 py-3 font-display font-black text-rose-600">
-                                        -{c.montant.toLocaleString()} F
-                                    </td>
-                                    <td className="px-4 py-3 text-right">
-                                        <button onClick={() => supprimerCharge(c.id)} className="p-2 text-slate-300 hover:text-rose-500 transition-colors">
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                            {charges.length === 0 && (
-                                <tr>
-                                    <td colSpan={3} className="px-8 py-20 text-center text-slate-300 font-bold uppercase text-[10px] tracking-widest">Aucune charge enregistrée</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {(showChargeModal || showRecurenteModal) && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-md bg-white rounded-xl p-6 shadow-2xl relative"
-            >
-              <button onClick={() => { setShowChargeModal(false); setShowRecurenteModal(false); }} className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-900"><X size={20} /></button>
-              <div className="mb-4 text-center">
-                  <h3 className="text-xl font-bold text-slate-900 tracking-tight underline decoration-rose-500 decoration-4 underline-offset-8">
-                    {showRecurenteModal ? 'Programmer une Charge' : 'Décaissement Ponctuel'}
-                  </h3>
-                  <p className="text-slate-500 font-medium mt-2">
-                    {showRecurenteModal ? 'Définissez un frais qui revient chaque mois.' : 'Enregistrez une dépense immédiate.'}
-                  </p>
+          <div className="bg-white rounded-[3rem] border border-slate-100 shadow-xl shadow-blue-900/5 overflow-hidden animate-in fade-in duration-500">
+              <div className="p-8 border-b border-slate-100">
+                  <h3 className="text-lg font-extrabold text-[#1E3A8A] uppercase tracking-tight">Registre des Charges Ponctuelles</h3>
               </div>
-              <form onSubmit={showRecurenteModal ? ajouterChargeRecurrente : ajouterCharge} className="space-y-3">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Désignation / Motif</label>
-                  <input type="text" value={nouveauMotifCharge} onChange={(e) => setNouveauMotifCharge(e.target.value)} required placeholder="Ex: Loyer, Électricité, Internet..."
-                    className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none focus:border-slate-900 transition-all font-bold text-slate-900" />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">Montant Mensuel (F CFA)</label>
-                  <input type="number" value={nouveauMontantCharge} onChange={(e) => setNouveauMontantCharge(e.target.value)} required placeholder="0"
-                    className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none font-black text-rose-600 text-xl" />
-                </div>
-                <button type="submit" className={`w-full py-3 ${showRecurenteModal ? 'bg-indigo-600' : 'bg-rose-600'} text-white rounded-xl font-bold uppercase tracking-widest text-[11px] shadow-xl shadow-indigo-600/20 active:scale-95 transition-all mt-4`}>
-                  {showRecurenteModal ? 'Programmer Mensuellement' : 'Confirmer le décaissement'}
-                </button>
-              </form>
-            </motion.div>
+              <div className="overflow-x-auto no-scrollbar">
+                  <table className="w-full text-left">
+                      <thead className="bg-slate-50 text-slate-400">
+                          <tr>
+                              <th className="px-10 py-5 text-[10px] font-bold uppercase tracking-widest">Date Enregistrement</th>
+                              <th className="px-10 py-5 text-[10px] font-bold uppercase tracking-widest">Nature du Motif</th>
+                              <th className="px-10 py-5 text-[10px] font-bold uppercase tracking-widest">Montant</th>
+                              <th className="px-10 py-5 text-[10px] font-bold uppercase tracking-widest text-right">Actions</th>
+                          </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                          {charges.map(c => (
+                              <tr key={c.id} className="hover:bg-slate-50 transition-all group">
+                                  <td className="px-10 py-6 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                                      {new Date(c.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                  </td>
+                                  <td className="px-10 py-6">
+                                      <p className="font-bold text-[#1E3A8A] text-sm uppercase tracking-tight">{c.motif}</p>
+                                  </td>
+                                  <td className="px-10 py-6 font-black text-[#FF7A00] text-xl tracking-tighter">
+                                      -{c.montant.toLocaleString()} <span className="text-[10px] opacity-30">XAF</span>
+                                  </td>
+                                  <td className="px-10 py-6 text-right">
+                                      <button onClick={() => supprimerCharge(c.id)} className="p-3 text-slate-200 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
+                                          <Trash2 size={20} />
+                                      </button>
+                                  </td>
+                              </tr>
+                          ))}
+                          {charges.length === 0 && (
+                              <tr>
+                                  <td colSpan={4} className="px-10 py-32 text-center text-slate-300 font-bold uppercase text-xs tracking-widest">Aucune charge ponctuelle enregistrée.</td>
+                              </tr>
+                          )}
+                      </tbody>
+                  </table>
+              </div>
           </div>
         )}
-      </AnimatePresence>
+      </div>
+
+      {/* Modals */}
+      {(showChargeModal || showRecurenteModal) && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 md:p-12">
+          <div onClick={() => { setShowChargeModal(false); setShowRecurenteModal(false); }} className="absolute inset-0 bg-[#1E3A8A]/90 backdrop-blur-xl" />
+          <div className="w-full max-w-xl bg-white p-12 md:p-16 rounded-[3.5rem] relative shadow-2xl animate-in zoom-in-95 duration-500 border border-white/20">
+            <button onClick={() => { setShowChargeModal(false); setShowRecurenteModal(false); }} className="absolute top-10 right-10 p-3 bg-slate-50 text-slate-400 hover:text-slate-900 rounded-2xl transition-all"><X size={24} /></button>
+            <div className="mb-12">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-orange-50 rounded-full text-orange-500 text-[10px] font-bold uppercase tracking-widest mb-6">
+                  Protocole Financier
+                </div>
+                <h3 className="text-4xl font-extrabold text-[#1E3A8A] tracking-tight leading-tight">
+                  {showRecurenteModal ? 'Charge Récurrente' : 'Dépense Ponctuelle'}
+                </h3>
+            </div>
+            <form onSubmit={showRecurenteModal ? ajouterChargeRecurrente : ajouterCharge} className="space-y-8">
+              <div>
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-3 px-1">Designation du Motif</label>
+                <input type="text" value={nouveauMotifCharge} onChange={(e) => setNouveauMotifCharge(e.target.value)} required placeholder="Ex: Loyer, Electricité, Maintenance..."
+                  className="w-full h-16 bg-slate-50 border border-slate-200 rounded-2xl px-8 outline-none focus:border-[#1E3A8A] focus:bg-white transition-all font-bold text-[#1E3A8A] placeholder:text-slate-200 shadow-sm" />
+              </div>
+              <div className="bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 shadow-inner">
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-4 text-center">Montant de la charge (XAF)</label>
+                <input type="number" value={nouveauMontantCharge} onChange={(e) => setNouveauMontantCharge(e.target.value)} required placeholder="0"
+                  className="w-full text-center text-5xl font-black text-[#FF7A00] bg-transparent outline-none tracking-tighter" />
+              </div>
+              <button type="submit" className="w-full h-20 bg-[#1E3A8A] text-white rounded-[2rem] text-sm font-bold uppercase tracking-widest hover:bg-blue-800 transition-all mt-6 shadow-2xl shadow-blue-900/20 flex items-center justify-center gap-4">
+                {showRecurenteModal ? 'Activer le Protocole' : 'Valider la Dépense'} <ArrowRight size={20} />
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       <ModalRapportFiscal 
         isOpen={showFiscalModal} 
         onClose={() => setShowFiscalModal(false)} 
-        defaultCA={1850000} 
+        defaultCA={totalEncaisse} 
       />
 
       <style>{`

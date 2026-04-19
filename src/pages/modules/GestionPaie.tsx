@@ -1,17 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Wallet, Calendar, Download, Users, 
   ArrowUpRight, ArrowDownRight, Printer, 
   Search, Filter, ChevronRight, CheckCircle2,
   AlertCircle, Briefcase, Clock, MapPin, Home,
-  FileText, Percent
+  FileText, Percent, Sparkles, Activity, Landmark,
+  ArrowRight, TrendingUp, Info
 } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { collection, query, where, onSnapshot, addDoc, getDocs, Timestamp, doc, getDoc } from 'firebase/firestore';
 import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
-import StatCard from '../../components/ui/StatCard';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -52,7 +51,6 @@ const GestionPaie = () => {
 
   useEffect(() => {
     if (!profil?.etablissement_id) {
-      // Si pas d'établissement, on ne peut rien charger mais on arrête le chargement
       setLoading(false);
       return;
     }
@@ -73,7 +71,6 @@ const GestionPaie = () => {
     };
     chargerEtablissement();
 
-    // Système pour suivre le chargement de chaque flux
     let ready = { emp: false, sessions: false, avances: false, trans: false };
     const checkReady = () => {
       if (ready.emp && ready.sessions && ready.avances && ready.trans) {
@@ -81,91 +78,49 @@ const GestionPaie = () => {
       }
     };
 
-    // Charger les employés
     const qEmp = query(collection(db, 'employes'), where('etablissement_id', '==', profil.etablissement_id));
-    const unsubEmp = onSnapshot(qEmp, 
-      (snap) => {
+    const unsubEmp = onSnapshot(qEmp, (snap) => {
         setEmployes(snap.docs.map(d => ({ id: d.id, ...d.data() })) as Employe[]);
-        ready.emp = true;
-        checkReady();
-      },
-      (err) => {
-        console.error("Erreur employes:", err);
-        ready.emp = true;
-        checkReady();
-      }
-    );
+        ready.emp = true; checkReady();
+    });
 
-    // Charger les sessions de travail du mois (sessions terminées ou en cours)
     const qSessions = query(
       collection(db, 'pointage_presence'), 
       where('etablissement_id', '==', profil.etablissement_id),
       where('debut', '>=', Timestamp.fromDate(debutMois)),
       where('debut', '<=', Timestamp.fromDate(finMois))
     );
-    const unsubSessions = onSnapshot(qSessions, 
-      (snap) => {
+    const unsubSessions = onSnapshot(qSessions, (snap) => {
         setSessions(snap.docs.map(d => ({ id: d.id, ...d.data() })) as SessionTravail[]);
-        ready.sessions = true;
-        checkReady();
-      },
-      (err) => {
-        console.error("Erreur sessions:", err);
-        ready.sessions = true;
-        checkReady();
-      }
-    );
+        ready.sessions = true; checkReady();
+    });
 
-    // Charger les avances du mois
     const qAvances = query(
       collection(db, 'avances'),
       where('etablissement_id', '==', profil.etablissement_id),
       where('date', '>=', debutMois.toISOString()),
       where('date', '<=', finMois.toISOString())
     );
-    const unsubAvances = onSnapshot(qAvances, 
-      (snap) => {
+    const unsubAvances = onSnapshot(qAvances, (snap) => {
         setAvances(snap.docs.map(d => d.data()) as Avance[]);
-        ready.avances = true;
-        checkReady();
-      },
-      (err) => {
-        console.error("Erreur avances:", err);
-        ready.avances = true;
-        checkReady();
-      }
-    );
+        ready.avances = true; checkReady();
+    });
 
-    // Charger les transactions pour les commissions
     const qTrans = query(
       collection(db, 'transactions_pos'),
       where('etablissement_id', '==', profil.etablissement_id),
       where('date', '>=', debutMois.toISOString()),
       where('date', '<=', finMois.toISOString())
     );
-    const unsubTrans = onSnapshot(qTrans, 
-      (snap) => {
+    const unsubTrans = onSnapshot(qTrans, (snap) => {
         setTransactions(snap.docs.map(d => d.data()));
-        ready.trans = true;
-        checkReady();
-      },
-      (err) => {
-        console.error("Erreur transactions:", err);
-        ready.trans = true;
-        checkReady();
-      }
-    );
+        ready.trans = true; checkReady();
+    });
 
-    // Sécurité : si après 5 secondes on est toujours en chargement, on force l'affichage
-    const timeout = setTimeout(() => {
-      setLoading(false);
-    }, 5000);
+    const timeout = setTimeout(() => { setLoading(false); }, 5000);
 
     return () => { 
-      unsubEmp(); 
-      unsubSessions(); 
-      unsubAvances(); 
-      unsubTrans(); 
+      unsubEmp(); unsubSessions(); unsubAvances(); unsubTrans(); 
       clearTimeout(timeout);
     };
   }, [profil?.etablissement_id, moisSelectionne, anneeSelectionnee]);
@@ -177,7 +132,7 @@ const GestionPaie = () => {
     const commission = emp.role === 'serveur' ? Math.floor(ventesEmp * 0.02) : 0;
 
     let salaireBase = 0;
-    let presence = 0; // Jours ou Heures
+    let presence = 0;
 
     if (emp.typeSalaire === 'mensuel') {
       salaireBase = emp.salaire || 0;
@@ -194,16 +149,11 @@ const GestionPaie = () => {
       sessionsEmp.forEach((s: any) => {
         if (s.debut && s.fin) {
           let diffMs = (s.fin as Timestamp).toMillis() - (s.debut as Timestamp).toMillis();
-          
-          // Déduction des pauses
           if (s.pauses && Array.isArray(s.pauses)) {
             s.pauses.forEach((p: any) => {
-              if (p.debut && p.fin) {
-                diffMs -= (p.fin as Timestamp).toMillis() - (p.debut as Timestamp).toMillis();
-              }
+              if (p.debut && p.fin) diffMs -= (p.fin as Timestamp).toMillis() - (p.debut as Timestamp).toMillis();
             });
           }
-          
           totalMinutes += diffMs / 60000;
         }
       });
@@ -224,170 +174,194 @@ const GestionPaie = () => {
     const doc = new jsPDF();
     const dateStr = `${moisSelectionne}/${anneeSelectionnee}`;
 
-    // Header
-    doc.setFontSize(22); doc.setTextColor(15, 23, 42); doc.text("GESTCAVE PRO", 14, 20);
-    doc.setFontSize(10); doc.setTextColor(100, 116, 139); doc.text(`BULLETIN DE PAIE - ${dateStr}`, 14, 28);
+    doc.setFontSize(22); doc.setTextColor(30, 58, 138); doc.text("GESTCAVE PRO", 14, 20);
+    doc.setFontSize(10); doc.setTextColor(100, 116, 139); doc.text(`CERTIFICAT DE RÉMUNÉRATION - ${dateStr}`, 14, 28);
     
-    doc.setDrawColor(241, 245, 249); doc.line(14, 35, 196, 35);
+    doc.setDrawColor(30, 58, 138); doc.setLineWidth(1); doc.line(14, 35, 196, 35);
 
-    // Infos Employé
-    doc.setFontSize(10); doc.setTextColor(15, 23, 42);
-    doc.setFont(undefined, 'bold'); doc.text("EMPLOYÉ", 14, 45);
-    doc.setFont(undefined, 'normal'); doc.text(`${emp.nom}`, 14, 52);
-    doc.text(`Rôle: ${emp.role.toUpperCase()}`, 14, 58);
-    doc.text(`Identifiant: ${emp.id.slice(-6).toUpperCase()}`, 14, 64);
+    doc.setFontSize(9); doc.setTextColor(30, 58, 138);
+    doc.setFont(undefined, 'bold'); doc.text("IDENTITÉ DE L'EMPLOYÉ", 14, 45);
+    doc.setFont(undefined, 'normal'); doc.text(`${emp.nom.toUpperCase()}`, 14, 52);
+    doc.text(`POSTE: ${emp.role.toUpperCase()}`, 14, 58);
+    doc.text(`ID: ${emp.id.toUpperCase()}`, 14, 64);
 
-    // Infos Entreprise
     doc.setFont(undefined, 'bold'); doc.text("ÉTABLISSEMENT", 120, 45);
-    doc.setFont(undefined, 'normal'); doc.text(`${etablissementNom}`, 120, 52);
-    doc.text(`Période: ${dateStr}`, 120, 58);
+    doc.setFont(undefined, 'normal'); doc.text(`${etablissementNom.toUpperCase()}`, 120, 52);
+    doc.text(`PÉRIODE: ${dateStr}`, 120, 58);
 
-    // Tableau des rubriques
     autoTable(doc, {
       startY: 80,
-      head: [['Désignation', 'Base / Quantité', 'Taux / Montant', 'Gains', 'Retenues']],
+      head: [['DÉSIGNATION', 'VOLUME / QTÉ', 'TAUX / ÉCHELLE', 'GAINS', 'RETENUES']],
       body: [
-        ['Salaire de Base', `${presence} ${emp.typeSalaire === 'horaire' ? 'H' : 'J'}`, `${emp.salaire.toLocaleString()} F`, `${salaireBase.toLocaleString()} F`, '-'],
-        ['Indemnité de Transport', '-', '-', `${primesTransport.toLocaleString()} F`, '-'],
-        ['Indemnité de Logement', '-', '-', `${primesLogement.toLocaleString()} F`, '-'],
-        ['Commissions sur Ventes (2%)', '-', '-', `${commission.toLocaleString()} F`, '-'],
-        ['Avances & Prêts', '-', '-', '-', `${avances.toLocaleString()} F`],
+        ['RÉMUNÉRATION DE BASE', `${presence} ${emp.typeSalaire === 'horaire' ? 'H' : 'J'}`, `${emp.salaire.toLocaleString()} XAF`, `${salaireBase.toLocaleString()} XAF`, '-'],
+        ['INDEMNITÉ TRANSPORT', '-', '-', `${primesTransport.toLocaleString()} XAF`, '-'],
+        ['INDEMNITÉ LOGEMENT', '-', '-', `${primesLogement.toLocaleString()} XAF`, '-'],
+        ['COMMISSION SUR VENTES (2%)', '-', '-', `${commission.toLocaleString()} XAF`, '-'],
+        ['AVANCES / ACOMPTES', '-', '-', '-', `${avances.toLocaleString()} XAF`],
       ],
-      headStyles: { fillColor: [15, 23, 42], fontSize: 9 },
-      bodyStyles: { fontSize: 8 },
-      foot: [['TOTAL', '', '', `${brut.toLocaleString()} F`, `${avances.toLocaleString()} F`]],
-      footStyles: { fillColor: [248, 250, 252], textColor: [15, 23, 42], fontStyle: 'bold' }
+      headStyles: { fillColor: [30, 58, 138], fontSize: 8 },
+      bodyStyles: { fontSize: 8, font: 'helvetica' },
+      foot: [['TOTAL GÉNÉRAL', '', '', `${brut.toLocaleString()} XAF`, `${avances.toLocaleString()} XAF`]],
+      footStyles: { fillColor: [248, 250, 252], textColor: [30, 58, 138], fontStyle: 'bold' }
     });
 
     const finalY = (doc as any).lastAutoTable.finalY + 15;
     
-    // Total Net
-    doc.setFillColor(248, 250, 252); doc.rect(120, finalY, 76, 15, 'F');
-    doc.setFontSize(14); doc.setFont(undefined, 'bold'); doc.setTextColor(5, 150, 105);
-    doc.text(`NET À PAYER : ${net.toLocaleString()} F`, 125, finalY + 10);
+    doc.setFillColor(30, 58, 138); doc.rect(120, finalY, 76, 18, 'F');
+    doc.setFontSize(14); doc.setFont(undefined, 'bold'); doc.setTextColor(255, 255, 255);
+    doc.text(`NET À PAYER :`, 125, finalY + 8);
+    doc.setFontSize(12); doc.text(`${net.toLocaleString()} XAF`, 125, finalY + 15);
 
-    // Signatures
-    doc.setFontSize(8); doc.setTextColor(100, 116, 139);
-    doc.text("Signature Employeur", 40, finalY + 40);
-    doc.text("Signature Employé", 140, finalY + 40);
+    doc.setFontSize(8); doc.setTextColor(148, 163, 184);
+    doc.text("SIGNATURE EMPLOYEUR", 40, finalY + 45);
+    doc.text("SIGNATURE EMPLOYÉ", 140, finalY + 45);
 
-    doc.save(`Bulletin_${emp.nom.replace(' ', '_')}_${dateStr}.pdf`);
-    toast.success(`Bulletin généré pour ${emp.nom}`);
+    doc.save(`Bulletin_Paie_${emp.nom.replace(' ', '_')}_${dateStr}.pdf`);
+    toast.success(`Bulletin certifié pour ${emp.nom.toUpperCase()}`);
   };
 
   const masseSalarialeTotale = employes.reduce((acc, emp) => acc + calculerBulletin(emp).net, 0);
 
-  if (loading) return <div className="p-20 text-center font-black animate-pulse text-slate-400 uppercase tracking-widest">Calcul de la paie en cours...</div>;
+  if (loading) return <div className="p-40 text-center font-bold text-[#1E3A8A] uppercase tracking-widest animate-pulse">Compilation des salaires...</div>;
 
   return (
-    <div className="space-y-4 pb-20">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-lg font-display font-black text-slate-900 tracking-tight uppercase">Centre de Paie</h2>
-          <p className="text-slate-500 font-medium text-[10px]">Génération des bulletins et suivi des rémunérations.</p>
+    <div className="space-y-10 pb-20 animate-in fade-in duration-700">
+      <header className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-xl shadow-blue-900/5 relative overflow-hidden border border-slate-100 flex flex-col md:flex-row justify-between items-end gap-8">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-[80px] -mr-32 -mt-32 opacity-50" />
+        
+        <div className="relative z-10">
+           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-50 rounded-full text-[#1E3A8A] text-xs font-bold uppercase tracking-widest mb-6">
+              <Landmark size={14} />
+              Ressources Humaines
+           </div>
+           <h1 className="text-4xl md:text-5xl font-extrabold text-[#1E3A8A] tracking-tight leading-tight mb-4">
+              Gestion des <span className="text-[#FF7A00]">Salaires</span>
+           </h1>
+           <p className="text-slate-500 font-medium text-lg max-w-md">Contrôlez la masse salariale, calculez les commissions et éditez les bulletins de paie.</p>
         </div>
-        <div className="flex gap-2 bg-white p-1 rounded-xl border border-slate-200">
+
+        <div className="flex gap-1 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 relative z-10 shadow-sm">
             <select 
               value={moisSelectionne} 
               onChange={(e) => setMoisSelectionne(Number(e.target.value))}
-              className="bg-transparent border-none outline-none font-black text-[10px] uppercase tracking-widest px-2"
+              className="bg-white border-none outline-none font-bold text-[10px] uppercase tracking-widest px-6 py-4 text-[#1E3A8A] rounded-xl shadow-sm focus:ring-2 focus:ring-blue-100 transition-all"
             >
               {Array.from({length: 12}, (_, i) => (
-                <option key={i+1} value={i+1}>{new Date(0, i).toLocaleString('fr-FR', {month: 'long'})}</option>
+                <option key={i+1} value={i+1}>{new Date(0, i).toLocaleString('fr-FR', {month: 'long'}).toUpperCase()}</option>
               ))}
             </select>
             <select 
               value={anneeSelectionnee} 
               onChange={(e) => setAnneeSelectionnee(Number(e.target.value))}
-              className="bg-transparent border-none outline-none font-black text-[10px] uppercase tracking-widest px-2 border-l border-slate-100"
+              className="bg-white border-none outline-none font-bold text-[10px] uppercase tracking-widest px-6 py-4 text-[#1E3A8A] rounded-xl shadow-sm focus:ring-2 focus:ring-blue-100 transition-all"
             >
               {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
             </select>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <StatCard label="Masse Salariale" valeur={`${masseSalarialeTotale.toLocaleString()}`} suffix="F" color="emerald" important subtext={`Pour ${new Date(0, moisSelectionne-1).toLocaleString('fr-FR', {month: 'long'})}`} />
-          <StatCard label="Bulletins" valeur={employes.length} subtext="À traiter" color="slate" />
-          <StatCard label="Sessions" valeur={sessions.length} subtext="Pointages enregistrés" color="slate" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-[#1E3A8A] p-10 rounded-[3rem] text-white shadow-2xl shadow-blue-900/20 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -mr-16 -mt-16" />
+            <p className="text-[11px] font-bold text-white/40 uppercase tracking-widest mb-6 px-1">Masse salariale estimée</p>
+            <p className="text-5xl font-black text-orange-400 tracking-tighter">{masseSalarialeTotale.toLocaleString()} <span className="text-sm font-bold opacity-30 text-white uppercase">XAF</span></p>
+            <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-6 bg-white/5 px-4 py-2 rounded-xl border border-white/10 w-fit">CYCLE {new Date(0, moisSelectionne-1).toLocaleString('fr-FR', {month: 'long'}).toUpperCase()}</p>
+          </div>
+          <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl shadow-blue-900/5 group hover:scale-[1.02] transition-all">
+            <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-[#1E3A8A] mb-8 shadow-inner group-hover:bg-blue-100 transition-colors">
+                <Users size={24} />
+            </div>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Certificats Actifs</p>
+            <p className="text-5xl font-black text-[#1E3A8A] tracking-tighter">{employes.length}</p>
+          </div>
+          <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl shadow-blue-900/5 group hover:scale-[1.02] transition-all">
+            <div className="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500 mb-8 shadow-inner group-hover:bg-orange-100 transition-colors">
+                <Activity size={24} />
+            </div>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Pointages validés</p>
+            <p className="text-5xl font-black text-[#1E3A8A] tracking-tighter">{sessions.length}</p>
+          </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
+      <div className="space-y-6">
           {employes.map(emp => {
             const data = calculerBulletin(emp);
             return (
-              <motion.div 
+              <div 
                 key={emp.id}
-                layout
-                className="bg-white border border-slate-100 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm hover:shadow-xl hover:shadow-slate-200/40 transition-all group"
+                className="bg-white rounded-[2.5rem] border border-slate-100 p-8 md:p-10 flex flex-col lg:flex-row items-center justify-between gap-8 md:gap-10 hover:border-blue-200 transition-all group shadow-xl shadow-blue-900/5 relative overflow-hidden"
               >
-                <div className="flex items-center gap-5">
-                    <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-xl shadow-inner group-hover:scale-110 transition-transform">
+                <div className="absolute top-0 left-0 w-2 h-full bg-[#1E3A8A]/10 group-hover:bg-[#1E3A8A] transition-colors" />
+                
+                <div className="flex items-center gap-8 w-full lg:w-auto">
+                    <div className="w-20 h-20 bg-slate-50 border border-slate-100 rounded-[1.5rem] flex items-center justify-center text-4xl shadow-inner group-hover:bg-blue-50 group-hover:border-blue-100 transition-all">
                         {emp.role === 'serveur' ? '🤵' : emp.role === 'caissier' ? '💰' : '👨‍🍳'}
                     </div>
-                    <div>
-                        <h3 className="font-black text-slate-900 uppercase tracking-tight text-md leading-none mb-1.5">{emp.nom}</h3>
+                    <div className="flex-1">
+                        <h3 className="font-extrabold text-[#1E3A8A] uppercase tracking-tight text-2xl leading-none mb-3">{emp.nom}</h3>
                         <div className="flex gap-2">
-                           <span className="text-[8px] font-black bg-slate-900 text-white px-1.5 py-0.5 rounded tracking-widest uppercase">{emp.role}</span>
-                           <span className="text-[8px] font-black bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded tracking-widest uppercase">{emp.typeSalaire}</span>
+                           <span className="text-[9px] font-bold bg-blue-50 text-[#1E3A8A] px-3 py-1.5 rounded-lg tracking-widest uppercase border border-blue-100">{emp.role}</span>
+                           <span className="text-[9px] font-bold bg-slate-50 text-slate-400 px-3 py-1.5 rounded-lg tracking-widest uppercase border border-slate-100">{emp.typeSalaire}</span>
                         </div>
                     </div>
                 </div>
 
-                <div className="flex flex-1 grid grid-cols-2 md:grid-cols-4 gap-4 px-4 border-l border-slate-50">
-                    <div className="text-center md:text-left">
-                        <p className="text-[7px] font-black text-slate-300 uppercase tracking-widest mb-1">Présence</p>
-                        <p className="font-black text-slate-900 text-xs">
+                <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10 w-full px-4 md:px-0">
+                    <div className="relative">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Volume travail</p>
+                        <p className="font-black text-[#1E3A8A] text-xl">
                           {data.presence} {emp.typeSalaire === 'horaire' ? 'H' : 'J'}
                         </p>
                     </div>
-                    <div className="text-center md:text-left">
-                        <p className="text-[7px] font-black text-slate-300 uppercase tracking-widest mb-1">Gains Brut</p>
-                        <p className="font-black text-emerald-600 text-xs">+{data.brut.toLocaleString()} F</p>
+                    <div className="relative">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Gain Brut</p>
+                        <p className="font-black text-[#1E3A8A] text-xl">+{data.brut.toLocaleString()} <span className="text-[10px] opacity-30">F</span></p>
                     </div>
-                    <div className="text-center md:text-left">
-                        <p className="text-[7px] font-black text-slate-300 uppercase tracking-widest mb-1">Avances</p>
-                        <p className="font-black text-rose-500 text-xs">-{data.avances.toLocaleString()} F</p>
+                    <div className="relative">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Retenues</p>
+                        <p className="font-black text-rose-500 text-xl">-{data.avances.toLocaleString()} <span className="text-[10px] opacity-30">F</span></p>
                     </div>
-                    <div className="text-center md:text-left">
-                        <p className="text-[7px] font-black text-slate-300 uppercase tracking-widest mb-1">Net à Payer</p>
-                        <p className="font-black text-slate-950 text-md tracking-tighter">{data.net.toLocaleString()} F</p>
+                    <div className="relative">
+                        <p className="text-[10px] font-bold text-[#1E3A8A] uppercase tracking-widest mb-2">Net à Payer</p>
+                        <p className="font-black text-[#1E3A8A] text-3xl tracking-tighter">{data.net.toLocaleString()} <span className="text-[10px] opacity-30">F</span></p>
                     </div>
                 </div>
 
                 <button 
                   onClick={() => genererBulletinPDF(emp)}
-                  className="px-6 py-3 rounded-xl bg-slate-950 text-white font-black text-[10px] uppercase tracking-[0.2em] flex items-center gap-3 hover:bg-slate-800 transition-all shadow-lg active:scale-95"
+                  className="w-full lg:w-auto px-8 h-16 bg-[#1E3A8A] text-white rounded-[1.5rem] font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-4 hover:bg-blue-800 transition-all shadow-xl shadow-blue-900/10 active:scale-95 group/btn"
                 >
-                  <Printer size={16} /> Imprimer
+                  <Printer size={18} className="group-hover/btn:scale-110 transition-transform" /> Imprimer
                 </button>
-              </motion.div>
+              </div>
             );
           })}
 
           {employes.length === 0 && (
-            <div className="py-20 text-center bg-white border-2 border-dashed border-slate-100 rounded-[3rem]">
-                <Users size={48} className="mx-auto text-slate-100 mb-6" />
-                <p className="text-slate-300 font-black uppercase tracking-[0.4em] text-xs">Aucun employé à rémunérer</p>
+            <div className="py-32 text-center bg-white rounded-[3rem] border-2 border-dashed border-slate-100">
+                <Users size={64} className="mx-auto text-slate-100 mb-8" />
+                <p className="text-slate-300 font-bold uppercase tracking-[0.4em] text-xs">Aucun employé identifié dans le registre.</p>
             </div>
           )}
       </div>
 
-      {/* Info Card */}
-      <div className="bg-indigo-600 rounded-[2.5rem] p-8 text-white flex flex-col md:flex-row items-center gap-8 shadow-2xl shadow-indigo-600/30 overflow-hidden relative">
-          <div className="absolute top-0 right-0 p-10 opacity-10">
-              <Percent size={120} />
-          </div>
-          <div className="flex-1 space-y-3 relative z-10">
-              <h3 className="text-2xl font-black uppercase tracking-tight">Optimisation Fiscale</h3>
-              <p className="text-indigo-100 text-xs font-medium leading-relaxed max-w-xl">
-                  Les indemnités de transport et de logement sont calculées hors-taxes pour réduire vos charges patronales. 
-                  Le système de pointage garantit que vous ne payez que le temps réel de travail effectué.
+      <div className="bg-[#1E3A8A] p-12 md:p-16 rounded-[3.5rem] text-white flex flex-col lg:flex-row items-center gap-12 shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-[100px] -mr-32 -mt-32" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-orange-500/10 rounded-full blur-[100px] -ml-32 -mb-32" />
+          
+          <div className="flex-1 space-y-6 relative z-10">
+              <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center text-orange-400 mb-8 border border-white/10 shadow-inner">
+                  <TrendingUp size={32} />
+              </div>
+              <h3 className="text-4xl font-black uppercase tracking-tighter">Optimisation des Charges</h3>
+              <p className="text-blue-100/70 text-lg font-medium leading-relaxed max-w-3xl">
+                  Le calcul des commissions sur les ventes de 2% stimule la performance de vos serveurs. 
+                  Toutes les rémunérations sont validées par le pointage PIN sécurisé pour une transparence totale.
               </p>
           </div>
           <div className="shrink-0 relative z-10">
-              <button className="px-8 py-4 bg-white text-indigo-600 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-xl shadow-black/10 hover:bg-indigo-50 transition-all active:scale-95">
-                  Paramètres RH
+              <button className="px-10 h-16 bg-white text-[#1E3A8A] rounded-[1.5rem] font-bold uppercase tracking-widest text-xs hover:bg-orange-500 hover:text-white transition-all shadow-2xl flex items-center gap-3">
+                  <FileText size={18} /> Rapports Détaillés
               </button>
           </div>
       </div>

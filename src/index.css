@@ -1,50 +1,86 @@
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-primary-admin: #0f172a;   /* Slate 950 - Profond */
-  --color-accent-admin: #2563eb;    /* Blue 600 - Pro */
-  --color-bg-admin: #f8fafc;        /* Slate 50 - Background */
-  --color-border-admin: #e2e8f0;    /* Slate 200 - Bordures */
+  /* Sovereign Ledger Color Palette - Refined for Blue & Orange */
+  --color-primary-sovereign: #003366;   /* Deep Institutional Blue */
+  --color-accent-sovereign: #f59e0b;    /* Vibrant Orange */
+  --color-bg-sovereign: #ffffff;         /* Pure White Canvas */
+  --color-surface-low: #f8f9fa;         /* Tonal Shift - Low */
+  --color-surface-highest: #e9ecef;     /* Tonal Shift - Highest */
+  --color-text-main: #1c1b1b;           /* Institutional Ink */
+  --color-border-ghost: #d1d5db;        /* Ghost Border (Slate 300) */
   
-  --font-sans: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-sans: "Public Sans", "Inter", "Segoe UI", system-ui, sans-serif;
+  
+  /* Sharp Edges Rule */
+  --radius-none: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
 }
 
 @layer base {
   body {
-    background-color: var(--color-bg-admin);
-    color: var(--color-primary-admin);
+    background-color: var(--color-bg-sovereign);
+    color: var(--color-text-main);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    @apply m-0 p-0;
   }
 
-  /* Force le noir sur les titres pour éviter tout blanc sur blanc */
+  /* Institutional Typography */
   h1, h2, h3, h4, h5, h6 {
-    color: var(--color-primary-admin) !important;
+    color: var(--color-primary-sovereign);
     font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Global Sharp Edge Enforcement */
+  * {
+    border-radius: 0 !important;
   }
 }
 
 @layer components {
-  /* Cartes Administratives Blanches avec Ombre Légère */
-  .card-admin {
-    @apply bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden;
+  /* Sovereign Cards (No-Line Rule) */
+  .card-sovereign {
+    @apply bg-white border-none shadow-none;
+    background-color: var(--color-surface-low);
   }
 
-  /* Navigation Sidebar Blanche */
-  .nav-sidebar-link {
-    @apply flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-semibold text-sm;
+  .card-sovereign-elevated {
+    @apply bg-white border-none shadow-none;
+    background-color: #ffffff;
   }
 
-  .nav-sidebar-link-active {
-    @apply bg-slate-900 text-white shadow-md shadow-slate-900/10;
+  /* Sovereign Navigation */
+  .nav-link-sovereign {
+    @apply flex items-center gap-3 px-6 py-4 transition-all duration-200 font-bold text-sm uppercase tracking-wider;
   }
 
-  .nav-sidebar-link-inactive {
-    @apply text-slate-500 hover:text-slate-900 hover:bg-slate-100;
+  .nav-link-sovereign-active {
+    @apply bg-primary-sovereign text-white;
+  }
+
+  .nav-link-sovereign-inactive {
+    @apply text-slate-600 hover:bg-surface-low hover:text-primary-sovereign;
+  }
+
+  /* Sovereign Buttons */
+  .btn-sovereign-primary {
+    @apply bg-primary-sovereign text-white px-8 py-3 font-bold uppercase tracking-widest transition-colors hover:bg-blue-900;
+  }
+
+  .btn-sovereign-accent {
+    @apply bg-accent-sovereign text-white px-8 py-3 font-bold uppercase tracking-widest transition-colors hover:bg-orange-600;
   }
 }
 
-/* Scrollbar Fine Admin */
-.custom-scrollbar-admin::-webkit-scrollbar { width: 5px; }
-.custom-scrollbar-admin::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar-admin::-webkit-scrollbar-thumb { @apply bg-slate-200 rounded-full hover:bg-slate-300; }
+/* Custom Scrollbar Sovereign */
+.custom-scrollbar-sovereign::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar-sovereign::-webkit-scrollbar-track { background: var(--color-bg-sovereign); }
+.custom-scrollbar-sovereign::-webkit-scrollbar-thumb { background: var(--color-border-ghost); }

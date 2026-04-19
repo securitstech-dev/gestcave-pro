@@ -1,226 +1,203 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Building2, MapPin, Phone, User, Mail, Send, CheckCircle2, ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { db } from '../lib/firebase';
-import { collection, addDoc } from 'firebase/firestore';
-import { useSearchParams } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuthStore } from '../store/authStore';
+import { 
+  Building, Mail, Lock, User, 
+  ArrowRight, Sparkles, ChevronLeft, 
+  Loader2, Globe, ShieldCheck, Zap
+} from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 const PageInscription = () => {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const planChoisi = searchParams.get('plan') || 'essai_gratuit';
-  const periodeChoisie = searchParams.get('period') || 'mensuel';
-
-  const [loading, setLoading] = useState(false);
-  const [envoye, setEnvoye] = useState(false);
-
   const [formData, setFormData] = useState({
-    nom_etablissement: '',
-    adresse_etablissement: '',
-    telephone_contact: '',
-    nom_contact: '',
-    email_contact: '',
+    nom: '',
+    email: '',
+    motDePasse: '',
+    etablissementNom: ''
   });
+  const [loading, setLoading] = useState(false);
+  const { inscription } = useAuthStore();
+  const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      await addDoc(collection(db, 'demandes_acces'), {
-        ...formData,
-        statut: 'en_attente',
-        date_demande: new Date().toISOString(),
-        plan: planChoisi,
-        periode: periodeChoisie
-      });
-
-
-      setEnvoye(true);
-      toast.success('Votre demande a été envoyée avec succès !');
-    } catch (error) {
-      console.error(error);
-      toast.error("Erreur lors de l'envoi de la demande");
+      await inscription(formData.email, formData.motDePasse, formData.nom, formData.etablissementNom);
+      toast.success("Bienvenue dans l'écosystème GestCave !");
+      navigate('/tableau-de-bord');
+    } catch (error: any) {
+      toast.error(error.message || "Erreur lors de l'inscription");
     } finally {
       setLoading(false);
     }
   };
 
-  if (envoye) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-white p-12 max-w-lg text-center rounded-[3rem] shadow-2xl shadow-emerald-500/10 border border-emerald-100"
-        >
-          <div className="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-8 text-emerald-600 shadow-inner">
-            <CheckCircle2 size={56} />
-          </div>
-          <h1 className="text-4xl font-black text-slate-900 mb-4 tracking-tight uppercase">Demande Reçue !</h1>
-          <p className="text-slate-500 font-medium mb-10 leading-relaxed">
-            Merci <span className="text-slate-900 font-bold">{formData.nom_contact}</span>. Votre demande d'accès pour <span className="text-indigo-600 font-bold">{formData.nom_etablissement}</span> a été transmise avec succès à notre équipe.
-            <br/><br/>
-            Un conseiller <span className="text-slate-900 font-bold">Securits Technologies</span> analysera votre dossier et vous contactera par email sous 24h.
-          </p>
-          <button onClick={() => navigate('/')} className="w-full py-5 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-[11px] hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 active:scale-95">
-            Retour au site
-          </button>
-        </motion.div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-slate-50 relative overflow-hidden">
-      {/* Decorative Orbs */}
-      <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-emerald-500/5 blur-[120px] rounded-full pointer-events-none" />
+    <div className="min-h-screen bg-slate-50 font-['Inter',sans-serif] flex items-center justify-center p-6 relative overflow-hidden selection:bg-blue-100">
+      {/* Background decoration */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
+        <div className="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] bg-blue-100 rounded-full blur-[120px] opacity-40" />
+        <div className="absolute -bottom-[10%] -right-[10%] w-[50%] h-[50%] bg-orange-100 rounded-full blur-[120px] opacity-40" />
+      </div>
 
-       <header className="max-w-7xl mx-auto px-6 h-24 flex items-center justify-between">
-          <button onClick={() => navigate('/')} className="flex items-center gap-3 text-slate-400 hover:text-slate-900 font-bold text-sm transition-all group">
-              <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center group-hover:bg-slate-50 transition-all">
-                  <ArrowLeft size={18} />
-              </div>
-              <span className="uppercase tracking-widest text-[10px] font-black">Retour Accueil</span>
-          </button>
-          <img src="/logo_gestcave.png" alt="Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-slate-900/10" />
-      </header>
-
-      
-      <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-20 items-center py-10 pb-32">
+      <div className="max-w-6xl w-full bg-white rounded-[3.5rem] shadow-[0_40px_100px_-20px_rgba(30,58,138,0.15)] flex flex-col md:flex-row overflow-hidden relative z-10 border border-white">
         
-        <div className="space-y-12">
-          <motion.div 
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-500 text-[10px] font-black uppercase tracking-widest mb-8 shadow-sm">
-              <span className={`w-2 h-2 rounded-full ${planChoisi === 'essai_gratuit' ? 'bg-indigo-500' : 'bg-emerald-500'} animate-pulse`} />
-              {planChoisi === 'essai_gratuit' ? 'Essai Gratuit • 14 Jours' : `Pack ${planChoisi.toUpperCase()} • ${periodeChoisie === 'annuel' ? '1 AN' : '1 MOIS'}`}
+        {/* Left Side: Branding & Value Props */}
+        <div className="md:w-[40%] bg-[#1E3A8A] p-16 text-white flex flex-col justify-between relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl -mr-32 -mt-32" />
+          
+          <div className="space-y-10 relative z-10">
+            <Link to="/" className="inline-flex items-center gap-3 text-white/60 hover:text-white transition-all text-xs font-black uppercase tracking-widest bg-white/5 px-4 py-2 rounded-full border border-white/5">
+              <ChevronLeft size={16} /> Portail Principal
+            </Link>
+            <div className="flex items-center gap-4">
+              <img src="/logo_gestcave.png" alt="Logo" className="w-12 h-12 object-contain" />
+              <h1 className="text-xl font-black tracking-tight uppercase">GestCave Pro</h1>
             </div>
-            <h1 className="text-6xl md:text-[5.5rem] font-display font-black text-slate-900 leading-[0.95] tracking-tighter mb-8">
-              Digitalisez votre <br/>
-              <span className="text-indigo-600">établissement.</span>
-            </h1>
-            <p className="text-slate-500 text-lg font-medium leading-relaxed max-w-md">
-                Rejoignez les dizaines d'établissements qui font confiance à <span className="text-slate-900 font-bold">GESTCAVE PRO</span> pour une synchronisation totale.
-            </p>
-          </motion.div>
+          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-10">
-            <FeatureItem title="Zéro Frais" desc="Liberté totale" color="indigo" />
-            <FeatureItem title="Cloud Sync" desc="Données sécurisées" color="emerald" />
-            <FeatureItem title="Temps Réel" desc="Cuisine synchronisée" color="rose" />
-            <FeatureItem title={planChoisi === 'essai_gratuit' ? 'Essai 14j' : 'Support 24/7'} desc="Équipe à l'écoute" color="slate" />
+          <div className="space-y-12 relative z-10">
+            <div className="space-y-6">
+                <h2 className="text-5xl font-black leading-[1.1] tracking-tight uppercase">
+                    Bâtissez <br/> 
+                    <span className="text-[#FF7A00]">le futur.</span>
+                </h2>
+                <p className="text-blue-100/60 leading-relaxed font-medium text-lg">
+                    Rejoignez des centaines d'établissements qui automatisent leur succès avec GestCave.
+                </p>
+            </div>
+
+            <div className="space-y-6">
+                {[
+                    { icon: <Zap size={18} />, text: 'Déploiement en 60 secondes' },
+                    { icon: <ShieldCheck size={18} />, text: 'IA de surveillance prédictive' },
+                    { icon: <Globe size={18} />, text: 'Accès Cloud Multi-Postes' }
+                ].map((item, i) => (
+                    <div key={i} className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-[#FF7A00] border border-white/5">
+                            {item.icon}
+                        </div>
+                        <span className="text-xs font-black uppercase tracking-widest text-blue-100/80">{item.text}</span>
+                    </div>
+                ))}
+            </div>
+          </div>
+
+          <div className="pt-12 border-t border-white/10 text-[10px] font-black text-blue-100/40 uppercase tracking-[0.3em] relative z-10">
+            Sovereign Ledger Technology — 2026
           </div>
         </div>
 
-        {/* FORMULAIRE CLAIR & PREMIUM */}
-        <motion.div 
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white p-12 sm:p-14 rounded-[4rem] shadow-2xl shadow-indigo-900/5 border border-slate-100 relative"
-        >
-          <div className="mb-12">
-            <h2 className="text-4xl font-black text-slate-900 tracking-tight leading-none mb-4 uppercase">
-              {planChoisi === 'essai_gratuit' ? 'Demander mon accès' : 'Sélectionnez votre Pack'}
-            </h2>
-            <p className="text-slate-400 font-medium">
-              {planChoisi === 'essai_gratuit' ? 'Validation immédiate par nos conseillers.' : `Vous avez choisi le pack ${planChoisi.toUpperCase()} (${periodeChoisie}).`}
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-8">
-            <ModernInput 
-              icon={<Building2 size={20} />} 
-              label="Nom de l'établissement" 
-              placeholder="ex: Le Grand Bar de Brazza"
-              value={formData.nom_etablissement}
-              onChange={(e: any) => setFormData({...formData, nom_etablissement: e.target.value})}
-            />
-
-            <ModernInput 
-              icon={<MapPin size={20} />} 
-              label="Adresse Complète" 
-              placeholder="ex: Rue Case Barnier, Brazzaville"
-              value={formData.adresse_etablissement}
-              onChange={(e: any) => setFormData({...formData, adresse_etablissement: e.target.value})}
-            />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-              <ModernInput 
-                icon={<User size={20} />} 
-                label="Responsable" 
-                placeholder="Votre nom"
-                value={formData.nom_contact}
-                onChange={(e: any) => setFormData({...formData, nom_contact: e.target.value})}
-              />
-              <ModernInput 
-                icon={<Phone size={20} />} 
-                label="Téléphone" 
-                placeholder="+242 0x xxx xxxx"
-                value={formData.telephone_contact}
-                onChange={(e: any) => setFormData({...formData, telephone_contact: e.target.value})}
-              />
+        {/* Right Side: Form */}
+        <div className="md:w-[60%] p-16 md:p-24 bg-white overflow-y-auto max-h-[90vh] no-scrollbar">
+          <div className="max-w-md mx-auto space-y-12">
+            <div className="space-y-4 text-center md:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-orange-50 rounded-full text-[#FF7A00] text-[10px] font-black uppercase tracking-widest border border-orange-100/50">
+                 <Sparkles size={12} /> Nouveau Partenaire
+              </div>
+              <h3 className="text-4xl font-black text-[#1E3A8A] tracking-tighter uppercase leading-none">Créer un Compte</h3>
+              <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Configurez votre environnement de gestion</p>
             </div>
 
-            <ModernInput 
-              icon={<Mail size={20} />} 
-              label="Email de contact" 
-              placeholder="contact@exemple.com"
-              type="email"
-              value={formData.email_contact}
-              onChange={(e: any) => setFormData({...formData, email_contact: e.target.value})}
-            />
+            <form onSubmit={handleRegister} className="grid grid-cols-1 gap-8">
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nom de l'Établissement</label>
+                <div className="relative group">
+                  <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#1E3A8A] transition-all">
+                    <Building size={22} />
+                  </div>
+                  <input 
+                    required 
+                    type="text" 
+                    value={formData.etablissementNom} 
+                    onChange={e => setFormData({...formData, etablissementNom: e.target.value})}
+                    placeholder="Lounge Bar, Cave à vins, etc."
+                    className="w-full h-18 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] pl-16 pr-8 outline-none focus:border-[#1E3A8A] focus:bg-white transition-all font-bold text-[#1E3A8A] shadow-sm placeholder:text-slate-200" 
+                  />
+                </div>
+              </div>
 
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="w-full h-20 bg-slate-900 text-white rounded-[1.8rem] font-bold uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-slate-950/20 active:scale-95 transition-all mt-6 flex items-center justify-center gap-4 hover:bg-slate-800"
-            >
-              {loading ? 'Envoi en cours...' : (
-                <>Envoyer la demande <Send size={20} /></>
-              )}
-            </button>
-          </form>
-        </motion.div>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nom de l'Administrateur</label>
+                <div className="relative group">
+                  <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#1E3A8A] transition-all">
+                    <User size={22} />
+                  </div>
+                  <input 
+                    required 
+                    type="text" 
+                    value={formData.nom} 
+                    onChange={e => setFormData({...formData, nom: e.target.value})}
+                    placeholder="Jean Dupont"
+                    className="w-full h-18 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] pl-16 pr-8 outline-none focus:border-[#1E3A8A] focus:bg-white transition-all font-bold text-[#1E3A8A] shadow-sm placeholder:text-slate-200" 
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Professionnel</label>
+                <div className="relative group">
+                  <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#1E3A8A] transition-all">
+                    <Mail size={22} />
+                  </div>
+                  <input 
+                    required 
+                    type="email" 
+                    value={formData.email} 
+                    onChange={e => setFormData({...formData, email: e.target.value})}
+                    placeholder="contact@etablissement.com"
+                    className="w-full h-18 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] pl-16 pr-8 outline-none focus:border-[#1E3A8A] focus:bg-white transition-all font-bold text-[#1E3A8A] shadow-sm placeholder:text-slate-200" 
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mot de passe de Sécurité</label>
+                <div className="relative group">
+                  <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#1E3A8A] transition-all">
+                    <Lock size={22} />
+                  </div>
+                  <input 
+                    required 
+                    type="password" 
+                    value={formData.motDePasse} 
+                    onChange={e => setFormData({...formData, motDePasse: e.target.value})}
+                    placeholder="Minimum 8 caractères"
+                    className="w-full h-18 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] pl-16 pr-8 outline-none focus:border-[#1E3A8A] focus:bg-white transition-all font-bold text-[#1E3A8A] shadow-sm placeholder:text-slate-200" 
+                  />
+                </div>
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="w-full h-20 bg-[#FF7A00] text-white rounded-[2rem] font-black uppercase tracking-widest text-sm shadow-2xl shadow-orange-900/20 hover:bg-orange-600 transition-all flex items-center justify-center gap-4 group disabled:opacity-50 active:scale-[0.98]"
+              >
+                {loading ? (
+                  <Loader2 size={24} className="animate-spin" />
+                ) : (
+                  <>
+                    Lancer la Configuration
+                    <ArrowRight size={22} className="group-hover:translate-x-2 transition-transform" />
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="pt-8 text-center border-t border-slate-50">
+              <p className="text-slate-400 text-sm font-bold">
+                Déjà partenaire ? {' '}
+                <Link to="/connexion" className="text-[#1E3A8A] hover:text-[#FF7A00] transition-colors border-b-2 border-blue-50 hover:border-orange-100 pb-0.5">
+                  Se connecter
+                </Link>
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
-
-const ModernInput = ({ icon, label, placeholder, value, onChange, type = "text" }: any) => (
-  <div className="space-y-3">
-    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{label}</label>
-    <div className="relative group">
-      <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-slate-300 group-focus-within:text-slate-900 transition-colors">
-        {icon}
-      </div>
-      <input
-        type={type}
-        required
-        value={value}
-        onChange={onChange}
-        className="w-full pl-14 h-16 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:bg-white focus:border-indigo-600 focus:shadow-xl focus:shadow-indigo-500/5 transition-all font-bold text-slate-900"
-        placeholder={placeholder}
-      />
-    </div>
-  </div>
-);
-
-const FeatureItem = ({ title, desc, color }: any) => (
-  <div className="flex gap-5 items-center group">
-    <div className={`w-14 h-14 rounded-2xl bg-${color}-500/5 border border-${color}-100 flex items-center justify-center text-${color}-600 group-hover:scale-110 transition-transform`}>
-        <CheckCircle2 size={24} />
-    </div>
-    <div>
-      <h4 className="text-slate-900 text-base font-black uppercase tracking-tight">{title}</h4>
-      <p className="text-slate-400 text-sm font-medium">{desc}</p>
-    </div>
-  </div>
-);
 
 export default PageInscription;

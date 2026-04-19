@@ -1,165 +1,155 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Mail, Lock, ArrowRight, Shield, ShieldCheck } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import toast from 'react-hot-toast';
+import { 
+  Shield, Mail, Lock, ArrowRight, 
+  Zap, ChevronLeft, AlertCircle, Loader2,
+  Sparkles, ShieldCheck
+} from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 const PageConnexion = () => {
-  const navigate = useNavigate();
-  const connexion = useAuthStore((state) => state.connexion);
-
-  const [typeCompte, setTypeCompte] = useState<'client' | 'admin'>('client');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const { connexion } = useAuthStore();
+  const navigate = useNavigate();
 
-  const gererConnexion = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      if (!email || !password) throw new Error("Veuillez remplir tous les champs");
       await connexion(email, password);
-      toast.success('Connexion réussie — Bienvenue !');
-      const superAdmins = ['securitstech@gmail.com', 'tendressematoko@gmail.com'];
-      if (superAdmins.includes(email.toLowerCase())) {
-        navigate('/super-admin');
-      } else {
-        navigate('/choisir-role');
-      }
-    } catch (err: any) {
-      toast.error(err.message || 'Identifiants incorrects');
+      toast.success("Bon retour dans votre espace !");
+      navigate('/tableau-de-bord');
+    } catch (error: any) {
+      toast.error(error.message || "Identifiants invalides");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-slate-50 font-['Inter',sans-serif] flex items-center justify-center p-6 relative overflow-hidden selection:bg-blue-100">
+      {/* Background decoration */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
+        <div className="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] bg-blue-100 rounded-full blur-[120px] opacity-40" />
+        <div className="absolute -bottom-[10%] -right-[10%] w-[50%] h-[50%] bg-orange-100 rounded-full blur-[120px] opacity-40" />
+      </div>
 
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-            <img src="/logo_gestcave.png" alt="Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-slate-900/10" />
-            <span className="font-bold text-xl tracking-tight text-slate-900">GESTCAVE PRO</span>
+      <div className="max-w-6xl w-full bg-white rounded-[3.5rem] shadow-[0_40px_100px_-20px_rgba(30,58,138,0.15)] flex flex-col md:flex-row overflow-hidden relative z-10 border border-white">
+        
+        {/* Left Side: Branding & Welcome */}
+        <div className="md:w-[45%] bg-[#1E3A8A] p-16 text-white flex flex-col justify-between relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl -mr-32 -mt-32" />
+          
+          <div className="space-y-10 relative z-10">
+            <Link to="/" className="inline-flex items-center gap-3 text-white/60 hover:text-white transition-all text-xs font-black uppercase tracking-widest bg-white/5 px-4 py-2 rounded-full border border-white/5">
+              <ChevronLeft size={16} /> Retour au portail
+            </Link>
+            <div className="flex items-center gap-4 pt-4">
+              <div className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10 shadow-xl">
+                 <img src="/logo_gestcave.png" alt="Logo" className="w-10 h-10 object-contain" />
+              </div>
+              <h1 className="text-2xl font-black tracking-tight uppercase">GestCave Pro</h1>
+            </div>
           </div>
-          <button onClick={() => navigate('/')} className="text-slate-400 hover:text-slate-900 transition-colors text-sm font-medium">
-            ← Retour au site
-          </button>
-        </div>
-      </header>
 
-      {/* Main */}
-      <main className="flex-grow flex items-center justify-center p-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="w-full max-w-[440px]"
-        >
-          <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl shadow-slate-900/10 p-10 text-center">
-
-            <div className="w-20 h-20 mx-auto mb-8 shadow-2xl shadow-slate-900/10">
-              <img src="/logo_gestcave.png" alt="Logo" className="w-full h-full rounded-[1.5rem]" />
-            </div>
-
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">GESTCAVE PRO</h1>
-            <div className="inline-block mt-3 mb-2 px-4 py-1 bg-slate-100 border border-slate-200 rounded-full">
-              <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Version Alpha 1.5 · Onboarding Auto</p>
-            </div>
-
-            <h2 className="text-xl font-bold text-slate-900 mt-6 mb-1">
-              {typeCompte === 'admin' ? 'Accès Administrateur' : 'Espace de Gestion'}
+          <div className="space-y-8 relative z-10">
+            <div className="w-16 h-1 bg-[#FF7A00] rounded-full" />
+            <h2 className="text-5xl font-black leading-[1.1] tracking-tight uppercase">
+                Maîtrisez <br/> 
+                <span className="text-[#FF7A00]">votre empire.</span>
             </h2>
-            <p className="text-slate-400 text-sm font-medium mb-8">
-              {typeCompte === 'admin'
-                ? 'Connexion sécurisée — Plateforme SaaS Global.'
-                : 'Connectez-vous pour piloter votre POS et votre ERP.'}
+            <p className="text-blue-100/60 leading-relaxed font-medium text-lg max-w-sm">
+              Connectez-vous pour piloter votre établissement avec la précision chirurgicale de nos outils d'IA.
             </p>
+          </div>
 
-            <form onSubmit={gererConnexion} className="space-y-5 text-left">
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Adresse Email</label>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 outline-none focus:border-slate-900 transition-all font-medium text-slate-900"
-                    placeholder="contact@monbar.com"
-                    required
+          <div className="pt-12 border-t border-white/10 flex items-center gap-4 relative z-10">
+            <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-blue-300">
+                <ShieldCheck size={20} />
+            </div>
+            <span className="text-[10px] font-black text-blue-100/40 uppercase tracking-[0.3em]">Infrastructure Sécurisée TLS 1.3</span>
+          </div>
+        </div>
+
+        {/* Right Side: Form */}
+        <div className="md:w-[55%] p-16 md:p-24 bg-white">
+          <div className="max-w-md mx-auto space-y-12">
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-full text-[#1E3A8A] text-[10px] font-black uppercase tracking-widest border border-blue-100/50">
+                 <Sparkles size={12} className="text-[#FF7A00]" /> Authentification
+              </div>
+              <h3 className="text-4xl font-black text-[#1E3A8A] tracking-tighter uppercase">Espace Client</h3>
+              <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Entrez vos identifiants administrateur</p>
+            </div>
+
+            <form onSubmit={handleLogin} className="space-y-8">
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Adresse Professionnelle</label>
+                <div className="relative group">
+                  <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#1E3A8A] transition-all">
+                    <Mail size={22} />
+                  </div>
+                  <input 
+                    required 
+                    type="email" 
+                    value={email} 
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="directeur@etablissement.com"
+                    className="w-full h-18 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] pl-16 pr-8 outline-none focus:border-[#1E3A8A] focus:bg-white transition-all font-bold text-[#1E3A8A] shadow-sm placeholder:text-slate-200" 
                   />
                 </div>
               </div>
 
-              <div>
-                <div className="flex justify-between items-center mb-2 px-1">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center ml-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mot de passe</label>
-                  <button 
-                    type="button"
-                    onClick={async () => {
-                      if (!email) return toast.error("Entrez votre email d'abord");
-                      try {
-                        await useAuthStore.getState().reinitialiserMotDePasse(email);
-                        toast.success("Email de réinitialisation envoyé !");
-                      } catch (err: any) {
-                        toast.error("Erreur : " + err.message);
-                      }
-                    }}
-                    className="text-[10px] font-bold text-slate-400 hover:text-slate-900 transition-colors"
-                  >
-                    Oublié ?
-                  </button>
+                  <button type="button" className="text-[10px] font-black text-[#FF7A00] uppercase tracking-widest hover:opacity-70 transition-opacity">Perdu ?</button>
                 </div>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 outline-none focus:border-slate-900 transition-all font-medium text-slate-900"
-                    placeholder="••••••••"
-                    required
+                <div className="relative group">
+                  <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#1E3A8A] transition-all">
+                    <Lock size={22} />
+                  </div>
+                  <input 
+                    required 
+                    type="password" 
+                    value={password} 
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full h-18 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] pl-16 pr-8 outline-none focus:border-[#1E3A8A] focus:bg-white transition-all font-bold text-[#1E3A8A] shadow-sm placeholder:text-slate-200" 
                   />
                 </div>
               </div>
 
-              <button
-                type="submit"
+              <button 
+                type="submit" 
                 disabled={loading}
-                className="w-full h-14 mt-4 bg-slate-900 text-white rounded-2xl font-bold text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-slate-900/25 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+                className="w-full h-20 bg-[#1E3A8A] text-white rounded-[2rem] font-black uppercase tracking-widest text-sm shadow-2xl shadow-blue-900/20 hover:bg-blue-800 transition-all flex items-center justify-center gap-4 group disabled:opacity-50 active:scale-[0.98]"
               >
                 {loading ? (
-                  <span className="flex items-center gap-2">
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Vérification...
-                  </span>
+                  <Loader2 size={24} className="animate-spin" />
                 ) : (
-                  <span className="flex items-center gap-2">
-                    Déverrouiller l'accès <ArrowRight size={18} />
-                  </span>
+                  <>
+                    Accéder au Tableau de Bord
+                    <ArrowRight size={22} className="group-hover:translate-x-2 transition-transform text-[#FF7A00]" />
+                  </>
                 )}
               </button>
             </form>
-          </div>
-        </motion.div>
-      </main>
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-slate-100 py-6">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p className="text-slate-400 text-sm">© 2026 GESTCAVE PRO · Données chiffrées de bout en bout.</p>
-          <div
-            className="flex items-center gap-2 text-slate-200 hover:text-slate-400 transition-colors text-sm cursor-default select-none"
-            onDoubleClick={() => setTypeCompte(prev => prev === 'admin' ? 'client' : 'admin')}
-            title="..."
-          >
-            <Shield size={16} /> Serveur Sécurisé
+            <div className="pt-8 text-center border-t border-slate-50">
+              <p className="text-slate-400 text-sm font-bold">
+                Pas encore de compte ? {' '}
+                <Link to="/inscription" className="text-[#1E3A8A] hover:text-[#FF7A00] transition-colors border-b-2 border-blue-50 hover:border-orange-100 pb-0.5">
+                  Créer un établissement
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
-      </footer>
+      </div>
     </div>
   );
 };

@@ -1,54 +1,47 @@
 import React, { useState } from 'react';
 import { db } from '../lib/firebase';
-import { collection, addDoc, writeBatch, doc } from 'firebase/firestore';
+import { collection, writeBatch, doc } from 'firebase/firestore';
 import { useAuthStore } from '../store/authStore';
-import { Database, Zap, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Database, Zap, CheckCircle2, AlertTriangle, Users, Wine, Utensils } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const SimulationLab = () => {
-  const { profil } = useAuthStore();
+  const { profil, etablissementSimuleId } = useAuthStore();
+  const etablissementId = etablissementSimuleId || profil?.etablissement_id;
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
   const seedRealisticData = async () => {
-    if (!profil?.etablissement_id) return toast.error("Erreur : ID établissement introuvable");
+    if (!etablissementId) {
+      console.log("DEBUG AUTH:", { profil, etablissementSimuleId });
+      let detail = "Veuillez vous reconnecter.";
+      if (!profil) detail = "Profil utilisateur non chargé.";
+      else if (profil.role === 'super_admin' && !etablissementSimuleId) detail = "Veuillez sélectionner un établissement à inspecter.";
+      else if (!profil.etablissement_id) detail = "Votre profil n'est lié à aucun établissement.";
+      
+      return toast.error(`Erreur : ${detail} (ID absent)`);
+    }
     
     setLoading(true);
     try {
       const batch = writeBatch(db);
-      const etablissement_id = profil.etablissement_id;
+      const etablissement_id = etablissementId;
 
-      // 1. PRODUITS & STOCKS
+      // 1. PRODUITS & STOCKS (Boissons -> Bar, Nourriture -> Cuisine/Grill en Unités)
       const produits = [
-        // BIÈRES (Casier de 12 ou 24)
-        { nom: "Heineken 33cl", categorie: "Boisson", prix: 1500, stockTotal: 120, stockAlerte: 24, unitesParCasier: 24, emoji: "🍺", destination_production: "bar" },
-        { nom: "Castel 65cl", categorie: "Boisson", prix: 1200, stockTotal: 240, stockAlerte: 48, unitesParCasier: 12, emoji: "🍺", destination_production: "bar" },
-        { nom: "Guinness Smooth", categorie: "Boisson", prix: 1800, stockTotal: 96, stockAlerte: 24, unitesParCasier: 24, emoji: "🍺", destination_production: "bar" },
-        { nom: "Beaufort Light", categorie: "Boisson", prix: 1300, stockTotal: 144, stockAlerte: 36, unitesParCasier: 12, emoji: "🍺", destination_production: "bar" },
+        // BOISSONS (Destination: BAR)
+        { nom: "Heineken 33cl", categorie: "Boisson", prix: 1500, stockTotal: 120, stockAlerte: 24, unitesParCasier: 24, emoji: "🍺", destination_production: "bar", uniteMesure: "bouteilles" },
+        { nom: "Castel 65cl", categorie: "Boisson", prix: 1200, stockTotal: 240, stockAlerte: 48, unitesParCasier: 12, emoji: "🍺", destination_production: "bar", uniteMesure: "bouteilles" },
+        { nom: "Coca-Cola 33cl", categorie: "Boisson", prix: 1000, stockTotal: 120, stockAlerte: 24, unitesParCasier: 24, emoji: "🥤", destination_production: "bar", uniteMesure: "bouteilles" },
+        { nom: "Eau Minérale 1.5L", categorie: "Boisson", prix: 800, stockTotal: 60, stockAlerte: 12, unitesParCasier: 6, emoji: "💧", destination_production: "bar", uniteMesure: "bouteilles" },
+        { nom: "Jack Daniels (Bouteille)", categorie: "Boisson", prix: 45000, stockTotal: 12, stockAlerte: 3, unitesParCasier: 1, emoji: "🥃", destination_production: "bar", uniteMesure: "bouteilles" },
         
-        // SOFTS
-        { nom: "Coca-Cola 33cl", categorie: "Boisson", prix: 1000, stockTotal: 120, stockAlerte: 24, unitesParCasier: 24, emoji: "🥤", destination_production: "bar" },
-        { nom: "Fanta Orange", categorie: "Boisson", prix: 1000, stockTotal: 120, stockAlerte: 24, unitesParCasier: 24, emoji: "🥤", destination_production: "bar" },
-        { nom: "Eau Minérale 1.5L", categorie: "Boisson", prix: 800, stockTotal: 60, stockAlerte: 12, unitesParCasier: 6, emoji: "💧", destination_production: "bar" },
-        { nom: "Sprite", categorie: "Boisson", prix: 1000, stockTotal: 72, stockAlerte: 12, unitesParCasier: 24, emoji: "🥤", destination_production: "bar" },
-
-        // SPIRITUEUX (Ventes bouteilles & VIP)
-        { nom: "Jack Daniels 70cl", categorie: "Boisson", prix: 45000, stockTotal: 12, stockAlerte: 3, unitesParCasier: 1, emoji: "🥃", destination_production: "bar" },
-        { nom: "Chivas Regal 12 ans", categorie: "Boisson", prix: 55000, stockTotal: 6, stockAlerte: 2, unitesParCasier: 1, emoji: "🥃", destination_production: "bar" },
-        { nom: "Hennessy VS", categorie: "Boisson", prix: 65000, stockTotal: 4, stockAlerte: 1, unitesParCasier: 1, emoji: "🥃", destination_production: "bar" },
-        { nom: "Moët & Chandon Brut", categorie: "Boisson", prix: 95000, stockTotal: 6, stockAlerte: 2, unitesParCasier: 1, emoji: "🍾", destination_production: "bar" },
-
-        // CUISINE - PLATS (Stock infini ou géré par ingrédients, ici on met un stock large)
-        { nom: "Poulet Grillé Entier", categorie: "Plat", prix: 12000, stockTotal: 50, stockAlerte: 5, unitesParCasier: 1, emoji: "🍗", destination_production: "grill" },
-        { nom: "Poisson Braisé (Capitaine)", categorie: "Plat", prix: 15000, stockTotal: 30, stockAlerte: 5, unitesParCasier: 1, emoji: "🐟", destination_production: "grill" },
-        { nom: "Brochettes de Boeuf (x3)", categorie: "Plat", prix: 4500, stockTotal: 100, stockAlerte: 20, unitesParCasier: 1, emoji: "🍢", destination_production: "grill" },
-        { nom: "Pizza Royale", categorie: "Plat", prix: 8500, stockTotal: 50, stockAlerte: 10, unitesParCasier: 1, emoji: "🍕", destination_production: "pizzeria" },
-        { nom: "Burger GestCave", categorie: "Plat", prix: 5500, stockTotal: 40, stockAlerte: 10, unitesParCasier: 1, emoji: "🍔", destination_production: "cuisine" },
-
-        // ACCOMPAGNEMENTS
-        { nom: "Portion de Frites", categorie: "A-Côté", prix: 2000, stockTotal: 100, stockAlerte: 10, unitesParCasier: 1, emoji: "🍟", destination_production: "cuisine" },
-        { nom: "Alloco (Banane)", categorie: "A-Côté", prix: 2500, stockTotal: 80, stockAlerte: 10, unitesParCasier: 1, emoji: "🍌", destination_production: "cuisine" },
-        { nom: "Chikwangue", categorie: "A-Côté", prix: 1500, stockTotal: 50, stockAlerte: 5, unitesParCasier: 1, emoji: "🥖", destination_production: "cuisine" }
+        // NOURRITURE (Destination: CUISINE/GRILL, Unité: UNITÉS)
+        { nom: "Poulet Braisé", categorie: "Plat", prix: 12000, stockTotal: 50, stockAlerte: 5, unitesParCasier: 1, emoji: "🍗", destination_production: "grill", uniteMesure: "unités" },
+        { nom: "Poisson Braisé", categorie: "Plat", prix: 15000, stockTotal: 30, stockAlerte: 5, unitesParCasier: 1, emoji: "🐟", destination_production: "grill", uniteMesure: "unités" },
+        { nom: "Pizza Royale", categorie: "Plat", prix: 8500, stockTotal: 50, stockAlerte: 10, unitesParCasier: 1, emoji: "🍕", destination_production: "pizzeria", uniteMesure: "unités" },
+        { nom: "Frites de Pomme", categorie: "A-Côté", prix: 2000, stockTotal: 100, stockAlerte: 10, unitesParCasier: 1, emoji: "🍟", destination_production: "cuisine", uniteMesure: "unités" },
+        { nom: "Alloco", categorie: "A-Côté", prix: 2500, stockTotal: 80, stockAlerte: 10, unitesParCasier: 1, emoji: "🍌", destination_production: "cuisine", uniteMesure: "unités" }
       ];
 
       for (const p of produits) {
@@ -56,31 +49,54 @@ const SimulationLab = () => {
         batch.set(pRef, { ...p, etablissement_id, dateCreation: new Date().toISOString() });
       }
 
-      // 2. TABLES RÉALISTES
-      const tables = [
-        { nom: "T01", zone: "salle", capacite: 4, statut: "disponible" },
-        { nom: "T02", zone: "salle", capacite: 4, statut: "disponible" },
-        { nom: "T03", zone: "salle", capacite: 2, statut: "disponible" },
-        { nom: "T04", zone: "salle", capacite: 6, statut: "disponible" },
-        { nom: "V01", zone: "vip", capacite: 4, statut: "disponible" },
-        { nom: "V02", zone: "vip", capacite: 8, statut: "disponible" },
-        { nom: "Terrasse 1", zone: "terrasse", capacite: 4, statut: "disponible" },
-        { nom: "Terrasse 2", zone: "terrasse", capacite: 4, statut: "disponible" },
-        { nom: "Comptoir 1", zone: "comptoir", capacite: 1, statut: "disponible" },
-        { nom: "Comptoir 2", zone: "comptoir", capacite: 1, statut: "disponible" }
+      // 2. PERSONNEL (12 Agents)
+      const employes = [
+        { nom: "Jean (Serveur 1)", role: "serveur", salaire: 85000, pin: "1111" },
+        { nom: "Marie (Serveur 2)", role: "serveur", salaire: 85000, pin: "2222" },
+        { nom: "Paul (Serveur 3)", role: "serveur", salaire: 85000, pin: "3333" },
+        { nom: "Alice (Serveur 4)", role: "serveur", salaire: 85000, pin: "4444" },
+        { nom: "Marc (Barman/Caissier 1)", role: "caissier", salaire: 125000, pin: "5555" },
+        { nom: "Sophie (Barman/Caissier 2)", role: "caissier", salaire: 125000, pin: "6666" },
+        { nom: "Chef Ibrahim", role: "cuisine", salaire: 150000, pin: "7777" },
+        { nom: "Awa (Cuisine)", role: "cuisine", salaire: 90000, pin: "8888" },
+        { nom: "Bakary (Sécurité 1)", role: "securite", salaire: 75000, pin: "9999" },
+        { nom: "Moussa (Sécurité 2)", role: "securite", salaire: 75000, pin: "1010" },
+        { nom: "Fatou (Nettoyage 1)", role: "agent_nettoyage", salaire: 65000, pin: "2020" },
+        { nom: "Kader (Nettoyage 2)", role: "agent_nettoyage", salaire: 65000, pin: "3030" }
       ];
 
-      for (const t of tables) {
-        const tRef = doc(collection(db, 'tables'));
-        batch.set(tRef, { ...t, etablissement_id });
+      for (const emp of employes) {
+        const empRef = doc(collection(db, 'employes'));
+        batch.set(empRef, { 
+          ...emp, 
+          etablissement_id, 
+          actif: true, 
+          dateCreation: new Date().toISOString(),
+          typeSalaire: 'mensuel'
+        });
+      }
+
+      // 3. TABLES
+      const zones = ["Comptoir", "Salle", "VIP", "Terrasse"];
+      for (const zone of zones) {
+        for (let i = 1; i <= 3; i++) {
+          const tRef = doc(collection(db, 'tables'));
+          batch.set(tRef, { 
+            nom: `${zone.charAt(0)}${i}`, 
+            zone: zone.toLowerCase(), 
+            capacite: zone === "VIP" ? 6 : 4, 
+            statut: "disponible",
+            etablissement_id 
+          });
+        }
       }
 
       await batch.commit();
       setDone(true);
-      toast.success("Établissement peuplé avec succès !");
+      toast.success("Structure opérationnelle générée !");
     } catch (error) {
       console.error(error);
-      toast.error("Erreur lors du peuplement");
+      toast.error("Erreur lors de la génération");
     } finally {
       setLoading(false);
     }
@@ -88,57 +104,82 @@ const SimulationLab = () => {
 
   return (
     <div className="p-8 max-w-2xl mx-auto">
-      <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl p-10">
-        <div className="flex items-center gap-4 mb-8">
-          <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
-            <Database size={28} />
+      <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-12 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -mr-32 -mt-32 opacity-60" />
+        
+        <div className="flex items-center gap-6 mb-12 relative z-10">
+          <div className="w-16 h-16 bg-[#1E3A8A] rounded-[1.5rem] flex items-center justify-center text-white shadow-xl shadow-blue-900/20">
+            <Zap size={32} fill="currentColor" />
           </div>
           <div>
-            <h2 className="text-2xl font-black text-slate-900">Lab de Simulation</h2>
-            <p className="text-slate-400 text-sm font-medium">Préparez votre environnement de test réaliste</p>
+            <h2 className="text-3xl font-black text-[#1E3A8A] tracking-tight uppercase">Config. Métier</h2>
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Structure Réelle Bar & Restaurant</p>
           </div>
         </div>
 
         {!done ? (
-          <div className="space-y-6">
-            <div className="bg-amber-50 border border-amber-100 rounded-2xl p-5 flex gap-4 text-amber-700">
-              <AlertTriangle className="shrink-0" size={20} />
-              <p className="text-xs leading-relaxed font-medium">
-                Cette action va injecter environ 20 produits variés et 10 tables réelles dans votre base de données. 
-                Idéal pour tester les rapports financiers sur 4 semaines.
-              </p>
+          <div className="space-y-8 relative z-10">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 group hover:bg-white hover:border-blue-100 transition-all">
+                <Wine className="text-[#1E3A8A] mb-4 group-hover:scale-110 transition-transform" size={24} />
+                <p className="text-xs font-black text-[#1E3A8A] uppercase tracking-widest">Boissons au Bar</p>
+                <p className="text-[10px] text-slate-400 font-bold mt-1">Gestion par le Barman/Caissier</p>
+              </div>
+              <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 group hover:bg-white hover:border-orange-100 transition-all">
+                <Utensils className="text-[#FF7A00] mb-4 group-hover:scale-110 transition-transform" size={24} />
+                <p className="text-xs font-black text-[#FF7A00] uppercase tracking-widest">Cuisine en Unités</p>
+                <p className="text-[10px] text-slate-400 font-bold mt-1">Plats & Portions (Pas de bouteilles)</p>
+              </div>
+            </div>
+
+            <div className="bg-[#1E3A8A] text-white rounded-[2rem] p-8 shadow-xl shadow-blue-900/20">
+              <div className="flex gap-4 items-start mb-4">
+                <AlertTriangle className="shrink-0 text-[#FF7A00]" size={24} />
+                <p className="text-sm font-bold leading-relaxed">
+                  Cette configuration va créer 12 agents, vos stocks de boissons et nourriture, ainsi que vos tables réparties par zone (Comptoir, VIP, etc.).
+                </p>
+              </div>
+              <p className="text-[10px] text-blue-200 font-bold uppercase tracking-[0.2em]">PIN par défaut : 1111, 2222, ... 5555 pour le Barman.</p>
             </div>
 
             <button
               onClick={seedRealisticData}
               disabled={loading}
-              className="w-full h-16 bg-slate-900 text-white rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 disabled:opacity-50"
+              className="w-full h-20 bg-[#FF7A00] text-white rounded-[1.5rem] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-4 hover:bg-orange-600 transition-all shadow-xl shadow-orange-900/20 disabled:opacity-50 active:scale-95"
             >
               {loading ? (
-                <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="w-8 h-8 border-4 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
-                  <Zap size={20} fill="currentColor" />
-                  PEUPLER MON ÉTABLISSEMENT
+                  <Zap size={24} fill="currentColor" />
+                  Générer ma structure
                 </>
               )}
             </button>
           </div>
         ) : (
-          <div className="text-center py-6">
-            <div className="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 size={40} />
+          <div className="text-center py-10 relative z-10 animate-in fade-in duration-700">
+            <div className="w-24 h-24 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
+              <CheckCircle2 size={48} />
             </div>
-            <h3 className="text-xl font-bold text-slate-900 mb-2">Configuration Terminée !</h3>
-            <p className="text-slate-400 text-sm font-medium mb-8">
-              Votre stock et vos tables sont prêts. Vous pouvez maintenant passer à la simulation des ventes.
+            <h3 className="text-2xl font-black text-[#1E3A8A] mb-3 uppercase tracking-tight">C'est en place !</h3>
+            <p className="text-slate-400 text-sm font-bold mb-10 max-w-xs mx-auto">
+              Votre Barman est au comptoir, votre cuisine est prête et vos serveurs ont leurs PIN.
             </p>
-            <button 
-              onClick={() => window.location.href = '/dashboard/stocks'}
-              className="px-8 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-200 transition-all"
-            >
-              Vérifier l'Inventaire
-            </button>
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={() => window.location.href = '/tableau-de-bord/plan-salles'}
+                className="w-full h-16 bg-[#1E3A8A] text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-blue-800 transition-all shadow-lg"
+              >
+                Lancer une vente
+              </button>
+              <button 
+                onClick={() => window.location.href = '/tableau-de-bord/stocks'}
+                className="w-full h-16 bg-slate-50 text-slate-400 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-100 transition-all"
+              >
+                Vérifier les stocks
+              </button>
+            </div>
           </div>
         )}
       </div>

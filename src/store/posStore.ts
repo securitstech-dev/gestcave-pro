@@ -191,6 +191,7 @@ interface PosState {
   historiqueSessions: SessionCaisse[];
   loading: boolean;
   unsubs: (() => void)[];
+  isOnline: boolean;
 
   initPOS: (etablissementId: string) => void;
   initialiserTempsReel: (etablissementId: string) => void;
@@ -223,6 +224,7 @@ export const usePOSStore = create<PosState>((set, get) => ({
   sessionActive: null,
   historiqueSessions: [],
   loading: false,
+  isOnline: true,
   unsubs: [],
 
   initPOS: (etablissementId) => {
@@ -231,6 +233,11 @@ export const usePOSStore = create<PosState>((set, get) => ({
     set({ loading: true, etablissement_id: etablissementId });
     
     const unsubs = [];
+
+    // CONNECTION STATUS
+    unsubs.push(onSnapshot(doc(db, '.info/connected'), (snap) => {
+      set({ isOnline: !!snap.data() });
+    }));
 
     // TABLES
     unsubs.push(onSnapshot(query(collection(db, 'tables'), where('etablissement_id', '==', etablissementId)), (snap) => {

@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Clock, UserCheck, Coffee, LogOut, 
-  ChevronRight, AlertCircle, Fingerprint,
-  CheckCircle2, History, ArrowLeft, Home, X
+  Fingerprint, CheckCircle2, History, X, ShieldAlert,
+  ArrowRight, Timer, Zap, Coffee as CoffeeIcon
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { 
@@ -11,7 +10,7 @@ import {
   Timestamp, addDoc, limit, orderBy 
 } from 'firebase/firestore';
 import { useParams, useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
 
 const PagePointage = () => {
   const { etablissementId } = useParams<{ etablissementId: string }>();
@@ -20,7 +19,6 @@ const PagePointage = () => {
   const [employe, setEmploye] = useState<any>(null);
   const [sessionActuelle, setSessionActuelle] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [historique, setHistorique] = useState<any[]>([]);
 
   // Temps réel
   const [time, setTime] = useState(new Date());
@@ -51,7 +49,7 @@ const PagePointage = () => {
       const snap = await getDocs(q);
       
       if (snap.empty) {
-        toast.error("PIN Incorrect");
+        toast.error("Code PIN incorrect — Accès refusé");
         setPin('');
         setLoading(false);
         return;
@@ -60,7 +58,6 @@ const PagePointage = () => {
       const empData = { id: snap.docs[0].id, ...snap.docs[0].data() };
       setEmploye(empData);
       
-      // Vérifier si une session de présence est ouverte aujourd'hui
       const qSession = query(
         collection(db, 'pointage_presence'),
         where('employe_id', '==', empData.id),
@@ -72,19 +69,8 @@ const PagePointage = () => {
         setSessionActuelle({ id: snapSession.docs[0].id, ...snapSession.docs[0].data() });
       }
 
-      // Charger historique récent
-      const qHist = query(
-        collection(db, 'pointage_presence'),
-        where('employe_id', '==', empData.id),
-        orderBy('debut', 'desc'),
-        limit(5)
-      );
-      const snapHist = await getDocs(qHist);
-      setHistorique(snapHist.docs.map(d => d.data()));
-
     } catch (error) {
-      console.error(error);
-      toast.error("Erreur de connexion");
+      toast.error("Erreur de connexion au registre");
     } finally {
       setLoading(false);
     }
@@ -103,181 +89,184 @@ const PagePointage = () => {
           statut: 'present',
           pauses: []
         });
-        toast.success(`Arrivée enregistrée : ${employe.nom}`);
+        toast.success(`Bon service, ${employe.nom} !`);
       } else if (type === 'depart') {
         const ref = doc(db, 'pointage_presence', sessionActuelle.id);
         await updateDoc(ref, {
           fin: Timestamp.now(),
           statut: 'termine'
         });
-        toast.success("Bonne soirée ! Départ validé.");
+        toast.success("Service terminé — À bientôt !");
       } else if (type === 'pause_debut') {
         const ref = doc(db, 'pointage_presence', sessionActuelle.id);
-        const nouvellesPauses = [...(sessionActuelle.pauses || []), { debut: Timestamp.now() }];
-        await updateDoc(ref, { 
-          pauses: nouvellesPauses,
-          statut: 'pause'
-        });
-        toast.success("Pause commencée");
+        const pauses = sessionActuelle.pauses || [];
+        pauses.push({ debut: Timestamp.now() });
+        await updateDoc(ref, { statut: 'pause', pauses });
+        toast.success("Pause enregistrée");
       } else if (type === 'pause_fin') {
         const ref = doc(db, 'pointage_presence', sessionActuelle.id);
         const pauses = [...sessionActuelle.pauses];
         pauses[pauses.length - 1].fin = Timestamp.now();
-        await updateDoc(ref, { 
-          pauses,
-          statut: 'present'
-        });
-        toast.success("Retour de pause");
+        await updateDoc(ref, { statut: 'present', pauses });
+        toast.success("Fin de pause");
       }
-      
-      // Reset
-      setEmploye(null);
-      setSessionActuelle(null);
-      setPin('');
+      reinitialiser();
     } catch (error) {
-      toast.error("Erreur de pointage");
+      toast.error("Erreur lors de l'enregistrement");
     } finally {
       setLoading(false);
     }
   };
 
+  const reinitialiser = () => {
+    setPin('');
+    setEmploye(null);
+    setSessionActuelle(null);
+  };
+
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 font-sans relative overflow-hidden">
+    <div className="min-h-screen bg-[#1E3A8A] font-['Inter',sans-serif] flex items-center justify-center p-6 md:p-12 overflow-hidden relative">
+      {/* Background Decor */}
+      <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-blue-800/30 rounded-full blur-[120px] -mr-96 -mt-96 animate-pulse" />
+      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-blue-900/40 rounded-full blur-[100px] -ml-64 -mb-64" />
       
-      {/* Bouton Retour (Navigation Terminal) */}
-      <div className="absolute top-8 left-8">
-        <button 
-          onClick={() => navigate(`/poste/${etablissementId}`)}
-          className="group flex items-center gap-3 px-6 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest transition-all border border-white/5"
-        >
-          <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> 
-          Quitter le Terminal
-        </button>
-      </div>
-
-      <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+      <div className="w-full max-w-5xl grid lg:grid-cols-2 gap-12 items-center relative z-10">
         
-        {/* Colonne Gauche : Terminal PIN */}
-        <div className="space-y-6">
-          <div className="text-center md:text-left">
-            <h1 className="text-4xl font-black text-white tracking-tighter uppercase mb-2 flex items-center gap-3">
-              <Fingerprint size={40} className="text-emerald-500" />
-              Pointeur HR
-            </h1>
-            <p className="text-slate-400 font-medium">Saisissez votre PIN pour pointer votre présence.</p>
-            <div className="mt-4 text-5xl font-mono font-black text-emerald-400 tabular-nums">
-              {time.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-            </div>
-          </div>
-
-          <div className="bg-slate-800/50 backdrop-blur-xl rounded-3xl p-8 border border-white/10 shadow-2xl">
-            <div className="flex justify-center gap-4 mb-8">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${pin.length >= i ? 'bg-emerald-500 border-emerald-500 scale-125' : 'border-slate-600'}`} />
-              ))}
+        {/* Left Side: Info & Time */}
+        <div className="space-y-12 text-white p-8">
+            <div className="space-y-4">
+                <div className="inline-flex items-center gap-3 px-4 py-2 bg-blue-500/20 backdrop-blur-md rounded-full text-blue-200 text-xs font-bold uppercase tracking-widest border border-white/10">
+                    <Zap size={14} className="text-[#FF7A00]" />
+                    Borne de Pointage Intelligente
+                </div>
+                <h1 className="text-5xl md:text-7xl font-black tracking-tighter leading-none uppercase">
+                   GestCave <br/>
+                   <span className="text-[#FF7A00]">Terminal</span>
+                </h1>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-                <button key={n} onClick={() => handlePIN(n.toString())} className="h-20 rounded-2xl bg-white/5 hover:bg-white/10 text-white text-3xl font-black transition-all active:scale-90 border border-white/5 shadow-lg active:bg-emerald-500/20">
-                  {n}
-                </button>
-              ))}
-              <button onClick={() => setPin('')} className="h-20 rounded-2xl bg-rose-500/10 text-rose-500 text-xs font-black uppercase tracking-widest hover:bg-rose-500/20 transition-all border border-rose-500/20 flex items-center justify-center gap-2">
-                <X size={16} /> Effacer
-              </button>
-              <button onClick={() => handlePIN('0')} className="h-20 rounded-2xl bg-white/5 hover:bg-white/10 text-white text-3xl font-black transition-all active:scale-90 border border-white/5 shadow-lg active:bg-emerald-500/20">0</button>
-              <div className="h-20 flex items-center justify-center">
-                 {loading && <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />}
-              </div>
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-10 rounded-[3rem] shadow-2xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -mr-16 -mt-16 group-hover:bg-white/10 transition-all" />
+                <div className="flex items-baseline gap-4 mb-2">
+                    <p className="text-7xl md:text-8xl font-black tracking-tighter text-white">
+                        {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                    <span className="text-2xl font-bold text-[#FF7A00] animate-pulse">:</span>
+                    <span className="text-3xl font-bold text-blue-300">
+                        {time.toLocaleTimeString([], { second: '2-digit' })}
+                    </span>
+                </div>
+                <p className="text-lg font-bold text-blue-200/60 uppercase tracking-widest">
+                    {time.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                </p>
             </div>
-          </div>
+
+            <div className="flex items-center gap-8 px-4 opacity-40">
+                <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
+                    <span className="text-xs font-bold uppercase tracking-[0.3em]">Network Active</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <ShieldAlert size={14} />
+                    <span className="text-xs font-bold uppercase tracking-[0.3em]">Biometric Auth</span>
+                </div>
+            </div>
         </div>
 
-        {/* Colonne Droite : Actions ou Info */}
-        <AnimatePresence mode="wait">
-          {!employe ? (
-            <motion.div key="waiting" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-              className="bg-white/5 rounded-3xl p-8 border border-white/5 flex flex-col items-center justify-center text-center space-y-4 min-h-[400px]"
-            >
-              <div className="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 animate-pulse">
-                <Clock size={40} />
-              </div>
-              <h2 className="text-xl font-bold text-white uppercase tracking-tight">En attente de pointage</h2>
-              <p className="text-slate-500 text-sm max-w-[200px]">Utilisez le clavier pour vous identifier.</p>
-            </motion.div>
-          ) : (
-            <motion.div key="actions" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl p-8 shadow-2xl space-y-6"
-            >
-              <div className="flex items-center gap-4 border-b border-slate-100 pb-6">
-                <div className="w-16 h-16 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-2xl font-black">
-                  {employe.nom[0]}
-                </div>
-                <div>
-                  <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">{employe.nom}</h2>
-                  <p className="text-emerald-600 font-bold text-xs uppercase tracking-widest flex items-center gap-1">
-                    <CheckCircle2 size={12} /> {employe.role}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4">
-                {!sessionActuelle ? (
-                  <button onClick={() => actionPointage('arrivee')} 
-                    className="w-full py-6 rounded-2xl bg-emerald-600 text-white font-black text-xl uppercase tracking-widest shadow-xl shadow-emerald-500/20 hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-4"
-                  >
-                    <UserCheck size={28} /> Pointer Arrivée
-                  </button>
-                ) : (
-                  <>
-                    <div className="bg-emerald-50 rounded-2xl p-4 flex justify-between items-center mb-2">
-                       <div>
-                         <p className="text-[10px] font-black text-emerald-600 uppercase">Présent depuis</p>
-                         <p className="text-xl font-black text-slate-900">
-                           {new Date(sessionActuelle.debut.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                         </p>
-                       </div>
-                       <div className="px-3 py-1 bg-emerald-500 text-white text-[10px] font-black rounded-full animate-pulse">EN POSTE</div>
+        {/* Right Side: Keyboard & Actions */}
+        <div className="bg-white p-10 md:p-16 rounded-[4rem] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.3)] border border-white">
+            {!employe ? (
+                <div className="space-y-12 animate-in zoom-in-95 duration-500">
+                    <div className="text-center space-y-4">
+                        <div className="w-20 h-20 bg-blue-50 text-[#1E3A8A] rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-inner">
+                            <Fingerprint size={40} />
+                        </div>
+                        <h2 className="text-3xl font-black text-[#1E3A8A] uppercase tracking-tight">Identification</h2>
+                        <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Saisissez votre code PIN personnel</p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      {sessionActuelle.statut === 'pause' ? (
-                        <button onClick={() => actionPointage('pause_fin')} 
-                          className="py-6 rounded-2xl bg-indigo-600 text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-500/20 hover:bg-indigo-700 active:scale-95 transition-all flex flex-col items-center gap-2"
-                        >
-                          <History size={24} /> Retour de Pause
-                        </button>
-                      ) : (
-                        <button onClick={() => actionPointage('pause_debut')} 
-                          className="py-6 rounded-2xl bg-amber-500 text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-amber-500/20 hover:bg-amber-600 active:scale-95 transition-all flex flex-col items-center gap-2"
-                        >
-                          <Coffee size={24} /> Prendre une Pause
-                        </button>
-                      )}
-                      <button onClick={() => actionPointage('depart')} 
-                        className="py-6 rounded-2xl bg-rose-600 text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-rose-500/20 hover:bg-rose-700 active:scale-95 transition-all flex flex-col items-center gap-2"
-                      >
-                        <LogOut size={24} /> Fin de Journée
-                      </button>
+                    <div className="flex justify-center gap-4">
+                        {[0, 1, 2, 3].map((i) => (
+                            <div key={i} className={`w-14 h-20 rounded-2xl flex items-center justify-center text-4xl font-black transition-all border-2 ${
+                                pin.length > i 
+                                ? 'bg-[#1E3A8A] border-[#1E3A8A] text-white shadow-xl shadow-blue-900/20' 
+                                : 'bg-slate-50 border-slate-100 text-slate-200'
+                            }`}>
+                                {pin.length > i ? '•' : ''}
+                            </div>
+                        ))}
                     </div>
-                  </>
-                )}
-              </div>
 
-              <div className="pt-4 border-t border-slate-100">
-                 <button onClick={() => setEmploye(null)} className="w-full py-3 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:text-slate-900 transition-colors">
-                   Ce n'est pas moi / Annuler
-                 </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                    <div className="grid grid-cols-3 gap-4 max-w-sm mx-auto">
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                            <button key={num} onClick={() => handlePIN(num.toString())}
+                                className="h-20 bg-slate-50 hover:bg-blue-50 text-2xl font-black text-[#1E3A8A] rounded-[1.5rem] transition-all active:scale-90 border border-slate-100 shadow-sm">
+                                {num}
+                            </button>
+                        ))}
+                        <button onClick={() => setPin('')} className="h-20 bg-rose-50 text-rose-500 rounded-[1.5rem] flex items-center justify-center hover:bg-rose-100 transition-all active:scale-90 shadow-sm">
+                            <X size={28} />
+                        </button>
+                        <button onClick={() => handlePIN('0')} className="h-20 bg-slate-50 hover:bg-blue-50 text-2xl font-black text-[#1E3A8A] rounded-[1.5rem] transition-all active:scale-90 border border-slate-100 shadow-sm">0</button>
+                        <button className="h-20 bg-slate-50 rounded-[1.5rem] flex items-center justify-center text-slate-200 border border-slate-100 opacity-30">
+                            <ArrowRight size={28} />
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <div className="space-y-12 animate-in slide-in-from-right duration-500">
+                    <div className="text-center space-y-6">
+                        <div className="w-32 h-32 bg-slate-50 rounded-[2.5rem] flex items-center justify-center text-5xl mx-auto shadow-inner border border-slate-100">
+                            {employe.role === 'serveur' ? '🤵' : 
+                             employe.role === 'caissier' ? '💰' : 
+                             employe.role === 'cuisine' ? '👨‍🍳' : '👤'}
+                        </div>
+                        <div>
+                            <h2 className="text-4xl font-black text-[#1E3A8A] uppercase tracking-tighter leading-none mb-2">{employe.nom}</h2>
+                            <p className="text-[10px] font-bold text-[#FF7A00] uppercase tracking-[0.4em]">{employe.role}</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4">
+                        {!sessionActuelle ? (
+                            <button onClick={() => actionPointage('arrivee')} disabled={loading}
+                                className="h-24 bg-[#1E3A8A] text-white rounded-[2rem] font-black uppercase tracking-widest text-lg shadow-2xl shadow-blue-900/30 hover:bg-blue-800 transition-all flex items-center justify-center gap-4 disabled:opacity-50 active:scale-95">
+                                <UserCheck size={32} className="text-[#FF7A00]" />
+                                Débuter le service
+                            </button>
+                        ) : (
+                            <div className="space-y-4">
+                                {sessionActuelle.statut === 'present' ? (
+                                    <button onClick={() => actionPointage('pause_debut')} disabled={loading}
+                                        className="w-full h-24 bg-orange-50 text-orange-600 rounded-[2rem] font-black uppercase tracking-widest text-lg border-2 border-orange-100 hover:bg-orange-100 transition-all flex items-center justify-center gap-4 active:scale-95">
+                                        <CoffeeIcon size={32} />
+                                        Prendre une pause
+                                    </button>
+                                ) : (
+                                    <button onClick={() => actionPointage('pause_fin')} disabled={loading}
+                                        className="w-full h-24 bg-emerald-50 text-emerald-600 rounded-[2rem] font-black uppercase tracking-widest text-lg border-2 border-emerald-100 hover:bg-emerald-100 transition-all flex items-center justify-center gap-4 active:scale-95">
+                                        <CheckCircle2 size={32} />
+                                        Reprendre le service
+                                    </button>
+                                )}
+                                <button onClick={() => actionPointage('depart')} disabled={loading}
+                                    className="w-full h-24 bg-[#1E3A8A] text-white rounded-[2rem] font-black uppercase tracking-widest text-lg shadow-2xl shadow-blue-900/20 hover:bg-blue-800 transition-all flex items-center justify-center gap-4 active:scale-95">
+                                    <LogOut size={32} className="text-rose-400" />
+                                    Terminer le service
+                                </button>
+                            </div>
+                        )}
+                        <button onClick={reinitialiser} className="w-full h-16 text-slate-400 font-bold uppercase tracking-widest text-xs hover:text-rose-500 transition-all">
+                            Annuler l'opération
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
       </div>
 
-      {/* Footer Branding */}
-      <div className="fixed bottom-8 left-0 right-0 text-center">
-        <p className="text-slate-600 font-black text-[10px] uppercase tracking-[0.3em]">GestCave Pro • Terminal de Pointage v2</p>
+      <div className="absolute bottom-8 left-0 w-full text-center">
+         <p className="text-white/20 text-[10px] font-bold uppercase tracking-[0.5em]">GestCave Pro Security Framework — v4.0.1</p>
       </div>
     </div>
   );

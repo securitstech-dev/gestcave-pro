@@ -1,17 +1,16 @@
 import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Banknote, CreditCard, Smartphone, Receipt, 
   CheckCircle2, Users, Clock, ShoppingBag, Wine,
   LogOut, ArrowRight, ShieldCheck, Wallet, 
   TrendingUp, History as HistoryIcon, User, X, Info, Calculator, ArrowLeft, ChevronLeft,
   History, Zap, Phone, UserPlus, AlertCircle, Search,
-  Lock, Unlock, ShieldAlert
+  Lock, Unlock, ShieldAlert, Sparkles, Printer, ArrowDownRight, CreditCard as CardIcon,
+  Check, MoreVertical, LayoutDashboard, Database, Landmark, DollarSign, Plus, Trash2
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
 import { usePOSStore, imprimerTicket } from '../../store/posStore';
 import { usePosteSession } from '../../hooks/usePosteSession';
-import { useAuthStore } from '../../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import type { LigneCommande } from '../../store/posStore';
 
@@ -20,7 +19,7 @@ const InterfaceCaissier = () => {
     tables, commandes, encaisserCommande, ouvrirVenteEmporter,
     sessionActive, ouvrirSession, fermerSession 
   } = usePOSStore();
-  const { nomEmploye, etablissementId, quitterPoste } = usePosteSession();
+  const { nomEmploye, idEmploye, etablissementId, quitterPoste } = usePosteSession();
   const navigate = useNavigate();
   
   const [commandeSelectionnee, setCommandeSelectionnee] = useState<string | null>(null);
@@ -81,7 +80,7 @@ const InterfaceCaissier = () => {
     if (!commandeSelectionnee || !modePaiement) return;
     
     if ((modePaiement === 'credit' || resteAPayer > 0) && (!nomClient || !contactClient)) {
-      toast.error('Nom et Contact requis pour une dette !');
+      toast.error('Identité du client requise pour le crédit');
       return;
     }
 
@@ -90,7 +89,7 @@ const InterfaceCaissier = () => {
       return;
     }
 
-    const toastId = toast.loading("Enregistrement...");
+    const toastId = toast.loading("Enregistrement de la transaction...");
     try {
       encaisserCommande(
         commandeSelectionnee, 
@@ -99,219 +98,352 @@ const InterfaceCaissier = () => {
         remise, 
         montantRecu, 
         contactClient,
-        refPaiement
+        modePaiement
       );
-      
-      toast.success("Transaction validée !", { id: toastId, icon: '💰' });
-      
-      // On propose l'impression
-      const etablissementNom = (window as any).etablissement_nom || 'Votre Établissement';
-      if (commandeActive) {
-         if (window.confirm("Voulez-vous imprimer le ticket ?")) {
-            imprimerTicket(commandeActive, etablissementNom);
-         }
-      }
-      
+      toast.success("Vente clôturée avec succès", { id: toastId });
       setCommandeSelectionnee(null);
       setModePaiement(null);
       setMontantSaisi('');
       setNomClient('');
       setContactClient('');
       setRemise(0);
-      setRefPaiement('');
-    } catch {
-      toast.error("Erreur serveur", { id: toastId });
+    } catch (error) {
+      toast.error("Erreur lors de l'encaissement", { id: toastId });
     }
   };
 
-  const demarrerVenteEmporter = async () => {
-    const id = await ouvrirVenteEmporter(etablissementId || 'caissier', nomEmploye);
-    setCommandeSelectionnee(id);
-    toast.success('Nouvelle vente directe', { icon: '⚡' });
-  };
-
   return (
-    <div className="h-screen w-screen flex flex-col md:flex-row bg-slate-50 font-display overflow-hidden text-slate-900">
-      
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap');
-        .font-display { font-family: 'Outfit', sans-serif; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-      `}</style>
-
-      {/* Sidebar : Liste des tickets */}
-      <aside className={`${commandeSelectionnee ? 'hidden md:flex' : 'flex'} w-full md:w-[190px] bg-white border-r border-slate-200 flex-col shadow-xl z-20`}>
-        <header className="p-2 space-y-2 bg-white/80 backdrop-blur-md sticky top-0 border-b border-slate-50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-slate-950 flex items-center justify-center text-white shadow-lg">
-                <Banknote size={16} />
+    <div className="h-screen bg-slate-50 flex flex-col font-['Inter',sans-serif] text-slate-800 overflow-hidden">
+      {/* Caissier Header */}
+      <header className="h-24 bg-[#1E3A8A] px-10 flex items-center justify-between shadow-2xl relative z-30">
+          <div className="flex items-center gap-8">
+              <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-[#1E3A8A] shadow-lg shadow-blue-900/20">
+                      <Wallet size={28} />
+                  </div>
+                  <div>
+                      <h1 className="text-white font-black text-xl tracking-tight uppercase leading-none">Interface Caisse</h1>
+                      <p className="text-blue-300 font-bold text-[10px] uppercase tracking-widest mt-1">Opérateur : {nomEmploye}</p>
+                  </div>
               </div>
-              <div>
-                <h1 className="text-[10px] font-black tracking-tight uppercase leading-none">Caisse</h1>
-                <div className="flex items-center gap-1 mt-0.5">
-                  <span className="w-1 h-1 rounded-full bg-emerald-500" />
-                  <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none">{nomEmploye}</p>
-                </div>
+              <div className="h-8 w-[1px] bg-white/10" />
+              <div className="flex gap-4">
+                  <button onClick={() => ouvrirVenteEmporter(idEmploye || 'inconnu', nomEmploye || 'Caissier')} className="h-12 px-6 bg-[#FF7A00] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-orange-600 transition-all shadow-lg shadow-orange-900/20 flex items-center gap-2">
+                    <Plus size={16} /> Vente Directe
+                  </button>
+                  <button onClick={() => setShowClotureModal(true)} className="h-12 px-6 bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/20 transition-all border border-white/10 flex items-center gap-2">
+                    <Lock size={16} /> Fermer Caisse
+                  </button>
               </div>
-            </div>
-            <div className="flex gap-1">
-               <button 
-                onClick={quitterPoste}
-                className="p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-all"
-              >
-                <LogOut size={14} />
-              </button>
-              {sessionActive && (
-                <button 
-                  onClick={() => setShowClotureModal(true)}
-                  className="p-1.5 rounded-lg hover:bg-amber-50 text-slate-300 hover:text-amber-600 transition-all"
-                  title="Clôturer"
-                >
-                  <Lock size={14} />
-                </button>
-              )}
-            </div>
           </div>
 
-          <div className="space-y-1.5">
-            <button 
-              onClick={demarrerVenteEmporter}
-              className="w-full h-7 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[7px] uppercase tracking-widest shadow-md transition-all flex items-center justify-center gap-2"
-            >
-              <ShoppingBag size={12} /> Vente Directe
-            </button>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-300" size={12} />
-              <input 
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="RECHERCHER..."
-                className="w-full h-7 pl-8 pr-3 rounded-lg bg-slate-50 border border-slate-100 focus:border-indigo-400 outline-none font-black text-[7px] tracking-widest"
-              />
-            </div>
+          <div className="flex items-center gap-6">
+              <div className="text-right">
+                  <p className="text-white font-black text-xs uppercase">{nomEmploye}</p>
+                  <button onClick={quitterPoste} className="text-rose-400 font-black text-[9px] uppercase tracking-widest flex items-center gap-2 justify-end mt-1 hover:text-rose-300">
+                    Quitter le poste <LogOut size={12} />
+                  </button>
+              </div>
           </div>
-        </header>
+      </header>
 
-        <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-2 no-scrollbar">
-          <div className="px-1 py-2 flex items-center justify-between">
-            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Tickets actifs</span>
-            <span className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 font-bold text-[8px]">{commandesActives.length}</span>
-          </div>
-
-          {commandesActives.length === 0 ? (
-            <div className="text-center py-6">
-               <Receipt size={20} className="text-slate-200 mx-auto mb-1" />
-               <p className="text-[7px] font-black text-slate-300 uppercase tracking-widest">Aucun ticket</p>
-            </div>
-          ) : (
-            commandesActives.map(c => (
-              <motion.button
-                key={c.id}
-                layout
-                onClick={() => setCommandeSelectionnee(c.id)}
-                className={`w-full p-1.5 rounded-xl border text-left transition-all ${
-                  commandeSelectionnee === c.id 
-                    ? 'bg-slate-900 border-slate-900 text-white shadow-lg' 
-                    : 'bg-white border-slate-100 hover:border-slate-200 shadow-sm'
-                }`}
-              >
-                <div className="flex justify-between items-start mb-1">
-                   <div className={`px-1.5 py-0.5 rounded text-[7px] font-black tracking-widest uppercase ${
-                     commandeSelectionnee === c.id ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-500'
-                   }`}>
-                     {c.type === 'a_emporter' ? '⚡ Comptoir' : '🏠 Salle'}
-                   </div>
-                   {tables.find(t => t.commandeActiveId === c.id)?.statut === 'en_attente_paiement' && (
-                      <div className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[7px] font-black tracking-widest uppercase animate-pulse">
-                         Paiement Demandé
-                      </div>
-                   )}
-                   <span className={`text-[11px] font-black tracking-tight ${commandeSelectionnee === c.id ? 'text-white' : 'text-slate-900'}`}>
-                     {(c.total || 0).toLocaleString()} <span className="text-[7px] font-normal opacity-50">F</span>
-                   </span>
+      {/* Main Interface Layout */}
+      <main className="flex-1 flex overflow-hidden">
+        {/* Left Side: Orders Selection */}
+        <div className="flex-1 flex flex-col bg-slate-50/50 overflow-hidden">
+            <div className="p-8 pb-4">
+                <div className="relative group">
+                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#1E3A8A] transition-colors" size={20} />
+                    <input 
+                      type="text" 
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      placeholder="Rechercher une table ou un serveur..."
+                      className="w-full h-16 bg-white border border-slate-100 rounded-[1.5rem] pl-16 pr-6 outline-none focus:border-[#1E3A8A] transition-all font-bold text-[#1E3A8A] shadow-sm"
+                    />
                 </div>
-                <h3 className="text-[11px] font-black uppercase tracking-tight leading-none truncate">
-                  {c.tableNom || 'Directe'}
-                </h3>
-                <div className="flex items-center justify-between gap-2 mt-1.5">
-                   <p className={`text-[7px] font-black uppercase tracking-widest truncate ${commandeSelectionnee === c.id ? 'text-white/40' : 'text-slate-400'}`}>
-                     {c.serveurNom}
-                   </p>
-                   <div className="flex items-center gap-1 text-[7px] font-bold opacity-60">
-                     <Clock size={8} /> {new Date(c.dateOuverture).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                   </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-8 pt-4 no-scrollbar">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {commandesActives.map((cmd) => (
+                        <button 
+                          key={cmd.id}
+                          onClick={() => setCommandeSelectionnee(cmd.id)}
+                          className={`p-8 rounded-[2.5rem] border-2 text-left transition-all relative overflow-hidden flex flex-col justify-between group h-64 ${
+                            commandeSelectionnee === cmd.id 
+                              ? 'bg-[#1E3A8A] border-[#1E3A8A] text-white shadow-2xl shadow-blue-900/20' 
+                              : 'bg-white border-slate-100 text-slate-400 hover:border-blue-100 shadow-xl shadow-blue-900/5'
+                          }`}
+                        >
+                            {commandeSelectionnee === cmd.id && (
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl -mr-12 -mt-12" />
+                            )}
+                            <div>
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${commandeSelectionnee === cmd.id ? 'bg-white/10 text-white' : 'bg-slate-50 text-[#1E3A8A]'}`}>
+                                        {cmd.tableNom || 'DIRECTE'}
+                                    </div>
+                                    <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest"># {cmd.id.slice(-4).toUpperCase()}</span>
+                                </div>
+                                <h3 className={`text-2xl font-black tracking-tighter uppercase leading-tight ${commandeSelectionnee === cmd.id ? 'text-white' : 'text-[#1E3A8A]'}`}>
+                                    {cmd.clientNom || 'Client direct'}
+                                </h3>
+                                <p className="text-[10px] font-bold uppercase tracking-widest mt-2 opacity-60">Serveur: {cmd.serveurNom}</p>
+                            </div>
+
+                            <div className="flex justify-between items-end mt-8">
+                                <div>
+                                    <p className={`text-xs font-black uppercase tracking-widest mb-1 ${commandeSelectionnee === cmd.id ? 'text-white/40' : 'text-slate-300'}`}>Total à encaisser</p>
+                                    <p className={`text-3xl font-black tracking-tighter ${commandeSelectionnee === cmd.id ? 'text-white' : 'text-[#FF7A00]'}`}>
+                                        {(cmd.total || 0).toLocaleString()} <span className="text-xs font-bold opacity-30">XAF</span>
+                                    </p>
+                                </div>
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${commandeSelectionnee === cmd.id ? 'bg-[#FF7A00] text-white' : 'bg-slate-50 text-slate-200'}`}>
+                                    <ArrowRight size={24} />
+                                </div>
+                            </div>
+                        </button>
+                    ))}
+                    
+                    {commandesActives.length === 0 && (
+                        <div className="col-span-full py-32 flex flex-col items-center justify-center text-center space-y-6 opacity-20">
+                            <Receipt size={80} className="text-[#1E3A8A]" />
+                            <p className="text-sm font-black text-[#1E3A8A] uppercase tracking-[0.5em]">Aucune commande en attente</p>
+                        </div>
+                    )}
                 </div>
-              </motion.button>
-            ))
-          )}
+            </div>
         </div>
-      </aside>
-      
-      {/* Overlay Ouverture de Caisse */}
-      {!sessionActive && (
-        <div className="fixed inset-0 z-[100] bg-white/60 backdrop-blur-xl flex items-center justify-center p-4">
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl text-center border border-slate-100"
-          >
-            <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-indigo-600">
-              <Unlock size={32} />
+
+        {/* Right Side: Payment Processing Area */}
+        {commandeSelectionnee ? (
+            <div className="w-[500px] bg-white border-l border-slate-100 flex flex-col shadow-2xl relative z-20">
+                <div className="flex-1 overflow-y-auto p-10 space-y-12 no-scrollbar">
+                    {/* Items List Summary */}
+                    <section>
+                        <div className="flex items-center justify-between mb-8">
+                            <div className="flex items-center gap-4">
+                                <div className="w-1.5 h-8 bg-[#1E3A8A] rounded-full" />
+                                <h3 className="text-xl font-black text-[#1E3A8A] uppercase tracking-tight">Détails de vente</h3>
+                            </div>
+                            <button onClick={() => setCommandeSelectionnee(null)} className="p-3 bg-slate-50 text-slate-400 rounded-2xl hover:bg-rose-50 hover:text-rose-500 transition-all">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-3">
+                            {commandeActive?.lignes.map((ligne, idx) => (
+                                <div key={idx} className="flex justify-between items-center py-3 border-b border-slate-50">
+                                    <div className="flex items-center gap-4">
+                                        <span className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center text-xs font-black text-[#1E3A8A]">{ligne.quantite}</span>
+                                        <div className="flex-1">
+                                            <h4 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight leading-none">{ligne.produitNom}</h4>
+                                            <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">{(ligne.prixUnitaire || 0).toLocaleString()} / unité</p>
+                                        </div>
+                                    </div>
+                                    <span className="text-sm font-black text-[#1E3A8A]">{(ligne.sousTotal || 0).toLocaleString()}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+
+                    {/* Payment Method Selection */}
+                    <section className="space-y-8">
+                        <div className="flex items-center gap-4">
+                            <div className="w-1.5 h-8 bg-[#FF7A00] rounded-full" />
+                            <h3 className="text-xl font-black text-[#1E3A8A] uppercase tracking-tight">Encaissement</h3>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            {[
+                                { id: 'especes', label: 'Espèces', icon: <Banknote size={24} /> },
+                                { id: 'mobile', label: 'M-Money', icon: <Smartphone size={24} /> },
+                                { id: 'carte', label: 'CB / Carte', icon: <CardIcon size={24} /> },
+                                { id: 'credit', label: 'Crédit Client', icon: <HistoryIcon size={24} /> },
+                            ].map(m => (
+                                <button
+                                    key={m.id}
+                                    onClick={() => {
+                                      setModePaiement(m.id as any);
+                                      if (m.id !== 'credit') setMontantSaisi(totalNet.toString());
+                                      else setMontantSaisi('0');
+                                    }}
+                                    className={`h-28 rounded-[2rem] flex flex-col items-center justify-center gap-3 transition-all relative overflow-hidden border-2 ${
+                                      modePaiement === m.id 
+                                        ? 'bg-[#1E3A8A] border-[#1E3A8A] text-white shadow-xl shadow-blue-900/20' 
+                                        : 'bg-slate-50 border-slate-50 text-slate-400 hover:border-blue-100 hover:bg-white'
+                                    }`}
+                                >
+                                    {m.icon}
+                                    <span className="text-[10px] font-black uppercase tracking-widest">{m.label}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </section>
+
+                    {/* Dynamic Payment Fields */}
+                    {modePaiement && (
+                        <div className="space-y-8 animate-in slide-in-from-bottom-5 duration-500">
+                             {modePaiement !== 'credit' && (
+                                <div className="space-y-6">
+                                    <div className="bg-slate-50 p-10 rounded-[2.5rem] border border-slate-100 shadow-inner text-center focus-within:bg-white focus-within:border-blue-100 transition-all">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Montant reçu (XAF)</p>
+                                        <input 
+                                            type="number" 
+                                            value={montantSaisi} 
+                                            onChange={e => setMontantSaisi(e.target.value)}
+                                            className="w-full text-center text-6xl font-black text-[#1E3A8A] bg-transparent outline-none tracking-tighter"
+                                            autoFocus
+                                        />
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {monnaieRendue > 0 && (
+                                            <div className="p-8 bg-emerald-50 rounded-[2rem] border border-emerald-100 text-center animate-in zoom-in duration-300">
+                                                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-2">À Rendre</p>
+                                                <p className="text-3xl font-black text-emerald-700 tracking-tighter">{monnaieRendue.toLocaleString()}</p>
+                                            </div>
+                                        )}
+                                        {resteAPayer > 0 && (
+                                            <div className="p-8 bg-rose-50 rounded-[2rem] border border-rose-100 text-center animate-in zoom-in duration-300">
+                                                <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-2">Reste</p>
+                                                <p className="text-3xl font-black text-rose-700 tracking-tighter">{resteAPayer.toLocaleString()}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                             )}
+
+                             {modePaiement === 'mobile' && (
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Référence Transaction</label>
+                                    <div className="relative">
+                                        <Zap className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                                        <input 
+                                            value={refPaiement} onChange={e => setRefPaiement(e.target.value)}
+                                            placeholder="Code de confirmation..."
+                                            className="w-full h-16 pl-14 pr-6 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-bold text-sm focus:border-[#1E3A8A] transition-all shadow-sm"
+                                        />
+                                    </div>
+                                </div>
+                             )}
+
+                             {(modePaiement === 'credit' || resteAPayer > 0) && (
+                                <div className="bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 space-y-6">
+                                    <div className="flex items-center gap-3 px-1">
+                                       <UserPlus size={20} className="text-[#FF7A00]" />
+                                       <h4 className="text-[11px] font-black text-[#1E3A8A] uppercase tracking-widest">Compte Client</h4>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div className="relative">
+                                            <User className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                                            <input 
+                                                value={nomClient} onChange={e => setNomClient(e.target.value)}
+                                                placeholder="Nom complet..."
+                                                className="w-full h-14 pl-14 pr-6 bg-white border border-slate-200 rounded-2xl outline-none font-bold text-slate-700 focus:border-[#1E3A8A] transition-all shadow-sm"
+                                            />
+                                        </div>
+                                        <div className="relative">
+                                            <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                                            <input 
+                                                value={contactClient} onChange={e => setContactClient(e.target.value)}
+                                                placeholder="Contact..."
+                                                className="w-full h-14 pl-14 pr-6 bg-white border border-slate-200 rounded-2xl outline-none font-bold text-slate-700 focus:border-[#1E3A8A] transition-all shadow-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                             )}
+                        </div>
+                    )}
+                </div>
+
+                <div className="p-10 bg-white border-t border-slate-50 space-y-6">
+                    <div className="flex justify-between items-center px-4">
+                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">Total Final</span>
+                        <span className="text-5xl font-black tracking-tighter text-[#1E3A8A]">{totalNet.toLocaleString()} <span className="text-xl font-bold opacity-30">XAF</span></span>
+                    </div>
+                    <button
+                        onClick={finaliserPaiement}
+                        disabled={!modePaiement}
+                        className="h-24 w-full bg-[#1E3A8A] text-white rounded-[2.5rem] font-black uppercase tracking-widest text-lg shadow-2xl shadow-blue-900/30 transition-all disabled:opacity-20 flex items-center justify-center gap-6 hover:bg-blue-800 active:scale-[0.98] group"
+                    >
+                        {modePaiement ? 'Clôturer la Vente' : 'Sélectionnez un paiement'}
+                        <Check size={32} className="group-hover:scale-125 transition-transform text-[#FF7A00]" />
+                    </button>
+                </div>
             </div>
-            <h2 className="text-xl font-black uppercase tracking-tight mb-1">Ouverture de Caisse</h2>
-            <p className="text-slate-400 text-[10px] mb-6 uppercase tracking-widest font-bold">Fonds de caisse initial</p>
+        ) : (
+            <div className="w-[500px] bg-white border-l border-slate-100 flex flex-col items-center justify-center text-center p-20 space-y-8">
+                <div className="w-32 h-32 bg-slate-50 rounded-[3rem] flex items-center justify-center text-[#1E3A8A] shadow-inner opacity-40">
+                    <Database size={64} />
+                </div>
+                <div className="space-y-4">
+                    <h3 className="text-2xl font-black text-[#1E3A8A] uppercase tracking-tighter">Prêt pour encaissement</h3>
+                    <p className="text-slate-400 font-bold uppercase tracking-widest text-xs leading-relaxed max-w-[280px]">Sélectionnez une commande active à gauche pour commencer le protocole de paiement.</p>
+                </div>
+            </div>
+        )}
+      </main>
+
+      {/* Modals are already present in original and just need slight aesthetic touches */}
+      {!sessionActive && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 md:p-12">
+          <div className="absolute inset-0 bg-[#1E3A8A]/90 backdrop-blur-3xl" />
+          <div className="w-full max-w-xl bg-white p-16 md:p-24 rounded-[4rem] relative shadow-2xl animate-in zoom-in-95 duration-500 text-center border border-white/20">
+            <div className="w-32 h-32 bg-blue-50 rounded-[3rem] flex items-center justify-center mx-auto mb-12 text-[#1E3A8A] shadow-inner">
+              <Unlock size={64} />
+            </div>
+            <h2 className="text-4xl font-black text-[#1E3A8A] tracking-tighter uppercase mb-4 leading-none">Initialisation</h2>
+            <p className="text-slate-500 font-medium text-lg mb-16">Ouvrez votre session pour activer les protocoles d'encaissement.</p>
             
-            <div className="bg-slate-50 p-4 rounded-2xl mb-6 border border-slate-100">
-               <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-2">Montant (FCFA)</p>
+            <div className="bg-slate-50 p-12 rounded-[3rem] border border-slate-100 mb-16 shadow-inner focus-within:bg-white focus-within:border-blue-100 transition-all">
+               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Fond de caisse (XAF)</p>
                <input 
                 type="number"
                 value={fondsSaisi}
                 onChange={e => setFondsSaisi(e.target.value)}
-                className="w-full text-center text-3xl font-black outline-none bg-transparent"
+                className="w-full text-center text-7xl font-black outline-none bg-transparent text-[#1E3A8A] tracking-tighter"
                 autoFocus
                />
             </div>
 
             <button 
               onClick={() => ouvrirSession(Number(fondsSaisi))}
-              className="w-full h-14 bg-slate-950 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl shadow-indigo-500/10 text-[10px]"
+              className="w-full h-24 bg-[#1E3A8A] text-white rounded-[2.5rem] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-2xl shadow-blue-900/30 text-lg flex items-center justify-center gap-6"
             >
-              Démarrer la Session
+              Démarrer le Service <ArrowRight size={32} />
             </button>
-          </motion.div>
+          </div>
         </div>
       )}
 
-      {/* Modal Clôture de Caisse */}
       {showClotureModal && (
-        <div className="fixed inset-0 z-[100] bg-white/60 backdrop-blur-xl flex items-center justify-center p-4">
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl text-center border border-slate-100"
-          >
-            <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-amber-600">
-              <Lock size={32} />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 md:p-12">
+          <div onClick={() => setShowClotureModal(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-2xl" />
+          <div className="w-full max-w-xl bg-white p-16 md:p-24 rounded-[4rem] relative shadow-2xl animate-in zoom-in-95 duration-300 text-center border border-slate-100">
+            <div className="w-32 h-32 bg-rose-50 rounded-[3rem] flex items-center justify-center mx-auto mb-12 text-rose-500 shadow-inner">
+              <Lock size={64} />
             </div>
-            <h2 className="text-xl font-black uppercase tracking-tight mb-1">Clôture de Caisse</h2>
-            <p className="text-slate-400 text-[10px] mb-6 uppercase tracking-widest font-bold">Confirmez le montant total</p>
+            <h2 className="text-4xl font-black text-[#1E3A8A] tracking-tighter uppercase mb-4 leading-none">Clôture Finale</h2>
+            <p className="text-slate-500 font-medium text-lg mb-16">Validez le solde de fin de journée pour libérer la caisse.</p>
             
-            <div className="bg-slate-50 p-4 rounded-2xl mb-6 border border-slate-100">
-               <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-2">Montant de Clôture (FCFA)</p>
+            <div className="bg-slate-50 p-12 rounded-[3rem] border border-slate-100 mb-16 shadow-inner focus-within:bg-white focus-within:border-rose-100 transition-all">
+               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Montant Constaté (XAF)</p>
                <input 
                 type="number"
                 value={fondsSaisi}
                 onChange={e => setFondsSaisi(e.target.value)}
-                className="w-full text-center text-3xl font-black outline-none bg-transparent"
+                className="w-full text-center text-7xl font-black outline-none bg-transparent text-rose-500 tracking-tighter"
                 autoFocus
                />
             </div>
 
-            <div className="flex gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <button 
                 onClick={() => setShowClotureModal(false)}
-                className="flex-1 h-12 bg-slate-100 text-slate-400 rounded-xl font-black uppercase tracking-widest text-[9px]"
+                className="h-20 bg-slate-100 text-slate-500 rounded-[2rem] font-black uppercase tracking-widest text-xs hover:bg-slate-200 transition-all"
               >
                 Annuler
               </button>
@@ -320,228 +452,20 @@ const InterfaceCaissier = () => {
                   await fermerSession(Number(fondsSaisi));
                   setShowClotureModal(false);
                 }}
-                className="flex-1 h-12 bg-red-600 text-white rounded-xl font-black uppercase tracking-widest text-[9px] shadow-lg shadow-red-500/10"
+                className="h-20 bg-rose-500 text-white rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-xl shadow-rose-900/20 hover:bg-rose-600 transition-all"
               >
                 Clôturer
               </button>
             </div>
-          </motion.div>
+          </div>
         </div>
       )}
 
-      {/* Main Panel : Encaissement */}
-      <main className="flex-1 flex flex-col bg-slate-50 relative overflow-hidden h-full">
-        <AnimatePresence mode="wait">
-          {!commandeActive ? (
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="flex-1 flex flex-col items-center justify-center p-4 text-center"
-            >
-              <div className="w-24 h-24 bg-white rounded-3xl shadow-xl border border-slate-100 flex items-center justify-center mb-6 text-slate-200">
-                <Calculator size={48} />
-              </div>
-              <h2 className="text-sm font-black text-slate-300 uppercase tracking-[0.3em] max-w-[200px]">Sélectionnez un ticket pour l'encaissement</h2>
-            </motion.div>
-          ) : (
-            <div className="flex-1 flex flex-col h-full overflow-hidden">
-              <header className="h-8 bg-white border-b border-slate-100 px-3 flex items-center justify-between flex-shrink-0 z-10">
-                 <div className="flex items-center gap-3">
-                    <button onClick={() => setCommandeSelectionnee(null)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-all">
-                       <ArrowLeft size={14} />
-                    </button>
-                    <div>
-                        <h2 className="text-[9px] font-black uppercase tracking-tight leading-none">{commandeActive.tableNom || 'Vente Directe'}</h2>
-                       <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Ticket #...{commandeActive.id.slice(-6)}</p>
-                    </div>
-                 </div>
-                 <div className="text-right">
-                     <p className="text-[12px] font-black tracking-tight text-indigo-600">{(commandeActive.total || 0).toLocaleString()} F</p>
-                 </div>
-              </header>
-
-              <div className="flex-1 flex flex-row overflow-hidden">
-                {/* Details Items */}
-                <div className="flex-1 overflow-y-auto p-3 space-y-3 no-scrollbar">
-                  {tournees.map((tournee, tidx) => (
-                    <div key={tidx} className="relative pl-4 pb-1 border-l-2 border-slate-100 last:border-transparent">
-                      <div className={`absolute -left-[11px] top-0 w-5 h-5 rounded-lg border flex items-center justify-center z-10 bg-white shadow-sm ${tournee.time ? 'border-slate-100 text-slate-300' : 'border-indigo-600 text-indigo-600'}`}>
-                        {tournee.time ? <History size={10} /> : <Zap size={10} />}
-                      </div>
-                      
-                      <div className="flex justify-between items-center mb-1.5 ml-2">
-                        <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest">
-                          {tournee.time ? `Tournée ${new Date(tournee.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : 'Dernière Tournée'}
-                        </span>
-                        <span className="font-bold text-slate-400 text-[8px]">{tournee.total.toLocaleString()} F</span>
-                      </div>
-  
-                      <div className="grid grid-cols-1 gap-1 ml-2">
-                        {tournee.items.map(ligne => (
-                          <div key={ligne.id} className="flex items-center justify-between p-1.5 bg-white rounded-xl border border-slate-100">
-                            <div className="flex items-center gap-2">
-                               <div className="w-5 h-5 rounded-lg bg-slate-50 flex items-center justify-center font-black text-slate-900 text-[8px]">x{ligne.quantite}</div>
-                               <div>
-                                  <p className="font-bold text-[9px] uppercase tracking-tight leading-none">{ligne.produitNom}</p>
-                                  <p className="text-[7px] font-bold text-slate-300 mt-0.5 tracking-widest leading-none">{ligne.prixUnitaire.toLocaleString()} F</p>
-                               </div>
-                            </div>
-                            <span className="font-black text-[9px] text-slate-900">{ligne.sousTotal.toLocaleString()} F</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {/* Total Card Compact */}
-                  <div className="mt-4 p-4 bg-slate-950 rounded-2xl text-white shadow-xl relative overflow-hidden group">
-                     <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 blur-[30px] rounded-full" />
-                     <div className="relative z-10">
-                        <div className="flex justify-between items-center mb-2 pb-2 border-b border-white/5">
-                           <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest">Total Brut</span>
-                           <span className="text-[12px] font-black tracking-tight opacity-50">{(commandeActive.total || 0).toLocaleString()} F</span>
-                        </div>
-                        <div className="flex justify-between items-end">
-                           <div>
-                              <p className="text-[7px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Net à Payer</p>
-                              <p className="text-xl font-black tracking-tight leading-none">
-                                 {totalNet.toLocaleString()} <span className="text-[10px]">F</span>
-                              </p>
-                           </div>
-                           <Receipt size={18} className="text-white/5 mb-0.5" />
-                        </div>
-                     </div>
-                  </div>
-                </div>
-
-                {/* Bloc Paiement */}
-                <div className="w-[195px] bg-white border-l border-slate-100 flex flex-col shadow-2xl z-10">
-                   <div className="flex-1 p-3 space-y-3 overflow-y-auto no-scrollbar">
-                      <section>
-                         <h3 className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-3 text-center">Mode de règlement</h3>
-                         <div className="grid grid-cols-2 gap-1">
-                            {[
-                                { id: 'especes', label: 'Cash', icon: <Banknote size={14} /> },
-                                { id: 'mobile', label: 'Mobile', icon: <Smartphone size={14} /> },
-                                { id: 'carte', label: 'Carte', icon: <CreditCard size={14} /> },
-                                { id: 'credit', label: 'Dette', icon: <HistoryIcon size={14} /> },
-                            ].map(m => (
-                               <button
-                                 key={m.id}
-                                 onClick={() => {
-                                   setModePaiement(m.id as any);
-                                   if (m.id !== 'credit') setMontantSaisi(totalNet.toString());
-                                   else setMontantSaisi('0');
-                                 }}
-                                 className={`h-12 rounded-xl flex flex-col items-center justify-center gap-1 transition-all border ${
-                                   modePaiement === m.id 
-                                     ? 'bg-slate-950 border-slate-950 text-white shadow-lg' 
-                                     : 'bg-slate-50 border-transparent text-slate-400 hover:bg-slate-100'
-                                 }`}
-                              >
-                                 <div className={`p-1 rounded-lg ${modePaiement === m.id ? 'bg-white/10' : 'bg-white shadow-sm'}`}>
-                                    {m.icon}
-                                 </div>
-                                 <span className="text-[7px] font-black uppercase tracking-widest">{m.label}</span>
-                              </button>
-                            ))}
-                         </div>
-                      </section>
-
-                      <AnimatePresence mode="wait">
-                         {modePaiement && (
-                            <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-                               {modePaiement !== 'credit' && (
-                                  <div className="space-y-2">
-                                     <div className="bg-slate-50 p-3 rounded-2xl text-center border border-slate-100">
-                                        <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-1">Montant Perçu</p>
-                                        <div className="flex items-center justify-center gap-2">
-                                           <input 
-                                              type="number" 
-                                              value={montantSaisi} 
-                                              onChange={e => setMontantSaisi(e.target.value)}
-                                              className="w-full text-center text-xl font-black text-slate-950 bg-transparent outline-none tracking-tight"
-                                              autoFocus
-                                           />
-                                           <span className="text-[12px] font-black text-slate-200">F</span>
-                                        </div>
-                                     </div>
-                                     
-                                     <div className="grid grid-cols-2 gap-2">
-                                        {monnaieRendue > 0 && (
-                                           <div className="p-2 bg-emerald-50 rounded-xl border border-emerald-100 text-center">
-                                              <p className="text-[6px] font-black text-emerald-600 uppercase tracking-widest mb-0.5">Rendu</p>
-                                              <p className="text-[11px] font-black text-emerald-800 tracking-tight">{monnaieRendue.toLocaleString()} F</p>
-                                           </div>
-                                        )}
-                                        {resteAPayer > 0 && (
-                                           <div className="p-2 bg-amber-50 rounded-xl border border-amber-100 text-center">
-                                              <p className="text-[6px] font-black text-amber-600 uppercase tracking-widest mb-0.5">Reste</p>
-                                              <p className="text-[11px] font-black text-amber-800 tracking-tight">{resteAPayer.toLocaleString()} F</p>
-                                           </div>
-                                        )}
-                                     </div>
-                                  </div>
-                               )}
-
-                               {modePaiement === 'mobile' && (
-                                  <div className="space-y-2">
-                                     <div className="bg-indigo-50 p-3 rounded-xl border border-indigo-100 flex items-center gap-2">
-                                        <Zap size={12} className="text-indigo-400" />
-                                        <input 
-                                           value={refPaiement} onChange={e => setRefPaiement(e.target.value)}
-                                           placeholder="RÉFÉRENCE TRANSACTION..."
-                                           className="w-full font-black text-[8px] uppercase outline-none bg-transparent placeholder:text-indigo-200 text-indigo-900"
-                                        />
-                                     </div>
-                                  </div>
-                               )}
-
-                               {(modePaiement === 'credit' || resteAPayer > 0) && (
-                                  <div className="space-y-2">
-                                     <div className="bg-white p-3 rounded-2xl border border-slate-200 space-y-3">
-                                        <div className="flex items-center gap-3 border-b border-slate-50 pb-2">
-                                           <User size={14} className="text-slate-300" />
-                                           <input 
-                                              value={nomClient} onChange={e => setNomClient(e.target.value)}
-                                              placeholder="NOM DU DÉBITEUR..."
-                                              className="w-full font-black text-[9px] uppercase outline-none placeholder:text-slate-200"
-                                           />
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                           <Phone size={14} className="text-slate-300" />
-                                           <input 
-                                              value={contactClient} onChange={e => setContactClient(e.target.value)}
-                                              placeholder="TÉLÉPHONE..."
-                                              className="w-full font-black text-[9px] uppercase outline-none placeholder:text-slate-200"
-                                           />
-                                        </div>
-                                     </div>
-                                  </div>
-                                )}
-                            </motion.div>
-                         )}
-                      </AnimatePresence>
-                   </div>
-
-                   <div className="p-3 bg-white border-t border-slate-50">
-                      <button
-                         onClick={finaliserPaiement}
-                         disabled={!modePaiement}
-                         className="h-12 w-full rounded-xl bg-slate-950 hover:bg-emerald-600 text-white font-black uppercase tracking-widest text-[9px] shadow-xl transition-all disabled:opacity-30 flex items-center justify-center gap-2 group"
-                      >
-                        {modePaiement ? 'Finaliser Transaction' : 'Choisir Mode'} 
-                        <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                      </button>
-                   </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </AnimatePresence>
-      </main>
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+      `}</style>
     </div>
   );
 };
-
 
 export default InterfaceCaissier;

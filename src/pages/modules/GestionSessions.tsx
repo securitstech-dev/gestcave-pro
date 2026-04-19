@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Calendar, Play, Lock, ShieldCheck, 
   Clock, User, TrendingUp, ChevronRight,
   Wallet, CreditCard, Smartphone, AlertCircle,
-  FileText, ArrowDownRight, History
+  FileText, ArrowDownRight, History, Activity,
+  Sparkles, LockKeyhole, ArrowRight, CheckCircle2,
+  PieChart, BarChart3, Receipt
 } from 'lucide-react';
 import { usePOSStore } from '../../store/posStore';
 import { useAuthStore } from '../../store/authStore';
@@ -29,263 +30,267 @@ const GestionSessions = () => {
   };
 
   return (
-    <div className="space-y-4">
-      <header className="flex justify-between items-end">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900 tracking-tight uppercase">Sessions & Flux</h2>
-          <p className="text-slate-500 font-medium text-[8px] mt-0.5">Supervisez l'activité de caisse et validez les clôtures financières.</p>
+    <div className="space-y-10 pb-20 animate-in fade-in duration-700">
+      <header className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-xl shadow-blue-900/5 relative overflow-hidden border border-slate-100 flex flex-col md:flex-row justify-between items-end gap-8">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-[80px] -mr-32 -mt-32 opacity-50" />
+        
+        <div className="relative z-10">
+           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-50 rounded-full text-[#1E3A8A] text-xs font-bold uppercase tracking-widest mb-6">
+              <History size={14} />
+              Contrôle des Sessions
+           </div>
+           <h1 className="text-4xl md:text-5xl font-extrabold text-[#1E3A8A] tracking-tight leading-tight mb-4">
+              Ouverture & <span className="text-[#FF7A00]">Clôture</span>
+           </h1>
+           <p className="text-slate-500 font-medium text-lg max-w-md">Gérez vos sessions de caisse, initialisez les fonds et validez vos rapports de fin de journée.</p>
         </div>
-        <div className="flex gap-3">
-            <div className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg flex items-center gap-2 shadow-sm">
-                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                <span className="text-[8px] font-black uppercase tracking-widest text-slate-600">Serveur Live</span>
+
+        <div className="flex gap-4 relative z-10">
+            <div className="px-6 py-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-4 shadow-sm">
+                <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse shadow-lg shadow-emerald-900/20" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-600">Système Live & Sécurisé</span>
             </div>
         </div>
       </header>
 
       {!sessionActive ? (
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl border border-slate-200 p-8 text-center shadow-xl shadow-slate-200/50"
-        >
-          <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <ShieldCheck size={32} />
+        <div className="bg-white rounded-[3.5rem] border border-slate-100 p-16 md:p-24 text-center shadow-xl shadow-blue-900/5 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-2 bg-slate-100" />
+          <div className="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-10 shadow-inner text-[#1E3A8A]">
+            <LockKeyhole size={48} />
           </div>
-          <h3 className="text-xl font-black text-slate-900 mb-2 tracking-tight uppercase">Aucune session active</h3>
-          <p className="text-slate-500 mb-6 max-w-sm mx-auto font-medium text-xs leading-relaxed">
-            La caisse est verrouillée. Initialisez une nouvelle session.
+          <h3 className="text-4xl font-black text-[#1E3A8A] mb-6 tracking-tight uppercase">Session Fermée</h3>
+          <p className="text-slate-400 mb-12 max-w-md mx-auto font-medium text-lg leading-relaxed">
+            Le registre de caisse est actuellement verrouillé. Veuillez initialiser le fond de caisse pour commencer les opérations.
           </p>
           
-          <div className="max-w-xs mx-auto bg-slate-50 p-6 rounded-2xl border border-slate-100">
-            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Fonds de caisse initial</label>
+          <div className="max-w-md mx-auto bg-slate-50 p-10 md:p-12 rounded-[3rem] border border-slate-100 shadow-inner">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-6 px-1">Fonds de caisse initial (XAF)</label>
             <input 
               type="number" 
               value={fondsSaisi}
               onChange={(e) => setFondsSaisi(Number(e.target.value))}
               placeholder="0"
-              className="w-full h-12 bg-white border border-slate-200 rounded-xl text-center text-2xl font-black text-slate-900 outline-none focus:border-indigo-600 transition-all mb-4 shadow-inner"
+              className="w-full h-20 bg-white rounded-2xl text-center text-5xl font-black text-[#1E3A8A] outline-none focus:ring-4 focus:ring-blue-100 transition-all mb-10 shadow-sm border border-slate-100"
             />
             <button 
               onClick={handleOuverture}
-              className="w-full h-12 bg-indigo-600 text-white rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-xl shadow-indigo-600/30 active:scale-95 transition-all flex items-center justify-center gap-3"
+              className="w-full h-20 bg-[#1E3A8A] text-white rounded-[2rem] font-bold uppercase tracking-widest text-sm hover:bg-blue-800 transition-all flex items-center justify-center gap-4 shadow-2xl shadow-blue-900/20"
             >
-              <Play size={14} fill="currentColor" /> Lancer la session
+              <Play size={20} className="fill-current" /> Initialiser la session
             </button>
           </div>
-        </motion.div>
+        </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Dashboard Session Active */}
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="lg:col-span-2 space-y-4"
-          >
-            <div className="bg-slate-900 rounded-2xl p-6 text-white shadow-2xl relative overflow-hidden">
+          {/* Active Session Dashboard */}
+          <div className="lg:col-span-2 space-y-8">
+            <div className="bg-[#1E3A8A] p-10 md:p-12 rounded-[3.5rem] text-white shadow-2xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-32 -mt-32" />
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-orange-500/10 rounded-full blur-3xl -ml-32 -mb-32" />
+                
                 <div className="relative z-10">
-                    <div className="flex justify-between items-start mb-6">
-                        <div className="flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full border border-white/10">
-                            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                            <span className="text-[7px] font-black uppercase tracking-widest text-emerald-400">Session Active</span>
+                    <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-12">
+                        <div className="flex items-center gap-3 bg-white/10 px-5 py-2 rounded-full border border-white/20 backdrop-blur-md">
+                            <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse shadow-lg shadow-emerald-400/50" />
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-white">Session Active</span>
                         </div>
                         <div className="text-right">
-                            <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest">ID Session</p>
-                            <p className="font-mono text-[8px] opacity-50">{sessionActive.id.slice(0, 12).toUpperCase()}</p>
+                            <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">ID Session</p>
+                            <p className="font-mono text-xs text-orange-400 font-bold tracking-widest uppercase">{sessionActive.id.slice(-12)}</p>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
                         <div>
-                            <p className="text-[10px] font-medium text-slate-400 mb-1">Caissier</p>
-                            <h3 className="text-xl font-black tracking-tight mb-4">{sessionActive.caissierNom}</h3>
+                            <p className="text-[11px] font-bold text-white/40 uppercase tracking-widest mb-3">Opérateur Responsable</p>
+                            <h3 className="text-4xl font-black tracking-tight mb-8 uppercase leading-none">{sessionActive.caissierNom}</h3>
                             
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-8">
                                 <div>
-                                    <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest mb-1">Ouverture</p>
-                                    <div className="flex items-center gap-1.5">
-                                        <Clock size={12} className="text-indigo-400" />
-                                        <span className="font-bold text-sm">{new Date(sessionActive.dateOuverture).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2 px-1">Ouverture</p>
+                                    <div className="flex items-center gap-3 text-orange-400 bg-white/5 px-4 py-2 rounded-xl border border-white/10">
+                                        <Clock size={18} />
+                                        <span className="font-black text-xl tracking-tight">{new Date(sessionActive.dateOuverture).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
                                     </div>
                                 </div>
-                                <div className="w-px h-6 bg-white/10" />
+                                <div className="w-[1px] h-12 bg-white/10" />
                                 <div>
-                                    <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest mb-1">Initial</p>
-                                    <div className="flex items-center gap-1.5">
-                                        <Wallet size={12} className="text-indigo-400" />
-                                        <span className="font-bold text-sm">{sessionActive.fondsInitial.toLocaleString()} F</span>
+                                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2 px-1">Fond de Base</p>
+                                    <div className="flex items-center gap-3 text-white bg-white/5 px-4 py-2 rounded-xl border border-white/10">
+                                        <Wallet size={18} />
+                                        <span className="font-black text-xl tracking-tight">{sessionActive.fondsInitial.toLocaleString()} <span className="text-[10px] opacity-30 uppercase">XAF</span></span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-white/5 rounded-2xl p-6 border border-white/5 backdrop-blur-sm">
-                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">CA Théorique</p>
-                            <div className="flex items-baseline gap-2 mb-4 px-1">
-                                <span className="text-4xl font-black tracking-tighter">{(sessionActive.totalVentesTheorique || 0).toLocaleString()}</span>
-                                <span className="text-xs font-bold text-slate-500">FCFA</span>
+                        <div className="bg-white/5 p-10 rounded-[2.5rem] border border-white/10 backdrop-blur-xl shadow-inner group-hover:bg-white/10 transition-colors">
+                            <p className="text-[11px] font-bold text-white/40 uppercase tracking-widest mb-4">CA Théorique Actuel</p>
+                            <div className="flex items-baseline gap-4 mb-8">
+                                <span className="text-6xl font-black tracking-tighter text-orange-400">{(sessionActive.totalVentesTheorique || 0).toLocaleString()}</span>
+                                <span className="text-lg font-bold text-white/30 tracking-tight uppercase">XAF</span>
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
-                                <div className="bg-white/5 p-3 rounded-xl">
-                                    <p className="text-[7px] font-bold text-slate-500 uppercase mb-1">Espèces</p>
-                                    <p className="text-xs font-black text-emerald-400">{(sessionActive.totalEspeces || 0).toLocaleString()} F</p>
+                                <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
+                                    <p className="text-[9px] font-bold text-white/40 uppercase mb-2">Espèces</p>
+                                    <p className="text-lg font-bold text-emerald-400">{(sessionActive.totalEspeces || 0).toLocaleString()} F</p>
                                 </div>
-                                <div className="bg-white/5 p-3 rounded-xl">
-                                    <p className="text-[7px] font-bold text-slate-500 uppercase mb-1">Mobile</p>
-                                    <p className="text-xs font-black text-orange-400">{(sessionActive.totalMobile || 0).toLocaleString()} F</p>
+                                <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
+                                    <p className="text-[9px] font-bold text-white/40 uppercase mb-2">Mobile</p>
+                                    <p className="text-lg font-bold text-orange-400">{(sessionActive.totalMobile || 0).toLocaleString()} F</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="mt-6 pt-4 border-t border-white/10 flex justify-between items-center">
-                        <div className="flex items-center gap-3 text-slate-400">
-                            <AlertCircle size={16} />
-                            <p className="text-[9px] font-medium max-w-sm">
-                                La clôture génère un rapport Z et réinitialise les compteurs.
+                    <div className="mt-12 pt-10 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-8">
+                        <div className="flex items-center gap-5 text-white/40">
+                            <div className="p-3 bg-orange-400/10 rounded-2xl text-orange-400 border border-orange-400/20">
+                               <AlertCircle size={24} />
+                            </div>
+                            <p className="text-xs font-medium uppercase tracking-widest max-w-sm leading-relaxed">
+                                La clôture génère le rapport final et verrouille les transactions. Vérifiez les soldes physiques avant de confirmer.
                             </p>
                         </div>
                         <button 
                             onClick={() => setShowConfirmCloture(true)}
-                            className="px-6 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-black uppercase tracking-widest text-[8px] transition-all flex items-center gap-2 shadow-xl shadow-rose-600/30"
+                            className="w-full md:w-auto px-10 h-20 bg-orange-500 hover:bg-white hover:text-[#1E3A8A] text-white rounded-[2rem] font-bold uppercase tracking-widest text-sm transition-all flex items-center justify-center gap-4 shadow-2xl shadow-orange-900/30 group/btn"
                         >
-                            <Lock size={14} /> Clôturer shift
+                            <LockKeyhole size={20} className="group-hover/btn:scale-110 transition-transform" /> Clôturer la session
                         </button>
                     </div>
                 </div>
-                
-                <div className="absolute -bottom-20 -right-20 opacity-5 rotate-12 scale-150">
-                    <TrendingUp size={400} />
-                </div>
             </div>
 
-            {/* Ventilation des paiements */}
-            <div className="grid grid-cols-3 gap-4">
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <div className="w-8 h-8 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center mb-3">
-                        <Smartphone size={16} />
+            {/* Inflow Distribution */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-blue-900/5 group hover:scale-[1.02] transition-all">
+                    <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-[#1E3A8A] mb-8 shadow-inner group-hover:bg-blue-100 transition-colors">
+                        <Smartphone size={24} />
                     </div>
-                    <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Mobile Money</p>
-                    <p className="text-sm font-black text-slate-900">{(sessionActive.totalMobile || 0).toLocaleString()} F</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Transferts Mobile</p>
+                    <p className="text-3xl font-black text-[#1E3A8A] tracking-tighter">{(sessionActive.totalMobile || 0).toLocaleString()} <span className="text-xs opacity-20 font-bold uppercase">XAF</span></p>
                 </div>
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <div className="w-8 h-8 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center mb-3">
-                        <CreditCard size={16} />
+                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-blue-900/5 group hover:scale-[1.02] transition-all">
+                    <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500 mb-8 shadow-inner group-hover:bg-emerald-100 transition-colors">
+                        <CreditCard size={24} />
                     </div>
-                    <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Cartes</p>
-                    <p className="text-sm font-black text-slate-900">{(sessionActive.totalCarte || 0).toLocaleString()} F</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Règlements Carte</p>
+                    <p className="text-3xl font-black text-[#1E3A8A] tracking-tighter">{(sessionActive.totalCarte || 0).toLocaleString()} <span className="text-xs opacity-20 font-bold uppercase">XAF</span></p>
                 </div>
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <div className="w-8 h-8 bg-slate-900 text-white rounded-lg flex items-center justify-center mb-3">
-                        <FileText size={16} />
+                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-blue-900/5 group hover:scale-[1.02] transition-all">
+                    <div className="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500 mb-8 shadow-inner group-hover:bg-orange-100 transition-colors">
+                        <Receipt size={24} />
                     </div>
-                    <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Crédit</p>
-                    <p className="text-sm font-black text-slate-900">{(sessionActive.totalCredit || 0).toLocaleString()} F</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Créances / Crédits</p>
+                    <p className="text-3xl font-black text-orange-500 tracking-tighter">{(sessionActive.totalCredit || 0).toLocaleString()} <span className="text-xs opacity-20 font-bold uppercase">XAF</span></p>
                 </div>
             </div>
-          </motion.div>
+          </div>
 
-          {/* Historique Récent */}
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="space-y-4"
-          >
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm h-full flex flex-col">
-              <div className="flex items-center gap-2 mb-4">
-                <History className="text-slate-400" size={16} />
-                <h4 className="text-[9px] font-black text-slate-900 uppercase tracking-widest">Archive Sessions</h4>
+          {/* Fiscal Archive */}
+          <div className="h-full">
+            <div className="bg-white border border-slate-100 rounded-[3rem] p-10 shadow-xl shadow-blue-900/5 h-full flex flex-col">
+              <div className="flex items-center gap-4 mb-10">
+                <div className="p-3 bg-blue-50 rounded-2xl text-[#1E3A8A]">
+                   <History size={20} />
+                </div>
+                <h4 className="text-lg font-extrabold text-[#1E3A8A] uppercase tracking-tight">Archives Sessions</h4>
               </div>
 
-              <div className="space-y-3 flex-grow overflow-y-auto pr-1 max-h-[500px]">
+              <div className="space-y-4 flex-grow overflow-y-auto pr-2 max-h-[700px] no-scrollbar">
                 {historiqueSessions.length === 0 ? (
-                    <div className="text-center py-10 opacity-30">
-                        <p className="text-[8px] font-black uppercase">Aucun historique</p>
+                    <div className="text-center py-24 opacity-20 flex flex-col items-center">
+                        <BarChart3 size={64} className="mb-6" />
+                        <p className="text-sm font-bold uppercase tracking-widest">Aucune archive</p>
                     </div>
                 ) : (
                     historiqueSessions.sort((a,b) => new Date(b.dateOuverture).getTime() - new Date(a.dateOuverture).getTime()).map((s) => (
-                        <div key={s.id} className="group p-3 bg-slate-50 hover:bg-slate-900 rounded-xl border border-slate-100 transition-all cursor-pointer">
-                            <div className="flex justify-between items-start mb-2">
+                        <div key={s.id} className="p-6 bg-slate-50 hover:bg-[#1E3A8A] rounded-[2rem] border border-slate-100 transition-all group cursor-pointer hover:shadow-xl hover:shadow-blue-900/20">
+                            <div className="flex justify-between items-start mb-6">
                                 <div>
-                                    <p className="text-[8px] font-black text-slate-400 group-hover:text-slate-500 uppercase tracking-widest">
-                                        {new Date(s.dateOuverture).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                                    <p className="text-[10px] font-bold text-slate-400 group-hover:text-white/40 uppercase tracking-widest mb-1.5">
+                                        {new Date(s.dateOuverture).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}
                                     </p>
-                                    <p className="font-bold text-[11px] text-slate-900 group-hover:text-white transition-colors">{s.caissierNom}</p>
+                                    <p className="font-black text-lg text-[#1E3A8A] group-hover:text-white tracking-tight uppercase leading-none">{s.caissierNom}</p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="font-black text-[11px] text-slate-900 group-hover:text-white transition-colors">{(s.totalVentesTheorique || 0).toLocaleString()} F</p>
-                                    <p className="text-[8px] text-emerald-500 font-bold uppercase">OK</p>
+                                    <p className="font-black text-xl text-[#1E3A8A] group-hover:text-orange-400 tracking-tighter">{(s.totalVentesTheorique || 0).toLocaleString()} <span className="text-[10px] opacity-30 group-hover:opacity-60">F</span></p>
+                                    <div className="flex items-center justify-end gap-1.5 text-[9px] text-emerald-500 group-hover:text-emerald-300 font-bold uppercase tracking-widest mt-1.5">
+                                       <CheckCircle2 size={12} /> Validé
+                                    </div>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3 text-[8px] font-bold uppercase tracking-widest text-slate-400 group-hover:text-slate-600 border-t border-slate-200 group-hover:border-white/10 pt-2">
-                                <span className="flex items-center gap-1"><Clock size={9} /> {new Date(s.dateOuverture).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                            <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-slate-400 group-hover:text-white/30 border-t border-slate-200 group-hover:border-white/10 pt-4">
+                                <span className="flex items-center gap-2"><Clock size={14} /> Début: {new Date(s.dateOuverture).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
                             </div>
                         </div>
                     ))
                 )}
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
       )}
 
-      {/* Modal de Clôture */}
-      <AnimatePresence>
-        {showConfirmCloture && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/80 backdrop-blur-xl">
-                <motion.div 
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl"
-                >
-                    <div className="text-center mb-6">
-                        <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-                            <Lock size={24} />
-                        </div>
-                        <h3 className="text-xl font-bold text-slate-900 tracking-tight">VÉRIFICATION</h3>
-                        <p className="text-slate-500 font-medium text-[10px] mt-1 px-4">Saisissez le montant total en espèces dans le tiroir.</p>
-                    </div>
+      {/* Protocol Termination Modal */}
+      {showConfirmCloture && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 md:p-12">
+              <div onClick={() => setShowConfirmCloture(false)} className="absolute inset-0 bg-[#1E3A8A]/90 backdrop-blur-xl" />
+              <div className="w-full max-w-xl bg-white rounded-[3.5rem] p-12 md:p-16 shadow-2xl relative animate-in zoom-in-95 duration-500 border border-white/20">
+                  <div className="text-center mb-12">
+                      <div className="w-20 h-20 bg-orange-50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 shadow-inner text-orange-500">
+                          <LockKeyhole size={40} />
+                      </div>
+                      <h3 className="text-4xl font-black text-[#1E3A8A] tracking-tighter uppercase mb-4 leading-none">Clôture Auditée</h3>
+                      <p className="text-slate-500 font-medium text-lg">Veuillez saisir le montant physique total compté en espèces.</p>
+                  </div>
 
-                    <div className="space-y-6">
-                        <div>
-                            <div className="flex justify-between text-[8px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
-                                <span>Attendu</span>
-                                <span className="text-slate-900">{(sessionActive?.totalEspeces || 0).toLocaleString()} F</span>
-                            </div>
-                            <input 
-                                type="number" 
-                                autoFocus
-                                value={fondsSaisi}
-                                onChange={(e) => setFondsSaisi(Number(e.target.value))}
-                                className="w-full h-14 bg-slate-100 border border-slate-200 rounded-2xl text-center text-2xl font-black text-slate-900 outline-none focus:border-rose-600 transition-all shadow-inner"
-                            />
-                        </div>
+                  <div className="space-y-10">
+                      <div className="bg-slate-50 p-10 rounded-[2.5rem] border border-slate-100 shadow-inner">
+                          <div className="flex justify-between text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-6 px-1">
+                              <span>Espèces attendues</span>
+                              <span className="text-[#1E3A8A] font-black">{(sessionActive?.totalEspeces || 0).toLocaleString()} XAF</span>
+                          </div>
+                          <input 
+                              type="number" 
+                              autoFocus
+                              value={fondsSaisi}
+                              onChange={(e) => setFondsSaisi(Number(e.target.value))}
+                              className="w-full text-center text-6xl font-black text-[#1E3A8A] bg-transparent outline-none tracking-tighter"
+                          />
+                      </div>
 
-                        {fondsSaisi !== (sessionActive?.totalEspeces || 0) && (
-                            <div className="bg-amber-50 border border-amber-100 p-3 rounded-xl flex gap-3">
-                                <AlertCircle className="text-amber-600 shrink-0" size={16} />
-                                <div>
-                                    <p className="text-[8px] font-black text-amber-800 uppercase tracking-widest">Écart détecté</p>
-                                    <p className="text-[10px] font-bold text-amber-700 leading-tight">
-                                        Un écart de <span className="text-rose-600">{Math.abs(fondsSaisi - (sessionActive?.totalEspeces || 0)).toLocaleString()} F</span> sera enregistré.
-                                    </p>
-                                </div>
-                            </div>
-                        )}
+                      {fondsSaisi !== (sessionActive?.totalEspeces || 0) && (
+                          <div className="bg-orange-50/50 border border-orange-100 rounded-[2rem] p-8 flex gap-6 animate-in fade-in duration-500">
+                              <div className="p-3 bg-white rounded-2xl text-orange-500 shadow-sm shrink-0 h-fit">
+                                 <AlertCircle size={24} />
+                              </div>
+                              <div>
+                                  <p className="text-sm font-bold text-orange-800 uppercase tracking-widest mb-2">Écart de caisse détecté</p>
+                                  <p className="text-slate-600 font-medium leading-relaxed">
+                                      Une différence de <span className="text-orange-600 font-black decoration-2 underline-offset-4">{Math.abs(fondsSaisi - (sessionActive?.totalEspeces || 0)).toLocaleString()} XAF</span> sera enregistrée dans le rapport d'audit.
+                                  </p>
+                              </div>
+                          </div>
+                      )}
 
-                        <div className="flex gap-3">
-                            <button onClick={() => setShowConfirmCloture(false)} className="flex-1 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest">Retour</button>
-                            <button onClick={handleCloture} className="flex-1 py-4 bg-slate-900 text-white rounded-xl font-black uppercase text-[9px] tracking-widest shadow-xl shadow-slate-900/30 active:scale-95 transition-all">
-                                Clôturer
-                            </button>
-                        </div>
-                    </div>
-                </motion.div>
-            </div>
-        )}
-      </AnimatePresence>
+                      <div className="flex flex-col gap-4">
+                          <button onClick={handleCloture} className="w-full h-20 bg-[#1E3A8A] text-white rounded-[2rem] font-bold uppercase tracking-widest text-sm shadow-2xl shadow-blue-900/20 hover:bg-blue-800 transition-all flex items-center justify-center gap-4">
+                             Valider la clôture <ArrowRight size={20} />
+                          </button>
+                          <button onClick={() => setShowConfirmCloture(false)} className="w-full py-6 text-slate-300 font-bold uppercase text-xs tracking-widest hover:text-[#1E3A8A] transition-all">Abandonner la clôture</button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+      `}</style>
     </div>
   );
 };

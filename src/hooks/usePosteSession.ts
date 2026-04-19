@@ -9,6 +9,10 @@ export const usePosteSession = () => {
   const navigate = useNavigate();
 
   // Infos employé depuis sessionStorage (mode poste)
+  const idEmploye = sessionStorage.getItem('poste_employe_id')
+    || profil?.id
+    || 'inconnu';
+
   const nomEmploye = sessionStorage.getItem('poste_employe_nom')
     || profil?.prenom
     || 'Employé';
@@ -58,5 +62,5 @@ export const usePosteSession = () => {
     }
   };
 
-  return { nomEmploye, roleEmploye, etablissementId, quitterPoste };
+  return { idEmploye, nomEmploye, roleEmploye, etablissementId, quitterPoste };
 };
