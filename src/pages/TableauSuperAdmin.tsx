@@ -37,6 +37,8 @@ const TableauSuperAdmin = () => {
   const [planPaiement, setPlanPaiement] = useState<'mensuel' | 'premium' | 'business'>('mensuel');
   
   const [lienActivation, setLienActivation] = useState<{ url: string; nom: string } | null>(null);
+  const [modalAjoutEtab, setModalAjoutEtab] = useState(false);
+  const [nouvelEtab, setNouvelEtab] = useState({ nom: '', contact: '', email: '', plan: 'premium' });
 
   useEffect(() => {
     setChargement(true);
@@ -125,6 +127,25 @@ const TableauSuperAdmin = () => {
       await updateDoc(doc(db, 'paiements', paiementId), { statut: 'rejete', date_rejet: new Date().toISOString() });
       toast.dismiss(toastId); toast.success('Paiement rejeté.'); setModalPaiement(null);
     } catch (err: any) { toast.dismiss(toastId); toast.error(`Erreur: ${err.message}`); }
+  };
+
+  const ajouterEtabAction = async () => {
+    if (!nouvelEtab.nom || !nouvelEtab.email) return toast.error("Nom et Email requis");
+    const toastId = toast.loading('Création...');
+    try {
+      await addDoc(collection(db, 'etablissements'), {
+        nom: nouvelEtab.nom,
+        contact_principal: nouvelEtab.contact || 'Admin Test',
+        email_contact: nouvelEtab.email,
+        subscription_plan: nouvelEtab.plan,
+        subscription_status: 'actif',
+        subscription_start_date: new Date().toISOString(),
+        subscription_end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      });
+      toast.success("Établissement créé !", { id: toastId });
+      setModalAjoutEtab(false);
+      setNouvelEtab({ nom: '', contact: '', email: '', plan: 'premium' });
+    } catch (err: any) { toast.error(err.message, { id: toastId }); }
   };
 
   const suspendreEtablissement = async (etab: any) => {
@@ -378,6 +399,12 @@ const TableauSuperAdmin = () => {
           {/* ── ÉTABLISSEMENTS ── */}
           {onglet === 'etablissements' && (
             <div className="p-10 space-y-6">
+               <div className="flex justify-between items-center mb-6">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{etabsFiltres.length} Établissements trouvés</p>
+                  <button onClick={() => setModalAjoutEtab(true)} className="h-12 px-6 bg-[#1E3A8A] text-white rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-blue-800 transition-all shadow-lg shadow-blue-900/10">
+                    <Building2 size={16} /> Ajouter un Établissement
+                  </button>
+               </div>
                <div className="grid grid-cols-1 gap-4">
                   {etabsFiltres.map((etab) => {
                     const expiration = new Date(etab.subscription_end_date);
@@ -648,6 +675,30 @@ const TableauSuperAdmin = () => {
               </div>
            </div>
         </div>
+      )}
+
+      {modalAjoutEtab && (
+         <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
+            <div onClick={() => setModalAjoutEtab(false)} className="absolute inset-0 bg-slate-900/90 backdrop-blur-xl" />
+            <div className="bg-white w-full max-w-lg p-12 rounded-[3.5rem] shadow-2xl relative animate-in zoom-in-95 duration-500">
+               <h3 className="text-3xl font-black text-[#1E3A8A] uppercase tracking-tight mb-8">Nouvel Établissement</h3>
+               <div className="space-y-6">
+                  <input type="text" placeholder="Nom de l'établissement" value={nouvelEtab.nom} onChange={e => setNouvelEtab({...nouvelEtab, nom: e.target.value})}
+                    className="w-full h-16 bg-slate-50 border border-slate-100 rounded-2xl px-6 font-bold text-sm outline-none focus:ring-4 focus:ring-blue-100" />
+                  <input type="email" placeholder="Email du gérant" value={nouvelEtab.email} onChange={e => setNouvelEtab({...nouvelEtab, email: e.target.value})}
+                    className="w-full h-16 bg-slate-50 border border-slate-100 rounded-2xl px-6 font-bold text-sm outline-none focus:ring-4 focus:ring-blue-100" />
+                  <select value={nouvelEtab.plan} onChange={e => setNouvelEtab({...nouvelEtab, plan: e.target.value})}
+                    className="w-full h-16 bg-slate-50 border border-slate-100 rounded-2xl px-6 font-bold text-sm outline-none focus:ring-4 focus:ring-blue-100 uppercase tracking-widest">
+                    <option value="premium">Premium</option>
+                    <option value="business">Business</option>
+                    <option value="starter">Starter</option>
+                  </select>
+                  <button onClick={ajouterEtabAction} className="w-full h-16 bg-[#FF7A00] text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-orange-500/20 hover:scale-105 transition-all mt-4">
+                    Créer l'Établissement
+                  </button>
+               </div>
+            </div>
+         </div>
       )}
 
       {lienActivation && (
