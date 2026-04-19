@@ -5,7 +5,7 @@ import {
   Layout, LayoutDashboard, Zap, Activity, ShieldCheck, Shield,
   Calendar, ArrowUpRight, ArrowDownRight, MoreVertical, DollarSign,
   Bell, Search, Menu, X, PlusCircle, Globe, History, ArrowRight, ArrowLeft, Receipt, Clock,
-  ChefHat, Flame, Timer, Wallet, Bot
+  ChefHat, Flame, Timer, Wallet, Bot, Monitor
 } from 'lucide-react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -109,6 +109,7 @@ const TableauClient = () => {
         <div>
           <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Postes de travail</p>
           <div className="space-y-1">
+            <SidebarLink icon={<Monitor size={18} />} label="Console Déploiement" path="/terminaux" />
             <SidebarLink icon={<ShoppingCart size={18} />} label="Point de Vente (Caisse)" path="/tableau-de-bord/caisse" />
             <SidebarLink icon={<Zap size={18} />} label="Écran Cuisine" path="/tableau-de-bord/cuisine" />
           </div>

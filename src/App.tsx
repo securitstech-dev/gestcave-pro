@@ -9,6 +9,7 @@ import SelectionMode from './pages/roles/SelectionMode';
 import InterfaceServeur from './pages/roles/InterfaceServeur';
 import InterfaceCuisine from './pages/roles/InterfaceCuisine';
 import InterfaceCaissier from './pages/roles/InterfaceCaissier';
+import PageConsoleTerminaux from './pages/PageConsoleTerminaux';
 import PageInscription from './pages/PageInscription';
 import PageActivation from './pages/PageActivation';
 import PagePoste from './pages/PagePoste';
@@ -39,6 +40,7 @@ function App() {
           <Route path="/serveur" element={<RoleGuard allowedRoles={['client_admin', 'employe']}><InterfaceServeur /></RoleGuard>} />
           <Route path="/cuisine" element={<RoleGuard allowedRoles={['client_admin', 'employe']}><InterfaceCuisine /></RoleGuard>} />
           <Route path="/caisse" element={<RoleGuard allowedRoles={['client_admin', 'employe']}><InterfaceCaissier /></RoleGuard>} />
+          <Route path="/terminaux" element={<RoleGuard allowedRoles={['client_admin']}><PageConsoleTerminaux /></RoleGuard>} />
 
           {/* Routes Admin */}
           <Route path="/super-admin/*" element={<RoleGuard allowedRoles={['super_admin']}><TableauSuperAdmin /></RoleGuard>} />
