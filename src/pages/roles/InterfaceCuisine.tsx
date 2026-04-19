@@ -17,6 +17,7 @@ import type { Commande, LigneCommande } from '../../store/posStore';
 const InterfaceCuisine = () => {
   const { 
     commandes, 
+    tables,
     marquerLignePrete, 
     marquerLigneEnPreparation, 
     marquerCommandeServie,
@@ -76,16 +77,23 @@ const InterfaceCuisine = () => {
   // Commandes actives pour le KDS
   const commandesKDS = useMemo(() => {
     return commandes.filter(c => {
+        // Sécurité : si la table est déjà libre, la commande ne doit plus être au KDS (Cleanup auto)
+        if (c.tableId) {
+          const table = tables.find(t => t.id === c.tableId);
+          if (table && table.statut === 'libre') return false;
+        }
+
         // La commande doit être envoyée ou en prep
         const isStatutOk = c.statut === 'envoyee' || c.statut === 'en_preparation';
         // Et avoir au moins une ligne destinée à ce poste qui n'est pas encore servie
         const hasLinesForPoste = c.lignes.some(l => filterLigne(l) && l.statut !== 'servi');
         return isStatutOk && hasLinesForPoste;
     }).sort((a, b) => new Date(a.dateOuverture).getTime() - new Date(b.dateOuverture).getTime());
-  }, [commandes, posteId]);
+  }, [commandes, tables, posteId]);
 
   const historiqueCommandes = useMemo(() => {
-    return commandes.filter(c => c.statut === 'servie')
+    // On inclut les commandes servies ET les commandes payées pour l'historique
+    return commandes.filter(c => c.statut === 'servie' || c.statut === 'payee')
       .sort((a, b) => new Date(b.dateOuverture).getTime() - new Date(a.dateOuverture).getTime())
       .slice(0, 30);
   }, [commandes]);
@@ -247,8 +255,16 @@ const KDSTicket = ({ commande, filterLigne, minutes, highlightItem, onPrint, pos
           </div>
           <p className="text-[9px] text-slate-600 font-black uppercase mt-0.5">👤 {commande.serveurNom}</p>
         </div>
-        <div className={`px-1.5 py-1 rounded-lg text-[10px] font-black shadow-sm ${isLate ? 'bg-rose-500 text-white animate-pulse' : 'bg-slate-900 text-white'}`}>
-          {minutes}m
+        <div className="flex items-center gap-1.5">
+           <button 
+             onClick={() => marquerCommandeServie(commande.id, posteId)}
+             className="px-2 py-1 rounded bg-emerald-500 text-white text-[8px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-1"
+           >
+             <Check size={10} /> Tout Servir
+           </button>
+           <div className={`px-1.5 py-1 rounded-lg text-[10px] font-black shadow-sm ${isLate ? 'bg-rose-500 text-white animate-pulse' : 'bg-slate-900 text-white'}`}>
+             {minutes}m
+           </div>
         </div>
       </div>
 

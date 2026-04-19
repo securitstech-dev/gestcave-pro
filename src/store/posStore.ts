@@ -295,6 +295,10 @@ export const usePOSStore = create<PosState>((set, get) => ({
       if (snap.exists()) {
           const cmd = { id: snap.id, ...snap.data() } as Commande;
           set(s => {
+              // Si la commande est payée, on la retire de l'état local (KDS/Caisse active)
+              if (cmd.statut === 'payee') {
+                  return { commandes: s.commandes.filter(c => c.id !== id) };
+              }
               const exists = s.commandes.some(c => c.id === id);
               if (exists) {
                   return { commandes: s.commandes.map(c => c.id === id ? cmd : c) };
@@ -609,12 +613,24 @@ export const usePOSStore = create<PosState>((set, get) => ({
     const snap = await getDoc(commandeRef);
     if (!snap.exists()) return;
     const cmd = { id: snap.id, ...snap.data() } as Commande;
+    
+    // Marquer automatiquement toutes les lignes comme servies lors de l'encaissement
+    // pour nettoyer le KDS
+    const nvellesLignes = (cmd.lignes || []).map(l => ({ ...l, statut: 'servi' as const }));
+    
     const totalFinal = Math.max(0, cmd.total - remise);
     const restant = Math.max(0, totalFinal - paye);
 
     batch.update(commandeRef, { 
-      statut: 'payee', methodePaiement: mode, clientNom: client || null, clientContact: contact || null,
-      montantPaye: paye || totalFinal, montantRestant: restant, remise, totalFinal
+      statut: 'payee', 
+      lignes: nvellesLignes,
+      methodePaiement: mode, 
+      clientNom: client || null, 
+      clientContact: contact || null,
+      montantPaye: paye || totalFinal, 
+      montantRestant: restant, 
+      remise, 
+      totalFinal
     });
 
     if (cmd.tableId) {
