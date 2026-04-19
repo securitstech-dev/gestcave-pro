@@ -126,7 +126,7 @@ export interface Commande {
   serveurId: string;
   serveurNom: string;
   dateOuverture: string;
-  statut: 'ouverte' | 'envoyee' | 'en_preparation' | 'servie' | 'payee';
+  statut: 'ouverte' | 'envoyee' | 'en_preparation' | 'servie' | 'payee' | 'en_attente_paiement';
   lignes: LigneCommande[];
   total: number;
   nombreCouverts: number;
@@ -198,7 +198,7 @@ interface PosState {
   arreterTempsReel: () => void;
   
   refreshCommande: (id: string) => Promise<void>;
-  ouvrirSession: (fondsInitial: number) => Promise<void>;
+  ouvrirSession: (fondsInitial: number, caissierId?: string, caissierNom?: string) => Promise<void>;
   fermerSession: (fondsFinal: number) => Promise<void>;
   ouvrirTable: (tableId: string, serveurId: string, serveurNom: string, nombreCouverts: number) => Promise<string>;
   ouvrirVenteEmporter: (serveurId: string, serveurNom: string) => Promise<string>;
@@ -670,7 +670,7 @@ export const usePOSStore = create<PosState>((set, get) => ({
       totalVente: totalFinal, // Total de la note pour historique
       clientNom: client || 'Direct', 
       clientContact: contact || '',
-      etablissement_id: get().etablissement_id || cmd.etablissement_id || cmd.etablissementId || '',
+      etablissement_id: get().etablissement_id || cmd.etablissement_id || '',
       serveurId: cmd.serveurId,
       serveurNom: cmd.serveurNom,
       refPaiement: refPaiement || null,

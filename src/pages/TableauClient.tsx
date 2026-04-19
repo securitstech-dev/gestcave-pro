@@ -5,7 +5,7 @@ import {
   Layout, LayoutDashboard, Zap, Activity, ShieldCheck, Shield,
   Calendar, ArrowUpRight, ArrowDownRight, MoreVertical, DollarSign,
   Bell, Search, Menu, X, PlusCircle, Globe, History, ArrowRight, ArrowLeft, Receipt, Clock,
-  ChefHat, Flame, Timer, Wallet, Bot, Monitor
+  ChefHat, Flame, Timer, Wallet, Bot, Monitor, BookOpen
 } from 'lucide-react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -25,6 +25,7 @@ import GestionAchats from './modules/GestionAchats';
 import GestionEtablissement from './modules/GestionEtablissement';
 import GestionSessions from './modules/GestionSessions';
 import GestionPaie from './modules/GestionPaie';
+import GrandLivre from './modules/GrandLivre';
 import IAIntelligence from './modules/IAIntelligence';
 import SimulationLab from '../components/SimulationLab';
 
@@ -121,6 +122,7 @@ const TableauClient = () => {
             <SidebarLink icon={<Package size={18} />} label="Inventaire & Stocks" path="/tableau-de-bord/stocks" />
             <SidebarLink icon={<TrendingUp size={18} />} label="Achats Fournisseurs" path="/tableau-de-bord/achats" />
             <SidebarLink icon={<DollarSign size={18} />} label="Comptabilité" path="/tableau-de-bord/admin" />
+            <SidebarLink icon={<BookOpen size={18} />} label="Grand Livre" path="/tableau-de-bord/grand-livre" />
             <SidebarLink icon={<Users size={18} />} label="Équipe & Personnel" path="/tableau-de-bord/rh" />
             <SidebarLink icon={<Wallet size={18} />} label="Paies & Salaires" path="/tableau-de-bord/paie" />
             <SidebarLink icon={<Clock size={18} />} label="Borne de Pointage" path={`/pointage/${profil?.etablissement_id}`} />
@@ -224,6 +226,7 @@ const TableauClient = () => {
               <Route path="/achats" element={<GestionAchats />} />
               <Route path="/tables" element={<GestionTables />} />
               <Route path="/admin" element={<GestionFinance />} />
+              <Route path="/grand-livre" element={<GrandLivre />} />
               <Route path="/sessions" element={<GestionSessions />} />
               <Route path="/settings" element={<GestionEtablissement />} />
               <Route path="/simulation" element={<SimulationLab />} />

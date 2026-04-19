@@ -22,12 +22,18 @@ const InterfaceServeur = () => {
     tables, produits, commandes, 
     ouvrirTable, ajouterLigne, modifierQuantite, 
     supprimerLigne, envoyerCuisine, annulerCommande, demanderAddition,
-    marquerCommandeServie, forcerLiberationTable
+    marquerCommandeServie, forcerLiberationTable, initPOS, etablissement_id: posEtabId
   } = usePOSStore();
   const { profil } = useAuthStore();
   
   const { nomEmploye, etablissementId, quitterPoste, idEmploye } = usePosteSession();
   const navigate = useNavigate();
+
+  // Auto-initialiser le store si accès direct (hors tableau de bord)
+  useEffect(() => {
+    const etabId = etablissementId || profil?.etablissement_id;
+    if (etabId && !posEtabId) initPOS(etabId);
+  }, [etablissementId, profil?.etablissement_id, posEtabId, initPOS]);
   
   const [etape, setEtape] = useState<'tables' | 'couverts' | 'commande'>('tables');
 

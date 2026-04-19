@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { usePOSStore } from '../../store/posStore';
 import { useAuthStore } from '../../store/authStore';
+import toast from 'react-hot-toast';
 
 const GestionSessions = () => {
   const { profil } = useAuthStore();
@@ -17,8 +18,14 @@ const GestionSessions = () => {
   const [showConfirmCloture, setShowConfirmCloture] = useState(false);
 
   const handleOuverture = async () => {
-    if (!profil) return;
-    await ouvrirSession(fondsSaisi);
+    if (sessionActive) {
+      toast ? toast.error('Une session est déjà ouverte !') : alert('Une session est déjà ouverte !');
+      return;
+    }
+    // Utilise le nom de l'opérateur connu (PIN > Admin)
+    const caissierId = sessionStorage.getItem('poste_employe_id') || profil?.id || 'admin';
+    const caissierNom = sessionStorage.getItem('poste_employe_nom') || profil?.nom || 'Gérant';
+    await ouvrirSession(fondsSaisi, caissierId, caissierNom);
     setFondsSaisi(0);
   };
 

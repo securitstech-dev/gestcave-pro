@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Banknote, CreditCard, Smartphone, Receipt, 
   CheckCircle2, Users, Clock, ShoppingBag, Wine,
@@ -17,13 +17,22 @@ import type { LigneCommande } from '../../store/posStore';
 
 const InterfaceCaissier = () => {
   const { profil } = useAuthStore();
-  const isAdmin = profil?.role === 'admin' || profil?.role === 'super_admin';
+  const isAdmin = profil?.role === 'client_admin' || profil?.role === 'super_admin';
   const { 
     tables, commandes, encaisserCommande, ouvrirVenteEmporter,
-    sessionActive, ouvrirSession, fermerSession, enregistrerAcompte, historiqueSessions
+    sessionActive, ouvrirSession, fermerSession, enregistrerAcompte, 
+    historiqueSessions, initPOS, etablissement_id: posEtabId
   } = usePOSStore();
   const { nomEmploye, idEmploye, etablissementId, quitterPoste } = usePosteSession();
   const navigate = useNavigate();
+
+  // CRITIQUE: Auto-initialiser le store quand la caisse est accédée directement
+  useEffect(() => {
+    const etabId = etablissementId || profil?.etablissement_id;
+    if (etabId && !posEtabId) {
+      initPOS(etabId);
+    }
+  }, [etablissementId, profil?.etablissement_id, posEtabId, initPOS]);
   
   const [commandeSelectionnee, setCommandeSelectionnee] = useState<string | null>(null);
   const [modePaiement, setModePaiement] = useState<'especes' | 'mobile' | 'carte' | 'credit' | null>(null);
