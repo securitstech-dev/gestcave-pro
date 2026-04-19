@@ -19,6 +19,7 @@ const InterfaceCuisine = () => {
     tables,
     marquerLignePrete, 
     marquerLigneEnPreparation, 
+    marquerToutesLignesPretes,
     marquerCommandeServie,
     etablissement_id: posEtabId
   } = usePOSStore();
@@ -120,15 +121,20 @@ const InterfaceCuisine = () => {
   return (
     <div className="h-screen bg-slate-50 flex flex-col font-['Inter',sans-serif] text-slate-800 overflow-hidden">
       {/* KDS Header */}
-      <header className="h-24 bg-[#1E3A8A] px-10 flex items-center justify-between shadow-2xl relative z-30">
+      <header className="h-28 bg-[#1E3A8A] px-10 flex items-center justify-between shadow-2xl relative z-30">
           <div className="flex items-center gap-8">
-              <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-[#1E3A8A] shadow-lg shadow-blue-900/20">
-                      <ChefHat size={28} />
+              <div className="flex items-center gap-6">
+                  <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-[#FF7A00] shadow-lg border border-white/10">
+                      <User size={32} />
                   </div>
                   <div>
-                      <h1 className="text-white font-black text-xl tracking-tight uppercase leading-none">Cuisine Live</h1>
-                      <p className="text-blue-300 font-bold text-[10px] uppercase tracking-widest mt-1">Poste : {posteId?.toUpperCase()}</p>
+                      <h1 className="text-white font-black text-xl tracking-tight uppercase leading-none">
+                        Bienvenue, <span className="text-[#FF7A00]">{nomEmploye?.split(' ')[0]}</span> !
+                      </h1>
+                      <div className="flex items-center gap-2 mt-2">
+                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                        <p className="text-blue-300 font-bold text-[10px] uppercase tracking-widest">Cuisinier • {nomEmploye}</p>
+                      </div>
                   </div>
               </div>
               <div className="h-8 w-[1px] bg-white/10" />
@@ -172,13 +178,18 @@ const InterfaceCuisine = () => {
                     
                     <div className={`p-8 border-b border-slate-50 flex justify-between items-start ${retard ? 'bg-rose-50/50' : 'bg-slate-50'}`}>
                         <div>
-                            <div className="flex items-center gap-3 mb-2">
+                            <div className="flex flex-wrap items-center gap-2 mb-2">
                                 <div className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${retard ? 'bg-rose-100 text-rose-600' : 'bg-[#1E3A8A] text-white'}`}>
-                                    {cmd.tableNom || 'EMPORTER'}
+                                    {cmd.type === 'a_emporter' ? 'À EMPORTER' : 'EN SALLE'}
+                                </div>
+                                <div className="px-4 py-1 rounded-full bg-blue-50 text-[#1E3A8A] border border-blue-100 text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
+                                    <User size={12} /> SERVEUR : {cmd.serveurNom || 'INCONNU'}
                                 </div>
                                 <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest"># {cmd.id.slice(-4).toUpperCase()}</span>
                             </div>
-                            <h3 className="text-3xl font-black text-[#1E3A8A] tracking-tighter uppercase leading-none">{cmd.clientNom || 'Client direct'}</h3>
+                            <h3 className="text-3xl font-black text-[#1E3A8A] tracking-tighter uppercase leading-none">
+                                {cmd.type === 'a_emporter' ? (cmd.clientNom || 'Client Direct') : `TABLE ${cmd.tableNom || 'INCONNUE'}`}
+                            </h3>
                         </div>
                         <div className="text-right">
                             <p className={`text-2xl font-black ${retard ? 'text-rose-600' : 'text-[#1E3A8A]'}`}>{minutesEcoulees(cmd.dateOuverture)} min</p>
@@ -220,23 +231,46 @@ const InterfaceCuisine = () => {
                         ))}
                     </div>
 
-                    <div className="p-8 bg-slate-50 border-t border-slate-100">
-                        {cmd.lignes.filter(filterLigne).every(l => l.statut === 'pret') ? (
-                            <button onClick={() => marquerCommandeServie(cmd.id)} className="w-full h-20 bg-emerald-500 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-emerald-900/20 flex items-center justify-center gap-4 group">
-                                <CheckCircle2 size={32} /> Tout est prêt
-                            </button>
-                        ) : (
-                            <div className="flex justify-between items-center px-4">
-                                <div className="flex items-center gap-2 text-slate-400">
-                                    <Utensils size={16} />
-                                    <span className="text-[10px] font-black uppercase tracking-widest">{cmd.lignes.filter(l => filterLigne(l) && l.statut === 'pret').length} / {cmd.lignes.filter(filterLigne).length} items</span>
-                                </div>
-                                <div className="flex -space-x-2">
-                                    <div className="w-10 h-10 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400"><User size={16} /></div>
-                                    <div className="w-10 h-10 rounded-full border-2 border-white bg-blue-100 flex items-center justify-center text-[10px] font-black text-blue-500">+{cmd.serveurNom?.charAt(0)}</div>
-                                </div>
+                    <div className="p-8 bg-slate-50 border-t border-slate-100 flex flex-col gap-4">
+                        <button 
+                          onClick={async () => {
+                            const toastId = toast.loading("Signalement au serveur...");
+                            // On marque tout comme prêt pour ce poste
+                            await marquerToutesLignesPretes(cmd.id, posteId || 'tous');
+                            
+                            // On crée la notification manuellement ici pour être précis
+                            const { addDoc, collection } = await import('firebase/firestore');
+                            const { db } = await import('../../lib/firebase');
+                            const station = posteId?.toUpperCase() || 'CUISINE';
+                            
+                            await addDoc(collection(db, 'notifications_postes'), {
+                              etablissement_id: posEtabId,
+                              serveurId: cmd.serveurId,
+                              commandeId: cmd.id,
+                              tableNom: cmd.tableNom || 'Emporter',
+                              type: 'pret_pour_service',
+                              message: `[${station}] La commande pour la table ${cmd.tableNom || 'Emporter'} est prête !`,
+                              date: new Date().toISOString(),
+                              statut: 'non_lu'
+                            });
+
+                            toast.success("Serveur alerté !", { id: toastId });
+                          }} 
+                          className="w-full h-20 bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-emerald-900/20 flex items-center justify-center gap-4 group hover:bg-emerald-500 transition-all active:scale-95"
+                        >
+                            <Bell size={28} className="group-hover:animate-ring" /> PRÊT POUR SERVICE
+                        </button>
+                        
+                        <div className="flex justify-between items-center px-4">
+                            <div className="flex items-center gap-2 text-slate-400">
+                                <Utensils size={16} />
+                                <span className="text-[10px] font-black uppercase tracking-widest">{cmd.lignes.filter(l => filterLigne(l) && l.statut === 'pret').length} / {cmd.lignes.filter(filterLigne).length} items</span>
                             </div>
-                        )}
+                            <div className="flex -space-x-2">
+                                <div className="w-10 h-10 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400"><User size={16} /></div>
+                                <div className="w-10 h-10 rounded-full border-2 border-white bg-blue-100 flex items-center justify-center text-[10px] font-black text-blue-500">+{cmd.serveurNom?.charAt(0)}</div>
+                            </div>
+                        </div>
                     </div>
                  </div>
                );

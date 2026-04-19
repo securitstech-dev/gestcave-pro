@@ -20,7 +20,7 @@ const PageConsoleTerminaux = () => {
       id: 'caisse',
       titre: 'Point de Vente (Caisse)',
       desc: 'Interface principale pour le Barman ou le Caissier. Gestion des paiements.',
-      url: `${baseUrl}/caisse`,
+      url: `${baseUrl}/poste/${etablissementId}?role=caisse`,
       icon: <Receipt size={32} />,
       color: 'bg-blue-600',
       type: 'Fixe / Tablette'
@@ -29,7 +29,7 @@ const PageConsoleTerminaux = () => {
       id: 'serveur',
       titre: 'Prise de Commande',
       desc: 'Interface mobile pour les serveurs en salle. Envoi direct en cuisine.',
-      url: `${baseUrl}/serveur`,
+      url: `${baseUrl}/poste/${etablissementId}?role=serveur`,
       icon: <Smartphone size={32} />,
       color: 'bg-[#FF7A00]',
       type: 'Mobile'
@@ -38,7 +38,7 @@ const PageConsoleTerminaux = () => {
       id: 'cuisine',
       titre: 'Écran Cuisine',
       desc: 'Affichage des commandes en attente. Validation des plats prêts.',
-      url: `${baseUrl}/cuisine`,
+      url: `${baseUrl}/poste/${etablissementId}?role=cuisine`,
       icon: <Utensils size={32} />,
       color: 'bg-emerald-600',
       type: 'Écran Fixe'
@@ -86,13 +86,16 @@ const PageConsoleTerminaux = () => {
              </p>
           </div>
           
-          <div className="bg-blue-50 border border-blue-100 p-6 rounded-3xl flex items-center gap-6 shadow-sm">
-             <div className="w-12 h-12 bg-[#1E3A8A] text-white rounded-2xl flex items-center justify-center shadow-lg">
-                <Zap size={24} />
+          <div className="flex items-center gap-5 bg-white p-6 rounded-[2rem] border border-slate-100 shadow-xl shadow-blue-900/5">
+             <div className="text-right hidden sm:block">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Superviseur</p>
+                <p className="text-lg font-black text-[#1E3A8A] tracking-tighter leading-none">
+                  Bienvenue, <span className="text-[#FF7A00]">{profil?.prenom || 'Propriétaire'}</span> !
+                </p>
              </div>
-             <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Status Système</p>
-                <p className="text-sm font-bold text-[#1E3A8A]">Tous les services sont LIVE</p>
+             <div className="w-14 h-14 bg-gradient-to-br from-[#1E3A8A] to-blue-800 rounded-2xl flex items-center justify-center text-white shadow-lg relative border-2 border-white">
+                <span className="font-black text-xl">{profil?.prenom?.[0] || 'A'}</span>
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white animate-pulse" />
              </div>
           </div>
         </div>

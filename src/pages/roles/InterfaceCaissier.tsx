@@ -10,14 +10,17 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { usePOSStore, imprimerTicket } from '../../store/posStore';
+import { useAuthStore } from '../../store/authStore';
 import { usePosteSession } from '../../hooks/usePosteSession';
 import { useNavigate } from 'react-router-dom';
 import type { LigneCommande } from '../../store/posStore';
 
 const InterfaceCaissier = () => {
+  const { profil } = useAuthStore();
+  const isAdmin = profil?.role === 'admin' || profil?.role === 'super_admin';
   const { 
     tables, commandes, encaisserCommande, ouvrirVenteEmporter,
-    sessionActive, ouvrirSession, fermerSession 
+    sessionActive, ouvrirSession, fermerSession, enregistrerAcompte, historiqueSessions
   } = usePOSStore();
   const { nomEmploye, idEmploye, etablissementId, quitterPoste } = usePosteSession();
   const navigate = useNavigate();
@@ -34,6 +37,20 @@ const InterfaceCaissier = () => {
   const [showClotureModal, setShowClotureModal] = useState(false);
   const [fondsSaisi, setFondsSaisi] = useState('0');
 
+  const fondAttendu = useMemo(() => {
+    if (!historiqueSessions || historiqueSessions.length === 0) return 0;
+    const closedSessions = [...historiqueSessions].filter(s => s.statut === 'fermee');
+    if (closedSessions.length === 0) return 0;
+    const derniereSession = closedSessions.sort((a, b) => new Date(b.dateFermeture || 0).getTime() - new Date(a.dateFermeture || 0).getTime())[0];
+    return derniereSession.fondsFinalSaisi || 0;
+  }, [historiqueSessions]);
+
+  React.useEffect(() => {
+    if (!sessionActive) {
+      setFondsSaisi(fondAttendu.toString());
+    }
+  }, [sessionActive, fondAttendu]);
+
   const [searchQuery, setSearchQuery] = useState('');
 
   const commandesActives = useMemo(() => {
@@ -48,11 +65,12 @@ const InterfaceCaissier = () => {
   const commandeActive = commandes.find(c => c.id === commandeSelectionnee);
   
   const totalNet = Math.max(0, (commandeActive?.total || 0) - remise);
+  const dejaPaye = Number(commandeActive?.montantPaye || 0);
   const montantRecu = parseFloat(montantSaisi) || 0;
   
-  const resteAPayer = Math.max(0, totalNet - montantRecu);
-  const monnaieRendue = (modePaiement === 'especes' && montantRecu > totalNet) 
-    ? montantRecu - totalNet 
+  const resteAPayer = Math.max(0, totalNet - dejaPaye - montantRecu);
+  const monnaieRendue = (modePaiement === 'especes' && (montantRecu + dejaPaye) > totalNet) 
+    ? (montantRecu + dejaPaye) - totalNet 
     : 0;
 
   const tournees = useMemo(() => {
@@ -84,7 +102,7 @@ const InterfaceCaissier = () => {
       return;
     }
 
-    if (modePaiement === 'especes' && montantRecu === 0) {
+    if (modePaiement === 'especes' && montantRecu === 0 && dejaPaye === 0) {
       toast.error('Veuillez saisir le montant reçu');
       return;
     }
@@ -96,7 +114,7 @@ const InterfaceCaissier = () => {
         modePaiement === 'credit' ? 'credit' : 'comptant', 
         nomClient, 
         remise, 
-        montantRecu, 
+        montantRecu + dejaPaye, 
         contactClient,
         modePaiement
       );
@@ -112,6 +130,33 @@ const InterfaceCaissier = () => {
     }
   };
 
+  const handleAcompte = async () => {
+    if (!commandeSelectionnee || !modePaiement || !montantRecu) {
+      toast.error("Veuillez saisir un montant et un mode de paiement");
+      return;
+    }
+    const toastId = toast.loading("Enregistrement de l'acompte...");
+    try {
+      await enregistrerAcompte(commandeSelectionnee, montantRecu, modePaiement);
+      toast.success("Acompte enregistré !", { id: toastId });
+      setMontantSaisi('');
+    } catch (error) {
+      toast.error("Erreur lors de l'acompte");
+    }
+  };
+
+  const handleDeconnexion = () => {
+    if (sessionActive) {
+      toast.error("⚠️ INTERDICTION DE DÉPART : Vous devez obligatoirement clôturer la caisse avant de vous déconnecter.", {
+        duration: 6000,
+        style: { background: '#ef4444', color: '#fff', fontWeight: 'bold' }
+      });
+      setShowClotureModal(true);
+      return;
+    }
+    quitterPoste();
+  };
+
   return (
     <div className="h-screen bg-slate-50 flex flex-col font-['Inter',sans-serif] text-slate-800 overflow-hidden">
       {/* Caissier Header */}
@@ -122,8 +167,13 @@ const InterfaceCaissier = () => {
                       <Wallet size={28} />
                   </div>
                   <div>
-                      <h1 className="text-white font-black text-xl tracking-tight uppercase leading-none">Interface Caisse</h1>
-                      <p className="text-blue-300 font-bold text-[10px] uppercase tracking-widest mt-1">Opérateur : {nomEmploye}</p>
+                      <h1 className="text-white font-black text-xl tracking-tight uppercase leading-none">
+                        Bienvenue, <span className="text-[#FF7A00]">{nomEmploye?.split(' ')[0]}</span> !
+                      </h1>
+                      <div className="flex items-center gap-2 mt-2">
+                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                        <p className="text-blue-300 font-bold text-[10px] uppercase tracking-widest">Session Active • {nomEmploye}</p>
+                      </div>
                   </div>
               </div>
               <div className="h-8 w-[1px] bg-white/10" />
@@ -138,12 +188,9 @@ const InterfaceCaissier = () => {
           </div>
 
           <div className="flex items-center gap-6">
-              <div className="text-right">
-                  <p className="text-white font-black text-xs uppercase">{nomEmploye}</p>
-                  <button onClick={quitterPoste} className="text-rose-400 font-black text-[9px] uppercase tracking-widest flex items-center gap-2 justify-end mt-1 hover:text-rose-300">
-                    Quitter le poste <LogOut size={12} />
-                  </button>
-              </div>
+              <button onClick={handleDeconnexion} className="flex items-center gap-3 px-5 py-3 bg-rose-500/10 text-rose-400 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all border border-rose-500/20 group">
+                Déconnexion <LogOut size={14} className="group-hover:translate-x-1 transition-transform" />
+              </button>
           </div>
       </header>
 
@@ -361,17 +408,32 @@ const InterfaceCaissier = () => {
 
                 <div className="p-10 bg-white border-t border-slate-50 space-y-6">
                     <div className="flex justify-between items-center px-4">
-                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">Total Final</span>
-                        <span className="text-5xl font-black tracking-tighter text-[#1E3A8A]">{totalNet.toLocaleString()} <span className="text-xl font-bold opacity-30">XAF</span></span>
+                        <div className="text-left">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] block">Déjà versé</span>
+                            <span className="text-xl font-black text-emerald-500">{dejaPaye.toLocaleString()} F</span>
+                        </div>
+                        <div className="text-right">
+                            <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] block">Reste à payer</span>
+                            <span className="text-5xl font-black tracking-tighter text-[#1E3A8A]">{resteAPayer.toLocaleString()} <span className="text-xl font-bold opacity-30">XAF</span></span>
+                        </div>
                     </div>
-                    <button
-                        onClick={finaliserPaiement}
-                        disabled={!modePaiement}
-                        className="h-24 w-full bg-[#1E3A8A] text-white rounded-[2.5rem] font-black uppercase tracking-widest text-lg shadow-2xl shadow-blue-900/30 transition-all disabled:opacity-20 flex items-center justify-center gap-6 hover:bg-blue-800 active:scale-[0.98] group"
-                    >
-                        {modePaiement ? 'Clôturer la Vente' : 'Sélectionnez un paiement'}
-                        <Check size={32} className="group-hover:scale-125 transition-transform text-[#FF7A00]" />
-                    </button>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <button
+                            onClick={handleAcompte}
+                            disabled={!modePaiement || montantRecu <= 0}
+                            className="h-20 bg-emerald-50 text-emerald-600 rounded-2xl font-black uppercase tracking-widest text-xs border-2 border-emerald-100 hover:bg-emerald-100 disabled:opacity-30 transition-all"
+                        >
+                            Enregistrer Acompte
+                        </button>
+                        <button
+                            onClick={finaliserPaiement}
+                            disabled={!modePaiement}
+                            className="h-20 bg-[#1E3A8A] text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-blue-900/20 disabled:opacity-30 flex items-center justify-center gap-3 group hover:bg-blue-800"
+                        >
+                            Clôturer Vente <Check size={20} className="text-[#FF7A00]" />
+                        </button>
+                    </div>
                 </div>
             </div>
         ) : (
@@ -399,18 +461,29 @@ const InterfaceCaissier = () => {
             <p className="text-slate-500 font-medium text-lg mb-16">Ouvrez votre session pour activer les protocoles d'encaissement.</p>
             
             <div className="bg-slate-50 p-12 rounded-[3rem] border border-slate-100 mb-16 shadow-inner focus-within:bg-white focus-within:border-blue-100 transition-all">
-               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Fond de caisse (XAF)</p>
+               <div className="flex items-center justify-between mb-6">
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fond de caisse (XAF)</p>
+                 {isAdmin ? (
+                   <span className="text-[10px] font-bold text-blue-500 bg-blue-100 px-3 py-1 rounded-full">Gérant : Modification Autorisée</span>
+                 ) : (
+                   <span className="text-[10px] font-bold text-rose-500 bg-rose-100 px-3 py-1 rounded-full">Verrouillé</span>
+                 )}
+               </div>
                <input 
                 type="number"
                 value={fondsSaisi}
-                onChange={e => setFondsSaisi(e.target.value)}
-                className="w-full text-center text-7xl font-black outline-none bg-transparent text-[#1E3A8A] tracking-tighter"
-                autoFocus
+                onChange={e => {
+                  if (isAdmin) setFondsSaisi(e.target.value);
+                }}
+                readOnly={!isAdmin}
+                className={`w-full text-center text-7xl font-black outline-none bg-transparent text-[#1E3A8A] tracking-tighter ${!isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                autoFocus={isAdmin}
                />
+               {!isAdmin && <p className="text-xs text-rose-500 font-bold mt-4 uppercase">Ce montant est reporté de la clôture de la veille. Seul le gérant peut le modifier.</p>}
             </div>
 
             <button 
-              onClick={() => ouvrirSession(Number(fondsSaisi))}
+              onClick={() => ouvrirSession(Number(fondsSaisi), idEmploye || '', nomEmploye || '')}
               className="w-full h-24 bg-[#1E3A8A] text-white rounded-[2.5rem] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-2xl shadow-blue-900/30 text-lg flex items-center justify-center gap-6"
             >
               Démarrer le Service <ArrowRight size={32} />

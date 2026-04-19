@@ -195,13 +195,16 @@ const TableauClient = () => {
                <span>{new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
             </div>
             
-            <div className="flex items-center gap-4 pl-6 border-l border-slate-100">
+            <div className="flex items-center gap-5 pl-8 border-l border-slate-100">
                <div className="text-right hidden md:block">
-                  <p className="text-sm font-bold text-slate-800 leading-none">{profil?.prenom || 'Utilisateur'}</p>
-                  <p className="text-[11px] font-bold text-[#FF7A00] mt-1">Administrateur</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Session Propriétaire</p>
+                  <p className="text-lg font-black text-[#1E3A8A] tracking-tighter leading-none">
+                    Bienvenue, <span className="text-[#FF7A00]">{profil?.prenom || 'Monsieur'}</span> !
+                  </p>
                </div>
-               <div className="w-11 h-11 bg-gradient-to-br from-[#1E3A8A] to-blue-800 rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-blue-900/10">
-                  {profil?.prenom?.[0] || 'A'}
+               <div className="w-12 h-12 bg-gradient-to-br from-[#1E3A8A] to-blue-800 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-900/20 relative group cursor-pointer border-2 border-white">
+                  <span className="font-black text-lg">{profil?.prenom?.[0] || 'A'}</span>
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white animate-pulse" />
                </div>
             </div>
           </div>
@@ -255,15 +258,16 @@ const DashboardAccueil = ({ profil, etablissementSimuleId, navigate }: any) => {
     return () => unsub();
   }, [etablissementId]);
 
-  const ventesDuJour = transactions.reduce((acc, t) => acc + (t.total || 0), 0);
+  const ventesDuJour = transactions.reduce((acc, t) => acc + (t.montant || 0), 0);
+  const potentielSalle = commandes.filter(c => c.statut !== 'payee').reduce((acc, c) => acc + ((c.total || 0) - (c.montantPaye || 0)), 0);
   const dettes = transactions.filter(t => t.modePaiement === 'credit').reduce((acc, t) => acc + (t.montantRestant || 0), 0);
-  const especes = transactions.filter(t => t.modePaiement === 'especes').reduce((acc, t) => acc + (t.total || 0), 0);
+  const especes = transactions.filter(t => t.modePaiement === 'especes').reduce((acc, t) => acc + (t.montant || 0), 0);
 
   const perfServeurs = useMemo(() => {
     const map: { [name: string]: number } = {};
     transactions.forEach(t => {
        const nom = t.serveurNom || 'Inconnu';
-       map[nom] = (map[nom] || 0) + (t.total || 0);
+       map[nom] = (map[nom] || 0) + (t.montant || 0);
     });
     return Object.entries(map).sort((a,b) => b[1] - a[1]).slice(0, 5);
   }, [transactions]);
@@ -311,9 +315,9 @@ const DashboardAccueil = ({ profil, etablissementSimuleId, navigate }: any) => {
       
       {/* Metrics Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard label="Ventes du jour" valeur={ventesDuJour} unit="XAF" icon={<Wallet className="text-[#1E3A8A]" />} />
+        <MetricCard label="CA Encaissé" valeur={ventesDuJour} unit="XAF" icon={<Wallet className="text-[#1E3A8A]" />} />
+        <MetricCard label="Potentiel (En salle)" valeur={potentielSalle} unit="XAF" icon={<Activity className="text-[#FF7A00]" />} />
         <MetricCard label="Encaissé (Espèces)" valeur={especes} unit="XAF" icon={<DollarSign className="text-emerald-500" />} />
-        <MetricCard label="Occupation Salles" valeur={tablesOccupees} unit="Tables" icon={<Activity className="text-blue-400" />} />
         <MetricCard label="Dettes Clients" valeur={dettes} unit="XAF" icon={<AlertTriangle className="text-rose-500" />} trend="danger" />
       </div>
 

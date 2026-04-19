@@ -20,7 +20,29 @@ const PagePointage = () => {
   const [sessionActuelle, setSessionActuelle] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  // Temps réel
+  // Support clavier physique
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (loading || employe) return; // Ne pas écouter si déjà identifié
+
+      if (e.key >= '0' && e.key <= '9') {
+        if (pin.length < 4) {
+          const val = e.key;
+          setPin(prev => {
+             const n = prev + val;
+             if (n.length === 4) verifierEmploye(n);
+             return n;
+          });
+        }
+      } else if (e.key === 'Backspace') {
+        setPin(prev => prev.slice(0, -1));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [pin, loading, employe]);
+
   const [time, setTime] = useState(new Date());
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -66,7 +88,26 @@ const PagePointage = () => {
       );
       const snapSession = await getDocs(qSession);
       if (!snapSession.empty) {
-        setSessionActuelle({ id: snapSession.docs[0].id, ...snapSession.docs[0].data() });
+        const sessionData = snapSession.docs[0].data();
+        const sessionId = snapSession.docs[0].id;
+        const debutMs = sessionData.debut?.toMillis ? sessionData.debut.toMillis() : Date.now();
+        const heuresEcoulees = (Date.now() - debutMs) / (1000 * 60 * 60);
+
+        if (heuresEcoulees > 14) {
+           // Auto-clôture de sécurité (oubli de départ)
+           await updateDoc(doc(db, 'pointage_presence', sessionId), {
+             fin: Timestamp.now(),
+             statut: 'termine_auto',
+             note_systeme: 'Oubli de badgeage départ'
+           });
+           toast.error("Oubli de départ détecté ! Votre session précédente a été fermée d'office. Veuillez badger à nouveau votre arrivée.", {
+             duration: 6000, style: { background: '#ef4444', color: '#fff', fontWeight: 'bold' }
+           });
+           // On ne définit pas la session, pour l'obliger à badger son arrivée du jour
+           setSessionActuelle(null);
+        } else {
+           setSessionActuelle({ id: sessionId, ...sessionData });
+        }
       }
 
     } catch (error) {

@@ -23,6 +23,8 @@ export const usePosteSession = () => {
 
   const etablissementId = sessionStorage.getItem('poste_etablissement_id')
     || profil?.etablissement_id
+    || useAuthStore.getState().etablissementSimuleId
+    || localStorage.getItem('gestcave_sim_etab_id')
     || null;
 
   // Si le store n'a pas de données (ex: refresh de page) — on réinitialise

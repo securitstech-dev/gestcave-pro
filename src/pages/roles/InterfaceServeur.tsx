@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { db } from '../../lib/firebase';
+import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { 
   Users, ChevronRight, Plus, Minus, Send, 
   X, ShoppingBag, Smartphone, Clock, LogOut,
@@ -6,7 +8,7 @@ import {
   CheckCircle2, AlertTriangle, ArrowLeft, Star,
   ShieldCheck, Crown, User, Search, Receipt,
   ClipboardList, CreditCard, ChevronDown, History, Trash2,
-  MoreVertical, Power, RefreshCcw, MoreHorizontal, ArrowRight, Check
+  MoreVertical, Power, RefreshCcw, MoreHorizontal, ArrowRight, Check, Bell
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { usePOSStore } from '../../store/posStore';
@@ -19,20 +21,69 @@ const InterfaceServeur = () => {
   const { 
     tables, produits, commandes, 
     ouvrirTable, ajouterLigne, modifierQuantite, 
-    supprimerLigne, envoyerCuisine, annulerCommande, demanderAddition
+    supprimerLigne, envoyerCuisine, annulerCommande, demanderAddition,
+    marquerCommandeServie, forcerLiberationTable
   } = usePOSStore();
   const { profil } = useAuthStore();
   
-  const { nomEmploye, etablissementId, quitterPoste } = usePosteSession();
+  const { nomEmploye, etablissementId, quitterPoste, idEmploye } = usePosteSession();
   const navigate = useNavigate();
   
   const [etape, setEtape] = useState<'tables' | 'couverts' | 'commande'>('tables');
+
+  // Audio pour le bip
+  const playNotificationSound = () => {
+    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+    audio.play().catch(e => console.log("Audio play blocked by browser", e));
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  };
   const [tableSelectionnee, setTableSelectionnee] = useState<TablePlan | null>(null);
   const [nombreCouverts, setNombreCouverts] = useState(1);
   const [commandeId, setCommandeId] = useState<string | null>(null);
   const [categorieActive, setCategorieActive] = useState<string>('Tout');
   const [rechercheProduit, setRechercheProduit] = useState('');
   const [showTableActions, setShowTableActions] = useState<string | null>(null);
+
+  // Écouteur de notifications "Prêt"
+  useEffect(() => {
+    if (!etablissementId || !idEmploye) return;
+
+    const q = query(
+      collection(db, 'notifications_postes'),
+      where('etablissement_id', '==', etablissementId),
+      where('serveurId', '==', idEmploye),
+      where('statut', '==', 'non_lu')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          const notif = change.doc.data();
+          
+          // Jouer le son et vibrer
+          playNotificationSound();
+          
+          // Afficher le toast
+          toast.success(notif.message, {
+            duration: 6000,
+            icon: '🍽️',
+            style: {
+              background: '#FF7A00',
+              color: '#fff',
+              fontWeight: 'bold',
+              borderRadius: '1rem',
+              border: '2px solid white'
+            }
+          });
+
+          // Marquer comme lu immédiatement
+          updateDoc(doc(db, 'notifications_postes', change.doc.id), { statut: 'lu' });
+        }
+      });
+    });
+
+    return () => unsubscribe();
+  }, [etablissementId, idEmploye]);
 
   const commandeActive = useMemo(() => 
     commandes.find(c => c.id === commandeId),
@@ -95,19 +146,31 @@ const InterfaceServeur = () => {
   if (etape === 'tables') {
     return (
       <div className="h-screen bg-slate-50 flex flex-col font-['Inter',sans-serif] overflow-hidden">
-        <header className="h-24 bg-[#1E3A8A] px-10 flex items-center justify-between shadow-xl relative z-20 shrink-0">
-            <div className="flex items-center gap-6">
-                <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-[#1E3A8A] shadow-lg">
-                    <LayoutGrid size={32} />
+        <header className="h-28 bg-[#1E3A8A] px-10 flex items-center justify-between shadow-xl relative z-20 shrink-0">
+            <div className="flex items-center gap-8">
+                <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-[#FF7A00] shadow-lg border border-white/10">
+                    <User size={32} />
                 </div>
                 <div>
-                    <h1 className="text-white font-black text-2xl tracking-tighter uppercase leading-none">Plan de Salle</h1>
-                    <p className="text-blue-200 font-bold text-[10px] uppercase tracking-widest mt-1">Serveur : {nomEmploye}</p>
+                    <h1 className="text-white font-black text-2xl tracking-tighter uppercase leading-none">
+                        Bienvenue, <span className="text-[#FF7A00]">{nomEmploye?.split(' ')[0]}</span> !
+                    </h1>
+                    <div className="flex items-center gap-2 mt-2">
+                        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                        <p className="text-blue-200 font-black text-[10px] uppercase tracking-[0.2em]">Session Active • {nomEmploye}</p>
+                    </div>
                 </div>
             </div>
-            <button onClick={quitterPoste} className="flex items-center gap-3 px-6 py-3 bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/20 transition-all border border-white/10">
-                Quitter <LogOut size={16} />
-            </button>
+            
+            <div className="flex items-center gap-4">
+                <div className="hidden md:flex flex-col items-end mr-4">
+                    <p className="text-[10px] font-black text-blue-300 uppercase tracking-widest">ID Agent</p>
+                    <p className="text-white font-bold text-xs">#{idEmploye?.slice(-5).toUpperCase()}</p>
+                </div>
+                <button onClick={quitterPoste} className="flex items-center gap-3 px-6 py-4 bg-rose-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 transition-all shadow-lg shadow-rose-900/20">
+                    <LogOut size={18} />
+                </button>
+            </div>
         </header>
 
         <main className="flex-1 overflow-y-auto p-10 no-scrollbar">
@@ -116,47 +179,77 @@ const InterfaceServeur = () => {
                     <div className="flex items-center gap-4 mb-8">
                         <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">{zone}</h2>
                         <div className="h-[1px] flex-1 bg-slate-100" />
+                        {zone === 'comptoir' && (
+                            <button 
+                              onClick={() => {
+                                  const tableComptoir = tables.find(t => t.zone === 'comptoir');
+                                  if (tableComptoir) {
+                                      setTableSelectionnee({...tableComptoir, nom: `Client ${commandes.filter(c => c.tableNom.startsWith('Comptoir')).length + 1}`});
+                                      setEtape('couverts');
+                                  }
+                              }}
+                              className="px-4 py-2 bg-[#FF7A00] text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-orange-900/20 flex items-center gap-2 hover:bg-orange-600 transition-all"
+                            >
+                                <Plus size={14} /> Nouveau Client au Comptoir
+                            </button>
+                        )}
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-8">
-                        {tables.filter(t => t.zone === zone).map(table => {
-                           const isOccupee = table.statut === 'occupee';
-                           const isAddition = table.statut === 'en_attente_paiement';
-                           const commande = isOccupee || isAddition ? commandes.find(c => c.tableId === table.id) : null;
+                        { (zone === 'comptoir' ? commandes.filter(c => c.tableNom.startsWith('Comptoir') && c.statut !== 'payee') : tables.filter(t => t.zone === zone) ).map(item => {
+                           const isTable = 'zone' in item;
+                           const table = isTable ? (item as TablePlan) : null;
+                           const commande = isTable ? (commandes.find(c => c.tableId === table?.id && c.statut !== 'payee')) : (item as Commande);
+                           
+                           const nomAffiche = isTable ? table?.nom : `Comptoir ${commande?.clientNom || '#' + commande?.id.slice(-3)}`;
+                           const isOccupee = isTable ? table?.statut === 'occupee' : true;
+                           const isAddition = isTable ? table?.statut === 'en_attente_paiement' : (commande?.statut === 'en_attente_paiement');
+                           const aDesProduitsPrets = commande?.lignes.some(l => l.statut === 'pret');
                            
                            return (
                              <button 
-                               key={table.id}
-                               onClick={() => {
-                                 if (isOccupee || isAddition) {
-                                   if (commande) {
-                                     setCommandeId(commande.id);
-                                     setEtape('commande');
-                                     setNombreCouverts(commande.nombreCouverts);
-                                     setTableSelectionnee(table);
-                                   }
-                                 } else {
+                               key={isTable ? table?.id : commande?.id}
+                               onClick={async () => {
+                                 if (commande) {
+                                   setCommandeId(commande.id);
+                                   setEtape('commande');
+                                   setNombreCouverts(commande.nombreCouverts || 1);
+                                   setTableSelectionnee(isTable ? table : { id: 'comptoir-virtual', nom: nomAffiche, zone: 'comptoir', capacite: 1, statut: 'occupee' } as any);
+                                 } else if (isTable && !isOccupee && !isAddition) {
                                    setTableSelectionnee(table);
                                    setEtape('couverts');
+                                 } else if (isTable && (isOccupee || isAddition)) {
+                                   if (window.confirm(`La table ${table?.nom} semble bloquée sans commande active. Voulez-vous la libérer de force ?`)) {
+                                     await forcerLiberationTable(table!.id);
+                                     toast.success("Table libérée");
+                                   }
                                  }
                                }}
                                className={`h-48 rounded-[2.5rem] border-2 flex flex-col items-center justify-center gap-4 transition-all relative overflow-hidden group shadow-sm ${
-                                 isOccupee ? 'bg-[#1E3A8A] border-[#1E3A8A] text-white shadow-xl shadow-blue-900/20' : 
+                                 isOccupee || !isTable ? 'bg-[#1E3A8A] border-[#1E3A8A] text-white shadow-xl shadow-blue-900/20' : 
                                  isAddition ? 'bg-orange-50 border-orange-200 text-[#FF7A00]' : 
                                  'bg-white border-slate-100 text-slate-400 hover:border-blue-100 hover:bg-slate-50'
                                }`}
                              >
-                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${isOccupee ? 'bg-white/10' : 'bg-slate-50'}`}>
-                                    {table.zone === 'vip' ? <Crown size={28} /> : <Utensils size={28} />}
+                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${isOccupee || !isTable ? 'bg-white/10' : (isAddition ? 'bg-orange-100 text-orange-600' : 'bg-slate-50')}`}>
+                                    {aDesProduitsPrets ? <Bell size={28} className="text-orange-400 animate-bounce" /> : (isAddition ? <Receipt size={28} /> : (table?.zone === 'vip' ? <Crown size={28} /> : <Utensils size={28} />))}
                                 </div>
                                 <div className="text-center">
-                                    <h3 className={`text-2xl font-black tracking-tighter leading-none ${isOccupee ? 'text-white' : 'text-[#1E3A8A]'}`}>{table.nom}</h3>
-                                    {isOccupee && commande && (
-                                        <p className="text-orange-400 font-black text-xs mt-2 uppercase">{(commande.total || 0).toLocaleString()} <span className="text-[10px] opacity-60">XAF</span></p>
+                                    <h3 className={`text-2xl font-black tracking-tighter leading-none ${isOccupee || !isTable ? 'text-white' : 'text-[#1E3A8A]'}`}>{nomAffiche}</h3>
+                                    {(isOccupee || isAddition || !isTable) && commande && (
+                                        <p className="text-orange-400 font-black text-xs mt-2 uppercase">
+                                          {( (commande.montantRestant !== undefined) ? commande.montantRestant : (commande.total || 0) ).toLocaleString()} 
+                                          <span className="text-[10px] opacity-60"> XAF</span>
+                                        </p>
                                     )}
-                                    {isAddition && <p className="text-emerald-500 font-black text-[10px] uppercase mt-2">Addition demandée</p>}
+                                    {aDesProduitsPrets && (
+                                        <div className="absolute top-4 right-4 bg-orange-500 text-white px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest animate-pulse shadow-lg">
+                                            À RÉCUPÉRER
+                                        </div>
+                                    )}
+                                    {isAddition && <p className="text-orange-600 font-black text-[10px] uppercase mt-2 animate-pulse">Addition demandée</p>}
                                 </div>
-                                <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${isOccupee ? 'bg-white/10 text-white/60' : 'bg-slate-50 text-slate-300'}`}>
-                                    <Users size={12} /> {table.capacite} places
+                                <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${isOccupee || !isTable ? 'bg-white/10 text-white/60' : 'bg-slate-50 text-slate-300'}`}>
+                                    <Users size={12} /> {table?.capacite || 1} places
                                 </div>
                              </button>
                            );
@@ -193,7 +286,7 @@ const InterfaceServeur = () => {
                   <div className="grid grid-cols-2 gap-4">
                       <button onClick={() => setEtape('tables')} className="h-20 bg-slate-100 text-slate-500 rounded-[2rem] font-black uppercase tracking-widest text-xs">Annuler</button>
                       <button onClick={async () => {
-                          const id = await ouvrirTable(tableSelectionnee!.id, profil!.id, profil!.nom, nombreCouverts);
+                          const id = await ouvrirTable(tableSelectionnee!.id, idEmploye || 'inconnu', nomEmploye || 'Serveur', nombreCouverts);
                           setCommandeId(id);
                           setEtape('commande');
                       }} className="h-20 bg-[#1E3A8A] text-white rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-xl shadow-blue-900/20">Lancer la commande</button>
@@ -328,8 +421,26 @@ const InterfaceServeur = () => {
                 </div>
 
                 <div className="p-8 md:p-10 bg-white border-t border-slate-50 space-y-6">
+                    {commandeActive?.lignes.some(l => l.statut === 'pret') && (
+                      <button 
+                        onClick={async () => {
+                            const toastId = toast.loading("Mise à jour du service...");
+                            await marquerCommandeServie(commandeId!);
+                            toast.success("Plats marqués comme servis !", { id: toastId });
+                        }}
+                        className="w-full h-20 bg-orange-500 text-white rounded-[2rem] font-black uppercase tracking-widest text-sm shadow-xl shadow-orange-900/20 flex items-center justify-center gap-4 hover:bg-orange-600 transition-all animate-pulse"
+                      >
+                          <Utensils size={24} /> CONFIRMER LE SERVICE (À RÉCUPÉRER)
+                      </button>
+                    )}
+
                     <div className="flex gap-4">
-                        <button onClick={() => handleFermerTable(commandeId!)} className="flex-1 h-16 bg-slate-50 text-slate-400 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-slate-100 hover:bg-rose-50 hover:text-rose-500 transition-all">Annuler Table</button>
+                        <button 
+                          onClick={() => handleFermerTable(commandeId!)} 
+                          className="flex-1 h-16 bg-rose-50 text-rose-600 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-rose-100 hover:bg-rose-500 hover:text-white transition-all shadow-sm flex items-center justify-center gap-2"
+                        >
+                          <Trash2 size={16} /> ANNULER / LIBÉRER LA TABLE
+                        </button>
                         <button onClick={() => demanderAddition(commandeId!, tableSelectionnee?.id || '')} className="flex-1 h-16 bg-emerald-50 text-emerald-600 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-emerald-100 hover:bg-emerald-100 transition-all">L'addition</button>
                     </div>
                     <button 

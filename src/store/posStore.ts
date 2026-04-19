@@ -214,6 +214,8 @@ interface PosState {
   encaisserCommande: (commandeId: string, modePaiement: 'comptant' | 'credit', clientNom: string, montantRemise?: number, montantPaye?: number, clientContact?: string, refPaiement?: string) => Promise<void>;
   annulerCommande: (commandeId: string) => Promise<void>;
   demanderAddition: (commandeId: string, tableId: string) => Promise<void>;
+  enregistrerAcompte: (commandeId: string, montant: number, mode: string) => Promise<void>;
+  forcerLiberationTable: (tableId: string) => Promise<void>;
 }
 
 export const usePOSStore = create<PosState>((set, get) => ({
@@ -316,13 +318,15 @@ export const usePOSStore = create<PosState>((set, get) => ({
       }
   },
 
-  ouvrirSession: async (fondsInitial) => {
-    const profile = useAuthStore.getState().profil;
-    if (!profile) return;
+  ouvrirSession: async (fondsInitial, caissierId?: string, caissierNom?: string) => {
+    const etabId = get().etablissement_id || useAuthStore.getState().etablissementSimuleId;
+    const cid = caissierId || sessionStorage.getItem('poste_employe_id') || useAuthStore.getState().profil?.id || 'unknown';
+    const cnom = caissierNom || sessionStorage.getItem('poste_employe_nom') || useAuthStore.getState().profil?.nom || 'Caissier';
+    
     const session = {
-      etablissement_id: profile.etablissement_id,
-      caissierId: profile.id || 'unknown',
-      caissierNom: profile.nom || 'Caissier',
+      etablissement_id: etabId,
+      caissierId: cid,
+      caissierNom: cnom,
       dateOuverture: new Date().toISOString(),
       fondsInitial: Number(fondsInitial),
       totalVentesTheorique: 0,
@@ -378,13 +382,13 @@ export const usePOSStore = create<PosState>((set, get) => ({
   },
 
   ouvrirTable: async (tableId, serveurId, serveurNom, nombreCouverts) => {
-    const profile = useAuthStore.getState().profil;
+    const etabId = get().etablissement_id;
     const table = get().tables.find(t => t.id === tableId);
     if (!table) throw new Error('Table introuvable');
 
     const nouvCmd = {
-      etablissement_id: profile?.etablissement_id || '',
-      etablissementId: profile?.etablissement_id || '', // Double champ pour sécurité
+      etablissement_id: etabId || '',
+      etablissementId: etabId || '', // Double champ pour sécurité
       tableId, tableNom: table.nom, serveurId, serveurNom,
       dateOuverture: new Date().toISOString(), statut: 'ouverte',
       lignes: [], total: 0, nombreCouverts: Number(nombreCouverts), type: 'sur_place'
@@ -396,10 +400,10 @@ export const usePOSStore = create<PosState>((set, get) => ({
   },
 
   ouvrirVenteEmporter: async (serveurId, serveurNom) => {
-    const profile = useAuthStore.getState().profil;
+    const etabId = get().etablissement_id;
     const nouvCmd = {
-      etablissement_id: profile?.etablissement_id || '',
-      etablissementId: profile?.etablissement_id || '',
+      etablissement_id: etabId || '',
+      etablissementId: etabId || '',
       tableId: null, tableNom: 'A EMPORTER', serveurId, serveurNom,
       dateOuverture: new Date().toISOString(), statut: 'ouverte',
       lignes: [], total: 0, nombreCouverts: 1, type: 'a_emporter'
@@ -489,7 +493,7 @@ export const usePOSStore = create<PosState>((set, get) => ({
     const lignes = (data.lignes || []) as LigneCommande[];
     const batch = writeBatch(db);
     const mtn = new Date().toISOString();
-    const etablissementId = useAuthStore.getState().profil?.etablissement_id;
+    const etablissementId = get().etablissement_id || data.etablissement_id || data.etablissementId || '';
     
     lignes.forEach(l => {
         if (l.statut === 'en_attente') {
@@ -611,6 +615,20 @@ export const usePOSStore = create<PosState>((set, get) => ({
       statut: toutesServies ? 'servie' : data.statut, 
       lignes: nvelles 
     });
+
+    // NOTIFICATION AU SERVEUR (Dès qu'une partie est prête)
+    const stationPrete = destination?.toUpperCase() || 'CUISINE';
+    await addDoc(collection(db, 'notifications_postes'), {
+      etablissement_id: data.etablissement_id,
+      serveurId: data.serveurId,
+      commandeId: commandeId,
+      tableNom: data.tableNom || 'Emporter',
+      type: 'pret_pour_service',
+      message: `[${stationPrete}] La commande pour la table ${data.tableNom || 'Emporter'} est prête !`,
+      date: new Date().toISOString(),
+      statut: 'non_lu'
+    });
+
     await get().refreshCommande(commandeId);
   },
 
@@ -645,13 +663,18 @@ export const usePOSStore = create<PosState>((set, get) => ({
     }
 
     batch.set(doc(collection(db, 'transactions_pos')), {
-      commandeId, total: totalFinal, montantRecu: paye || totalFinal,
-      montantRestant: restant, modePaiement: mode, date: new Date().toISOString(),
-      clientNom: client || 'Direct', clientContact: contact || '',
-      etablissement_id: useAuthStore.getState().profil?.etablissement_id,
+      commandeId,
+      modePaiement: mode, 
+      date: new Date().toISOString(),
+      montant: paye || totalFinal, // Argent encaissé maintenant
+      totalVente: totalFinal, // Total de la note pour historique
+      clientNom: client || 'Direct', 
+      clientContact: contact || '',
+      etablissement_id: get().etablissement_id || cmd.etablissement_id || cmd.etablissementId || '',
       serveurId: cmd.serveurId,
       serveurNom: cmd.serveurNom,
-      refPaiement: refPaiement || null
+      refPaiement: refPaiement || null,
+      type: 'final'
     });
 
     await batch.commit();
@@ -694,5 +717,42 @@ export const usePOSStore = create<PosState>((set, get) => ({
     batch.update(doc(db, 'tables', tableId), { statut: 'en_attente_paiement' });
     await batch.commit();
     toast.success("Demande d'addition envoyée à la caisse !");
+  },
+
+  enregistrerAcompte: async (commandeId, montant, mode) => {
+    const cmd = get().commandes.find(c => c.id === commandeId);
+    if (!cmd) return;
+
+    const nouveauMontantPaye = (cmd.montantPaye || 0) + montant;
+    const nouveauMontantRestant = (cmd.total || 0) - nouveauMontantPaye;
+
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'commandes', commandeId), { 
+      montantPaye: nouveauMontantPaye,
+      montantRestant: nouveauMontantRestant
+    });
+
+    // Enregistrement de l'acompte comme transaction
+    const transaction = {
+      commandeId,
+      etablissement_id: cmd.etablissement_id,
+      montant: montant, // L'argent encaissé MAINTENANT
+      totalVente: cmd.total,
+      date: new Date().toISOString(),
+      modePaiement: mode,
+      type: 'acompte',
+      serveurNom: cmd.serveurNom
+    };
+    
+    batch.set(doc(collection(db, 'transactions_pos')), transaction);
+    await batch.commit();
+    await get().refreshCommande(commandeId);
+  },
+
+  forcerLiberationTable: async (tableId) => {
+    await updateDoc(doc(db, 'tables', tableId), { 
+      statut: 'libre', 
+      commandeActiveId: null 
+    });
   }
 }));

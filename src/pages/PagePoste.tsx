@@ -9,12 +9,14 @@ import { toast } from 'react-hot-toast';
 const PagePoste = () => {
   const { etablissementId } = useParams<{ etablissementId: string }>();
   const navigate = useNavigate();
-  const { initialiserTempsReel, isOnline } = usePOSStore();
+  const location = window.location;
+  const { initialiserTempsReel } = usePOSStore();
 
   const [nomEtablissement, setNomEtablissement] = useState('Configuration...');
   const [showPinModal, setShowPinModal] = useState(false);
   const [selectedMode, setSelectedMode] = useState<any>(null);
   const [pin, setPin] = useState('');
+  const [pinError, setPinError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const modes = [
@@ -88,6 +90,16 @@ const PagePoste = () => {
     chargerEtablissement();
   }, [etablissementId, initialiserTempsReel]);
 
+  // Détection automatique du rôle via URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const roleParam = params.get('role');
+    if (roleParam && modes.some(m => m.id === roleParam)) {
+      const mode = modes.find(m => m.id === roleParam);
+      if (mode) gererSelection(mode);
+    }
+  }, [location.search]);
+
   const gererSelection = (mode: any) => {
     if (mode.id === 'pointage') {
       navigate(mode.route);
@@ -97,6 +109,27 @@ const PagePoste = () => {
     setShowPinModal(true);
     setPin('');
   };
+
+  // Support clavier physique
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!showPinModal || loading) return;
+
+      if (e.key >= '0' && e.key <= '9') {
+        setPinError(null);
+        if (pin.length < 4) setPin(prev => prev + e.key);
+      } else if (e.key === 'Backspace') {
+        setPin(prev => prev.slice(0, -1));
+      } else if (e.key === 'Enter') {
+        if (pin.length === 4) verifierAcces();
+      } else if (e.key === 'Escape') {
+        setShowPinModal(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showPinModal, pin, loading]);
 
   const verifierAcces = async () => {
     if (pin.length < 4) return;
@@ -112,25 +145,53 @@ const PagePoste = () => {
       const snap = await getDocs(q);
       
       if (snap.empty) {
-        toast.error('Code PIN incorrect');
+        setPinError("CODE PIN INTROUVABLE OU INCORRECT");
         setPin('');
         setLoading(false);
         return;
       }
 
       const employe = snap.docs[0].data();
+      const employeId = snap.docs[0].id;
       
       // Vérification des droits
       if (selectedMode.role !== 'any' && employe.role !== selectedMode.role && employe.role !== 'admin' && employe.role !== 'gerant') {
-        toast.error(`Accès refusé. Role ${selectedMode.role} requis.`);
+        setPinError(`RÔLE INCOMPATIBLE (REQUIS : ${selectedMode.role.toUpperCase()})`);
         setPin('');
         setLoading(false);
         return;
       }
 
+      // Vérification du pointage obligatoire (Présence active requise)
+      // On exempte l'admin global pour les urgences techniques
+      if (employe.role !== 'admin') {
+        const qPointage = query(
+          collection(db, 'pointage_presence'),
+          where('employe_id', '==', employeId),
+          where('statut', '==', 'present')
+        );
+        const snapPointage = await getDocs(qPointage);
+        
+        if (snapPointage.empty) {
+          setPinError("PIN VALIDE. ACCÈS BLOQUÉ : POINTAGE OBLIGATOIRE AU TERMINAL.");
+          setPin('');
+          setLoading(false);
+          return;
+        }
+      }
+
       // Connexion réussie
       toast.success(`Accès autorisé : ${employe.nom}`);
+      
+      // Sauvegarde des infos pour le hook usePosteSession
+      sessionStorage.setItem('poste_employe_id', snap.docs[0].id);
+      sessionStorage.setItem('poste_employe_nom', employe.nom);
+      sessionStorage.setItem('poste_employe_role', employe.role);
+      sessionStorage.setItem('poste_etablissement_id', etablissementId);
+      
+      // Compatibilité avec l'ancien système
       localStorage.setItem('temp_auth_user', JSON.stringify({ ...employe, id: snap.docs[0].id }));
+      
       navigate(selectedMode.route);
       
     } catch (error) {
@@ -242,20 +303,32 @@ const PagePoste = () => {
 
                       <div className="grid grid-cols-3 gap-4">
                           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                              <button key={num} onClick={() => pin.length < 4 && setPin(pin + num)}
+                              <button key={num} onClick={() => { setPinError(null); pin.length < 4 && setPin(pin + num); }}
                                   className="h-20 bg-slate-50 hover:bg-blue-50 text-2xl font-black text-[#1E3A8A] rounded-[1.5rem] transition-all active:scale-90 border border-slate-100 shadow-sm">
                                   {num}
                               </button>
                           ))}
-                          <button onClick={() => setPin('')} className="h-20 bg-rose-50 text-rose-500 rounded-[1.5rem] flex items-center justify-center hover:bg-rose-100 transition-all active:scale-90">
+                          <button onClick={() => { setPinError(null); setPin(''); }} className="h-20 bg-rose-50 text-rose-500 rounded-[1.5rem] flex items-center justify-center hover:bg-rose-100 transition-all active:scale-90">
                               <X size={24} />
                           </button>
-                          <button onClick={() => pin.length < 4 && setPin(pin + '0')} className="h-20 bg-slate-50 hover:bg-blue-50 text-2xl font-black text-[#1E3A8A] rounded-[1.5rem] transition-all active:scale-90 border border-slate-100">0</button>
+                          <button onClick={() => { setPinError(null); pin.length < 4 && setPin(pin + '0'); }} className="h-20 bg-slate-50 hover:bg-blue-50 text-2xl font-black text-[#1E3A8A] rounded-[1.5rem] transition-all active:scale-90 border border-slate-100">0</button>
                           <button onClick={verifierAcces} disabled={pin.length < 4 || loading}
                               className="h-20 bg-[#FF7A00] text-white rounded-[1.5rem] flex items-center justify-center hover:bg-orange-600 transition-all active:scale-90 shadow-xl shadow-orange-900/20 disabled:opacity-30">
                               {loading ? <Loader2 size={24} className="animate-spin" /> : <ArrowRight size={24} />}
                           </button>
                       </div>
+
+                      {pinError && (
+                          <div className="p-6 bg-rose-50 border-2 border-rose-100 rounded-[1.5rem] animate-in slide-in-from-bottom-2 text-center shadow-inner">
+                              <div className="flex items-center justify-center gap-3 text-rose-500 mb-2">
+                                  <Shield size={24} />
+                                  <h4 className="text-xl font-black uppercase tracking-tighter">Accès Refusé</h4>
+                              </div>
+                              <p className="text-rose-600 font-bold text-[11px] uppercase tracking-[0.2em] leading-relaxed">
+                                  {pinError}
+                              </p>
+                          </div>
+                      )}
                   </div>
               </div>
           </div>
