@@ -209,7 +209,7 @@ interface PosState {
   marquerToutesLignesPretes: (commandeId: string, posteId: string) => Promise<void>;
   marquerLigneEnPreparation: (commandeId: string, ligneId: string) => Promise<void>;
   marquerToutesLignesEnPreparation: (commandeId: string, posteId: string) => Promise<void>;
-  marquerCommandeServie: (commandeId: string) => Promise<void>;
+  marquerCommandeServie: (commandeId: string, posteId?: string | null) => Promise<void>;
   encaisserCommande: (commandeId: string, modePaiement: 'comptant' | 'credit', clientNom: string, montantRemise?: number, montantPaye?: number, clientContact?: string, refPaiement?: string) => Promise<void>;
   annulerCommande: (commandeId: string) => Promise<void>;
   demanderAddition: (commandeId: string, tableId: string) => Promise<void>;
