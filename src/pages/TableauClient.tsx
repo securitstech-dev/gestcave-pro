@@ -10,7 +10,7 @@ import {
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { usePOSStore } from '../store/posStore';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 // Modules
@@ -37,8 +37,21 @@ const TableauClient = () => {
   const location = useLocation();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [modulesActifs, setModulesActifs] = useState<string[]>(['pos', 'stock', 'hr', 'compta', 'kds', 'analytics']);
 
   const etablissementId = etablissementSimuleId || profil?.etablissement_id;
+
+  // Listen to modules_actifs from Firestore in real-time
+  useEffect(() => {
+    if (!etablissementId) return;
+    const unsub = onSnapshot(doc(db, 'etablissements', etablissementId), (snap) => {
+      const data = snap.data();
+      if (data?.modules_actifs) setModulesActifs(data.modules_actifs);
+    });
+    return () => unsub();
+  }, [etablissementId]);
+
+  const hasModule = (id: string) => modulesActifs.includes(id);
 
   useEffect(() => {
     if (etablissementId) {
@@ -108,25 +121,27 @@ const TableauClient = () => {
           </div>
         </div>
 
+        {(hasModule('pos') || hasModule('kds')) && (
         <div>
           <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Postes de travail</p>
           <div className="space-y-1">
             <SidebarLink icon={<Monitor size={18} />} label="Console Déploiement" path="/terminaux" />
-            <SidebarLink icon={<ShoppingCart size={18} />} label="Point de Vente (Caisse)" path="/tableau-de-bord/caisse" />
-            <SidebarLink icon={<Zap size={18} />} label="Écran Cuisine" path="/tableau-de-bord/cuisine" />
+            {hasModule('pos') && <SidebarLink icon={<ShoppingCart size={18} />} label="Point de Vente (Caisse)" path="/tableau-de-bord/caisse" />}
+            {hasModule('kds') && <SidebarLink icon={<Zap size={18} />} label="Écran Cuisine" path="/tableau-de-bord/cuisine" />}
           </div>
         </div>
+        )}
 
         <div>
           <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Gestion Interne</p>
           <div className="space-y-1">
-            <SidebarLink icon={<Package size={18} />} label="Inventaire & Stocks" path="/tableau-de-bord/stocks" />
-            <SidebarLink icon={<TrendingUp size={18} />} label="Achats Fournisseurs" path="/tableau-de-bord/achats" />
-            <SidebarLink icon={<DollarSign size={18} />} label="Comptabilité" path="/tableau-de-bord/admin" />
-            <SidebarLink icon={<BookOpen size={18} />} label="Grand Livre" path="/tableau-de-bord/grand-livre" />
-            <SidebarLink icon={<Users size={18} />} label="Équipe & Personnel" path="/tableau-de-bord/rh" />
-            <SidebarLink icon={<Wallet size={18} />} label="Paies & Salaires" path="/tableau-de-bord/paie" />
-            <SidebarLink icon={<Clock size={18} />} label="Borne de Pointage" path={`/pointage/${profil?.etablissement_id}`} />
+            {hasModule('stock') && <SidebarLink icon={<Package size={18} />} label="Inventaire & Stocks" path="/tableau-de-bord/stocks" />}
+            {hasModule('stock') && <SidebarLink icon={<TrendingUp size={18} />} label="Achats Fournisseurs" path="/tableau-de-bord/achats" />}
+            {hasModule('compta') && <SidebarLink icon={<DollarSign size={18} />} label="Comptabilité" path="/tableau-de-bord/admin" />}
+            {hasModule('compta') && <SidebarLink icon={<BookOpen size={18} />} label="Grand Livre" path="/tableau-de-bord/grand-livre" />}
+            {hasModule('hr') && <SidebarLink icon={<Users size={18} />} label="Équipe & Personnel" path="/tableau-de-bord/rh" />}
+            {hasModule('hr') && <SidebarLink icon={<Wallet size={18} />} label="Paies & Salaires" path="/tableau-de-bord/paie" />}
+            {hasModule('hr') && <SidebarLink icon={<Clock size={18} />} label="Borne de Pointage" path={`/pointage/${profil?.etablissement_id}`} />}
             <SidebarLink icon={<Settings size={18} />} label="Paramètres" path="/tableau-de-bord/settings" />
           </div>
         </div>
