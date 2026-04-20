@@ -180,6 +180,29 @@ const GestionEmployes = () => {
     toast.success(`Code PIN de ${nom.toUpperCase()} copié`);
   };
 
+  const marquerAbsence = async (emp: Employe) => {
+    const penaltyAmount = emp.typeSalaire === 'journalier' ? emp.salaire : 
+                        emp.typeSalaire === 'mensuel' ? Math.floor(emp.salaire / 26) : 
+                        emp.salaire * 8;
+
+    if (!window.confirm(`Confirmer l'absence INJUSTIFIÉE de ${emp.nom.toUpperCase()} ?\n\nUne pénalité de ${penaltyAmount.toLocaleString()} XAF sera déduite de sa paie.`)) return;
+
+    try {
+      await addDoc(collection(db, 'discipline'), {
+        employe_id: emp.id,
+        employe_nom: emp.nom,
+        type: 'absence_injustifiee',
+        montant: penaltyAmount,
+        date: new Date().toISOString(),
+        etablissement_id: etablissementId,
+        note: "Absence injustifiée constatée par la direction"
+      });
+      toast.success(`Absence enregistrée pour ${emp.nom}`);
+    } catch {
+      toast.error("Erreur lors de l'enregistrement de l'absence");
+    }
+  };
+
   const masseSalariale = employes.reduce((acc, curr) => acc + (curr.salaire || 0), 0);
   const totalAvancesMois = avances.reduce((acc, curr) => acc + (curr.montant || 0), 0);
 
@@ -346,10 +369,15 @@ const GestionEmployes = () => {
                     >
                       Avance
                     </button>
-                    <button onClick={() => enregistrerPaiement(emp, soldeNet)}
-                      className="h-14 bg-[#1E3A8A] text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all hover:bg-blue-800 shadow-lg shadow-blue-900/10"
+                    <button onClick={() => marquerAbsence(emp)}
+                      className="h-14 bg-orange-50 border border-orange-200 text-orange-600 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all hover:bg-orange-100"
                     >
-                      Payer
+                      Absence
+                    </button>
+                    <button onClick={() => enregistrerPaiement(emp, soldeNet)}
+                      className="col-span-2 h-16 bg-[#1E3A8A] text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all hover:bg-blue-800 shadow-lg shadow-blue-900/10 mt-2"
+                    >
+                      Payer le solde net
                     </button>
                     <button onClick={() => supprimerEmploye(emp.id, emp.nom)} className="col-span-2 h-12 text-slate-300 hover:text-rose-500 text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2">
                        <Trash2 size={14} /> Supprimer l'accès

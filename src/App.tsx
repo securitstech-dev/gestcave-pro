@@ -18,11 +18,13 @@ import PagePointage from './pages/PagePointage';
 import PageTerminalManager from './pages/PageTerminalManager';
 import RoleGuard from './components/auth/RoleGuard';
 import LocalAdminSetup from './pages/LocalAdminSetup';
+import ConnectivityIndicator from './components/ui/ConnectivityIndicator';
 
 function App() {
   return (
     <Router>
       <div className="min-h-screen">
+        <ConnectivityIndicator />
         <Routes>
           {/* Routes publiques */}
           <Route path="/" element={<PageAccueil />} />

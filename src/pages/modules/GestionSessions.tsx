@@ -19,18 +19,24 @@ const GestionSessions = () => {
 
   const handleOuverture = async () => {
     if (sessionActive) {
-      toast ? toast.error('Une session est déjà ouverte !') : alert('Une session est déjà ouverte !');
+      toast.error('Une session est déjà ouverte !');
       return;
     }
-    // Utilise le nom de l'opérateur connu (PIN > Admin)
-    const caissierId = sessionStorage.getItem('poste_employe_id') || profil?.id || 'admin';
-    const caissierNom = sessionStorage.getItem('poste_employe_nom') || profil?.nom || 'Gérant';
-    await ouvrirSession(fondsSaisi, caissierId, caissierNom);
+    
+    const caissierId = sessionStorage.getItem('poste_employe_id') || profil?.id;
+    const caissierNom = sessionStorage.getItem('poste_employe_nom') || profil?.nom;
+
+    if (!caissierId || caissierId === 'admin') {
+      toast.error("Veuillez vous identifier avec votre PIN personnel pour ouvrir la caisse.");
+      return;
+    }
+
+    await ouvrirSession(fondsSaisi, caissierId, caissierNom || 'Opérateur');
     setFondsSaisi(0);
   };
 
   const handleCloture = async () => {
-    if (!sessionActive || !profil) return;
+    if (!sessionActive) return;
     await fermerSession(fondsSaisi);
     setShowConfirmCloture(false);
     setFondsSaisi(0);
@@ -62,17 +68,18 @@ const GestionSessions = () => {
 
       {!sessionActive ? (
         <div className="bg-white rounded-[3.5rem] border border-slate-100 p-16 md:p-24 text-center shadow-xl shadow-blue-900/5 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-2 bg-slate-100" />
-          <div className="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-10 shadow-inner text-[#1E3A8A]">
+          <div className="absolute top-0 left-0 w-full h-2 bg-orange-400" />
+          <div className="w-24 h-24 bg-orange-50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-10 shadow-inner text-orange-500">
             <LockKeyhole size={48} />
           </div>
-          <h3 className="text-4xl font-black text-[#1E3A8A] mb-6 tracking-tight uppercase">Session Fermée</h3>
+          <h3 className="text-4xl font-black text-[#1E3A8A] mb-6 tracking-tight uppercase">Responsabilité Individuelle</h3>
           <p className="text-slate-400 mb-12 max-w-md mx-auto font-medium text-lg leading-relaxed">
-            Le registre de caisse est actuellement verrouillé. Veuillez initialiser le fond de caisse pour commencer les opérations.
+            L'ouverture de la caisse engage la responsabilité du caissier. <br/>
+            <span className="text-[#1E3A8A] font-bold">Le patron ne peut pas ouvrir de session pour vous.</span>
           </p>
           
           <div className="max-w-md mx-auto bg-slate-50 p-10 md:p-12 rounded-[3rem] border border-slate-100 shadow-inner">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-6 px-1">Fonds de caisse initial (XAF)</label>
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-6 px-1">Fonds de caisse initial confié (XAF)</label>
             <input 
               type="number" 
               value={fondsSaisi}
@@ -80,11 +87,19 @@ const GestionSessions = () => {
               placeholder="0"
               className="w-full h-20 bg-white rounded-2xl text-center text-5xl font-black text-[#1E3A8A] outline-none focus:ring-4 focus:ring-blue-100 transition-all mb-10 shadow-sm border border-slate-100"
             />
+            
+            <div className="bg-white/50 p-4 rounded-xl border border-slate-200 mb-8 flex items-start gap-3 text-left">
+              <ShieldCheck size={16} className="text-emerald-500 shrink-0 mt-0.5" />
+              <p className="text-[10px] text-slate-500 font-bold uppercase leading-relaxed">
+                En initialisant, vous certifiez avoir vérifié le montant en espèces.
+              </p>
+            </div>
+
             <button 
               onClick={handleOuverture}
               className="w-full h-20 bg-[#1E3A8A] text-white rounded-[2rem] font-bold uppercase tracking-widest text-sm hover:bg-blue-800 transition-all flex items-center justify-center gap-4 shadow-2xl shadow-blue-900/20"
             >
-              <Play size={20} className="fill-current" /> Initialiser la session
+              <Play size={20} className="fill-current" /> Ouvrir sous ma responsabilité
             </button>
           </div>
         </div>

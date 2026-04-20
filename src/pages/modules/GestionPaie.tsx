@@ -44,6 +44,7 @@ const GestionPaie = () => {
   const [avances, setAvances] = useState<Avance[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [etablissementNom, setEtablissementNom] = useState('Mon Établissement');
+  const [malus, setMalus] = useState<any[]>([]); // Pour les absences injustifiées
   const [loading, setLoading] = useState(true);
   
   const [moisSelectionne, setMoisSelectionne] = useState(new Date().getMonth() + 1);
@@ -117,10 +118,20 @@ const GestionPaie = () => {
         ready.trans = true; checkReady();
     });
 
+    const qMalus = query(
+      collection(db, 'discipline'),
+      where('etablissement_id', '==', profil.etablissement_id),
+      where('date', '>=', debutMois.toISOString()),
+      where('date', '<=', finMois.toISOString())
+    );
+    const unsubMalus = onSnapshot(qMalus, (snap) => {
+        setMalus(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
     const timeout = setTimeout(() => { setLoading(false); }, 5000);
 
     return () => { 
-      unsubEmp(); unsubSessions(); unsubAvances(); unsubTrans(); 
+      unsubEmp(); unsubSessions(); unsubAvances(); unsubTrans(); unsubMalus();
       clearTimeout(timeout);
     };
   }, [profil?.etablissement_id, moisSelectionne, anneeSelectionnee]);
@@ -161,16 +172,19 @@ const GestionPaie = () => {
       salaireBase = Math.floor(presence * (emp.salaire || 0));
     }
 
+    const malusEmp = malus.filter(m => m.employe_id === emp.id).reduce((acc, m) => acc + (m.montant || 0), 0);
+    const absencesInjustifiees = malus.filter(m => m.employe_id === emp.id && m.type === 'absence_injustifiee').length;
+
     const primesTransport = emp.primes?.transport || 0;
     const primesLogement = emp.primes?.logement || 0;
     const brut = salaireBase + primesTransport + primesLogement + commission;
-    const net = brut - avancesEmp;
+    const net = brut - avancesEmp - malusEmp;
 
-    return { salaireBase, presence, commission, primesTransport, primesLogement, brut, avances: avancesEmp, net };
+    return { salaireBase, presence, commission, primesTransport, primesLogement, brut, avances: avancesEmp, malus: malusEmp, absencesInjustifiees, net };
   };
 
   const genererBulletinPDF = (emp: Employe) => {
-    const { salaireBase, presence, commission, primesTransport, primesLogement, brut, avances, net } = calculerBulletin(emp);
+    const { salaireBase, presence, commission, primesTransport, primesLogement, brut, avances, malus: malusTotal, absencesInjustifiees, net } = calculerBulletin(emp);
     const doc = new jsPDF();
     const dateStr = `${moisSelectionne}/${anneeSelectionnee}`;
 
@@ -198,6 +212,7 @@ const GestionPaie = () => {
         ['INDEMNITÉ LOGEMENT', '-', '-', `${primesLogement.toLocaleString()} XAF`, '-'],
         ['COMMISSION SUR VENTES (2%)', '-', '-', `${commission.toLocaleString()} XAF`, '-'],
         ['AVANCES / ACOMPTES', '-', '-', '-', `${avances.toLocaleString()} XAF`],
+        ['PÉNALITÉS DISCIPLINAIRES', `${absencesInjustifiees} ABS.`, '-', '-', `${malusTotal.toLocaleString()} XAF`],
       ],
       headStyles: { fillColor: [30, 58, 138], fontSize: 8 },
       bodyStyles: { fontSize: 8, font: 'helvetica' },
@@ -320,6 +335,12 @@ const GestionPaie = () => {
                     <div className="relative">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Retenues</p>
                         <p className="font-black text-rose-500 text-xl">-{data.avances.toLocaleString()} <span className="text-[10px] opacity-30">F</span></p>
+                    </div>
+                    <div className="relative">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Discipline</p>
+                        <p className={`font-black text-xl ${data.absencesInjustifiees > 0 ? 'text-orange-500' : 'text-emerald-500'}`}>
+                          {data.absencesInjustifiees} ABS.
+                        </p>
                     </div>
                     <div className="relative">
                         <p className="text-[10px] font-bold text-[#1E3A8A] uppercase tracking-widest mb-2">Net à Payer</p>
