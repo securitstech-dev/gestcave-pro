@@ -24,7 +24,7 @@ function App() {
   return (
     <Router>
       <div className="min-h-screen">
-        <ConnectivityIndicator />
+        {/* <ConnectivityIndicator /> */}
         <Routes>
           {/* Routes publiques */}
           <Route path="/" element={<PageAccueil />} />
