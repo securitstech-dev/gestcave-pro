@@ -279,13 +279,19 @@ const InterfaceCaissier = () => {
 
             <div className="flex-1 overflow-y-auto p-8 pt-4 no-scrollbar">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {commandesActives.map((cmd) => (
+                    {commandesActives.map((cmd) => {
+                        const table = tables.find(t => t.id === cmd.tableId);
+                        const isDemandeAddition = table?.statut === 'en_attente_paiement';
+                        
+                        return (
                         <button 
                           key={cmd.id}
                           onClick={() => setCommandeSelectionnee(cmd.id)}
                           className={`p-8 rounded-[2.5rem] border-2 text-left transition-all relative overflow-hidden flex flex-col justify-between group h-64 ${
                             commandeSelectionnee === cmd.id 
                               ? 'bg-[#1E3A8A] border-[#1E3A8A] text-white shadow-2xl shadow-blue-900/20' 
+                              : isDemandeAddition
+                              ? 'bg-rose-50 border-rose-400 text-slate-800 shadow-xl shadow-rose-900/10 animate-pulse'
                               : 'bg-white border-slate-100 text-slate-400 hover:border-blue-100 shadow-xl shadow-blue-900/5'
                           }`}
                         >
@@ -294,12 +300,15 @@ const InterfaceCaissier = () => {
                             )}
                             <div>
                                 <div className="flex justify-between items-start mb-4">
-                                    <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${commandeSelectionnee === cmd.id ? 'bg-white/10 text-white' : 'bg-slate-50 text-[#1E3A8A]'}`}>
-                                        {cmd.tableNom || 'DIRECTE'}
+                                    <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                        commandeSelectionnee === cmd.id ? 'bg-white/10 text-white' : 
+                                        isDemandeAddition ? 'bg-rose-500 text-white' : 'bg-slate-50 text-[#1E3A8A]'
+                                    }`}>
+                                        {cmd.tableNom || 'DIRECTE'} {isDemandeAddition ? ' (ADDITION DEMANDÉE)' : ''}
                                     </div>
-                                    <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest"># {cmd.id.slice(-4).toUpperCase()}</span>
+                                    <span className={`text-[10px] font-bold uppercase tracking-widest ${isDemandeAddition && commandeSelectionnee !== cmd.id ? 'text-rose-400' : 'opacity-40'}`}># {cmd.id.slice(-4).toUpperCase()}</span>
                                 </div>
-                                <h3 className={`text-2xl font-black tracking-tighter uppercase leading-tight ${commandeSelectionnee === cmd.id ? 'text-white' : 'text-[#1E3A8A]'}`}>
+                                <h3 className={`text-2xl font-black tracking-tighter uppercase leading-tight ${commandeSelectionnee === cmd.id ? 'text-white' : isDemandeAddition ? 'text-rose-600' : 'text-[#1E3A8A]'}`}>
                                     {cmd.clientNom || 'Client direct'}
                                 </h3>
                                 <p className="text-[10px] font-bold uppercase tracking-widest mt-2 opacity-60">Serveur: {cmd.serveurNom}</p>
@@ -317,7 +326,8 @@ const InterfaceCaissier = () => {
                                 </div>
                             </div>
                         </button>
-                    ))}
+                        );
+                    })}
                     
                     {commandesActives.length === 0 && (
                         <div className="col-span-full py-32 flex flex-col items-center justify-center text-center space-y-6 opacity-20">
