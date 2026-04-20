@@ -688,12 +688,13 @@ export const usePOSStore = create<PosState>((set, get) => ({
     const session = get().sessionActive;
     if (session) {
       const modeAmount = paye || totalFinal;
+      const m = mode as string;
       batch.update(doc(db, 'sessions_caisse', session.id), {
         totalVentesTheorique: increment(modeAmount),
-        ...(mode === 'mobile' ? { totalMobile: increment(modeAmount) } : {}),
-        ...(mode === 'especes' || mode === 'comptant' ? { totalEspeces: increment(modeAmount) } : {}),
-        ...(mode === 'carte' ? { totalCarte: increment(modeAmount) } : {}),
-        ...(mode === 'credit' ? { totalCredit: increment(modeAmount) } : {})
+        ...(m === 'mobile' ? { totalMobile: increment(modeAmount) } : {}),
+        ...(m === 'especes' || m === 'comptant' ? { totalEspeces: increment(modeAmount) } : {}),
+        ...(m === 'carte' ? { totalCarte: increment(modeAmount) } : {}),
+        ...(m === 'credit' ? { totalCredit: increment(modeAmount) } : {})
       });
     }
 
