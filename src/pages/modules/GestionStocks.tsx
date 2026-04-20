@@ -51,7 +51,7 @@ const GestionStocks = () => {
   const [unitesParCasier, setUnitesParCasier] = useState(12);
   const [stockAlerte, setStockAlerte] = useState(10);
   const [emoji, setEmoji] = useState('🥤');
-  const [uniteMesure, setUniteMesure] = useState('bouteilles');
+  const [uniteMesure, setUniteMesure] = useState('Unités');
   const [destination, setDestination] = useState<'cuisine' | 'bar' | 'pizzeria' | 'grill' | 'chicha'>('cuisine');
 
   useEffect(() => {
@@ -77,7 +77,7 @@ const GestionStocks = () => {
         unitesParCasier,
         stockAlerte,
         emoji,
-        uniteMesure,
+        uniteMesure: categorie === 'Boisson' ? 'bouteilles' : uniteMesure,
         destination,
         stockTotal: 0,
         historique: [],
@@ -121,7 +121,7 @@ const GestionStocks = () => {
         unitesParCasier,
         stockAlerte,
         emoji,
-        uniteMesure,
+        uniteMesure: categorie === 'Boisson' ? 'bouteilles' : uniteMesure,
         destination_production: destination
       });
       toast.success(`${nom} mis à jour`);
@@ -329,8 +329,8 @@ const GestionStocks = () => {
                   <tr>
                     <th className="px-8 py-6">Article</th>
                     <th className="px-8 py-6">Prix Unitaire</th>
-                    <th className="px-8 py-6">État des Casiers</th>
-                    <th className="px-8 py-6">Quantité Réelle</th>
+                    <th className="px-8 py-6">Gestion / Colisage</th>
+                    <th className="px-8 py-6">Stock Réel</th>
                     <th className="px-8 py-6 text-right">Actions rapides</th>
                   </tr>
                 </thead>
@@ -357,7 +357,7 @@ const GestionStocks = () => {
                              </div>
                          </td>
                          <td className="px-8 py-6">
-                           {p.categorie === 'Boisson' ? formatStock(p.stockTotal, p.unitesParCasier) : <span className="text-slate-200">—</span>}
+                           {p.categorie === 'Boisson' ? formatStock(p.stockTotal, p.unitesParCasier) : <span className="text-slate-400 italic text-[10px] uppercase font-bold tracking-widest">Détail {p.uniteMesure}</span>}
                          </td>
                          <td className="px-8 py-6">
                              <div className="flex items-center gap-3">
@@ -446,10 +446,22 @@ const GestionStocks = () => {
                 <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-2 px-1">Prix (XAF)</label>
                 <input type="number" value={prix} onChange={(e)=>setPrix(Number(e.target.value))} required className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-bold text-slate-700 shadow-sm" />
               </div>
-              {categorie === 'Boisson' && (
+              {categorie === 'Boisson' ? (
                 <div className="col-span-2">
                   <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-2 px-1">Conditionnement (Unités / Casier)</label>
                   <input type="number" value={unitesParCasier} onChange={(e)=>setUnitesParCasier(Number(e.target.value))} className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-bold text-slate-700 shadow-sm" />
+                </div>
+              ) : (
+                <div className="col-span-2">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-2 px-1">Unité de mesure (Ex: Kg, Portions, Cartons)</label>
+                  <select value={uniteMesure} onChange={(e)=>setUniteMesure(e.target.value)} className="w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl px-6 outline-none font-bold text-slate-700 focus:bg-white appearance-none shadow-sm">
+                    <option value="Unités">Unités (Pièces)</option>
+                    <option value="Kg">Kilogrammes (Kg)</option>
+                    <option value="Cartons">Cartons</option>
+                    <option value="Portions">Portions</option>
+                    <option value="Sacs">Sacs</option>
+                    <option value="Litres">Litres</option>
+                  </select>
                 </div>
               )}
               <div className="col-span-2">
