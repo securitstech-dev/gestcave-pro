@@ -97,7 +97,10 @@ const PageAccueil = () => {
               >
                 Commencer l'expérience
               </button>
-              <button className="px-10 py-5 bg-white border-2 border-slate-100 text-[#1E3A8A] rounded-2xl font-bold text-lg hover:bg-slate-50 transition-all flex items-center justify-center gap-3">
+              <button 
+                onClick={() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' })}
+                className="px-10 py-5 bg-white border-2 border-slate-100 text-[#1E3A8A] rounded-2xl font-bold text-lg hover:bg-slate-50 transition-all flex items-center justify-center gap-3"
+              >
                 Découvrir les Modules <ChevronRight size={20} />
               </button>
             </div>
