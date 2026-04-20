@@ -5,13 +5,13 @@ import {
   Clock, TrendingUp, Sparkles, X, ChevronRight,
   UserCheck, PlusCircle, ArrowRight, Building2,
   Shield, Receipt, ShieldAlert, Award,
-  Check, Globe, Star, Landmark
+  Check, Globe, Star, Landmark, Loader2
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { toast } from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { db, storage } from '../lib/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const PageAbonnement = () => {

@@ -10,7 +10,7 @@ import {
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { usePOSStore } from '../store/posStore';
-import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, addDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { toast } from 'react-hot-toast';
 
