@@ -19,7 +19,6 @@ import PageTerminalManager from './pages/PageTerminalManager';
 import RoleGuard from './components/auth/RoleGuard';
 import LocalAdminSetup from './pages/LocalAdminSetup';
 import ConnectivityIndicator from './components/ui/ConnectivityIndicator';
-import ScenarioSeeder from './components/ScenarioSeeder';
 
 function App() {
   return (
@@ -57,7 +56,6 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <Toaster position="top-right" />
-        <ScenarioSeeder />
       </div>
     </Router>
   );
