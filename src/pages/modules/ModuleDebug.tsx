@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Terminal, ShieldAlert, Database, Wifi, WifiOff, 
   RefreshCcw, Trash2, AlertCircle, CheckCircle2, 
-  Layers, User, Landmark, HardDrive, Cpu, Activity
+  Layers, User, Landmark, HardDrive, Cpu, Activity, History as HistoryIcon
 } from 'lucide-react';
 import { usePOSStore } from '../../store/posStore';
 import { useAuthStore } from '../../store/authStore';
@@ -137,7 +137,7 @@ const ModuleDebug = () => {
                   { label: 'Produits', val: posStore.produits.length, icon: <Layers size={14}/> },
                   { label: 'Tables', val: posStore.tables.length, icon: <Activity size={14}/> },
                   { label: 'Commandes', val: posStore.commandes.length, icon: <RefreshCcw size={14}/> },
-                  { label: 'Sessions', val: posStore.historiqueSessions.length, icon: <History size={14}/> }
+                  { label: 'Sessions', val: posStore.historiqueSessions.length, icon: <HistoryIcon size={14}/> }
                 ].map((item, i) => (
                   <div key={i} className="p-6 bg-slate-50 rounded-2xl border border-slate-100 text-center">
                     <div className="text-blue-400 mb-2 flex justify-center">{item.icon}</div>

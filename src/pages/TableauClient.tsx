@@ -4,7 +4,7 @@ import {
   Settings, LogOut, ChevronRight, Package, CreditCard, 
   Layout, LayoutDashboard, Zap, Activity, ShieldCheck, Shield, ShieldAlert,
   Calendar, ArrowUpRight, ArrowDownRight, MoreVertical, DollarSign,
-  Bell, Search, Menu, X, PlusCircle, Globe, History, ArrowRight, ArrowLeft, Receipt, Clock,
+  Bell, Search, Menu, X, PlusCircle, Globe, History, ArrowRight, ArrowLeft, Receipt, Clock, Terminal,
   ChefHat, Flame, Timer, Wallet, Bot, Monitor, BookOpen
 } from 'lucide-react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
