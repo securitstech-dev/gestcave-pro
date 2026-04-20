@@ -212,7 +212,21 @@ const InterfaceCuisine = () => {
                                     </div>
                                     <div className="flex-1">
                                         <h4 className={`text-xl font-black tracking-tight leading-none uppercase ${ligne.statut === 'pret' ? 'text-emerald-700' : 'text-[#1E3A8A]'}`}>{ligne.produitNom}</h4>
-                                        {ligne.note && <p className="text-rose-500 font-black text-[10px] uppercase mt-2 bg-rose-50 px-2 py-1 rounded-lg inline-block">Note: {ligne.note}</p>}
+                                        <div className="flex items-center gap-3 mt-2">
+                                            {ligne.note && <p className="text-rose-500 font-black text-[10px] uppercase bg-rose-50 px-2 py-1 rounded-lg inline-block">Note: {ligne.note}</p>}
+                                            {ligne.datePreparationStart && ligne.datePret && (
+                                                <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
+                                                    <Timer size={12} />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest">Cuit en {Math.floor((new Date(ligne.datePret).getTime() - new Date(ligne.datePreparationStart).getTime()) / 60000)} min</span>
+                                                </div>
+                                            )}
+                                            {ligne.datePreparationStart && !ligne.datePret && (
+                                                <div className="flex items-center gap-1.5 text-blue-600 bg-blue-50 px-2 py-1 rounded-lg animate-pulse">
+                                                    <Flame size={12} />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest">En cuisson: {Math.floor((Date.now() - new Date(ligne.datePreparationStart).getTime()) / 60000)} min</span>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 

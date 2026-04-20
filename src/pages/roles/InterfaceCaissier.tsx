@@ -213,6 +213,52 @@ const InterfaceCaissier = () => {
               </button>
           </div>
       </header>
+      
+      {/* Real-time Financial Dashboard */}
+      <div className="bg-white border-b border-slate-100 px-10 py-6 grid grid-cols-1 md:grid-cols-4 gap-6 shrink-0 relative z-20">
+          <div className="bg-emerald-50 p-6 rounded-3xl border border-emerald-100 flex items-center gap-4 group hover:bg-emerald-100 transition-all">
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm">
+                  <Banknote size={24} />
+              </div>
+              <div>
+                  <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Total Encaissé</p>
+                  <p className="text-2xl font-black text-[#1E3A8A] tracking-tighter">
+                    {commandes.filter(c => c.statut === 'payee' || (c.montantPaye || 0) > 0).reduce((acc, c) => acc + (c.montantPaye || 0), 0).toLocaleString()} <span className="text-xs opacity-40">F</span>
+                  </p>
+              </div>
+          </div>
+          <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100 flex items-center gap-4 group hover:bg-rose-100 transition-all">
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-rose-600 shadow-sm">
+                  <AlertCircle size={24} />
+              </div>
+              <div>
+                  <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-1">Dettes / Impayés</p>
+                  <p className="text-2xl font-black text-[#1E3A8A] tracking-tighter">
+                    {commandes.reduce((acc, c) => acc + (c.montantRestant || 0), 0).toLocaleString()} <span className="text-xs opacity-40">F</span>
+                  </p>
+              </div>
+          </div>
+          <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100 flex items-center gap-4 group hover:bg-blue-100 transition-all">
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-[#1E3A8A] shadow-sm">
+                  <History size={24} />
+              </div>
+              <div>
+                  <p className="text-[10px] font-black text-[#1E3A8A] uppercase tracking-widest mb-1">Ventes Latentes</p>
+                  <p className="text-2xl font-black text-[#1E3A8A] tracking-tighter">
+                    {commandes.filter(c => c.statut !== 'payee').reduce((acc, c) => acc + (c.total || 0), 0).toLocaleString()} <span className="text-xs opacity-40">F</span>
+                  </p>
+              </div>
+          </div>
+          <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex items-center gap-4">
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-400 shadow-sm">
+                  <Calculator size={24} />
+              </div>
+              <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Transactions</p>
+                  <p className="text-2xl font-black text-[#1E3A8A] tracking-tighter">{commandes.length} Ops</p>
+              </div>
+          </div>
+      </div>
 
       {/* Main Interface Layout */}
       <main className="flex-1 flex overflow-hidden">

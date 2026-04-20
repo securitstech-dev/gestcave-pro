@@ -79,10 +79,10 @@ const PlanDeSalles = () => {
       {/* Executive Infrastructure Stats */}
       <div className="flex flex-col lg:flex-row gap-6 items-stretch">
         <div className="flex-1 grid grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatPill label="Ventes Latentes" value={`${totalActif.toLocaleString()} XAF`} icon={<Activity size={24} />} color="blue" />
-          <StatPill label="Taux d'Occupation" value={`${tauxOccupation}%`} icon={<Users size={24} />} color="orange" />
-          <StatPill label="Tables Actives" value={`${tablesOccupees} / ${tables.length}`} icon={<Layout size={24} />} color="blue" />
-          <StatPill label="Commandes en cours" value={commandes.filter(c => c.statut !== 'payee').length} icon={<Clock size={24} />} color="blue" />
+          <StatPill label="Cash Encaissé (Session)" value={`${commandes.filter(c => c.statut === 'payee' || (c.montantPaye || 0) > 0).reduce((acc, c) => acc + (c.montantPaye || 0), 0).toLocaleString()} F`} icon={<Banknote size={24} />} color="emerald" />
+          <StatPill label="Dettes / Crédits" value={`${commandes.reduce((acc, c) => acc + (c.montantRestant || 0), 0).toLocaleString()} F`} icon={<AlertCircle size={24} />} color="rose" />
+          <StatPill label="Ventes Latentes" value={`${totalActif.toLocaleString()} F`} icon={<Activity size={24} />} color="blue" />
+          <StatPill label="Occupation" value={`${tauxOccupation}% (${tablesOccupees} tables)`} icon={<Users size={24} />} color="orange" />
         </div>
         <button 
           onClick={() => navigate('/tableau-de-bord/tables')}
