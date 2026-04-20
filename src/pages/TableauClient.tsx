@@ -12,6 +12,7 @@ import { useAuthStore } from '../store/authStore';
 import { usePOSStore } from '../store/posStore';
 import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { toast } from 'react-hot-toast';
 
 // Modules
 import InterfaceCaissier from './roles/InterfaceCaissier';
@@ -249,22 +250,70 @@ const TableauClient = () => {
         <div className="flex-1 overflow-y-auto p-8 no-scrollbar bg-slate-50/50">
           <div className="max-w-7xl mx-auto">
             <Routes>
+              {/* ── Routes libres (toujours accessibles) ── */}
               <Route path="/" element={<DashboardAccueil profil={profil} etablissementSimuleId={etablissementSimuleId} navigate={navigate} />} />
               <Route path="/plan-salles" element={<PlanDeSalles />} />
-              <Route path="/caisse" element={<InterfaceCaissier />} />
-              <Route path="/cuisine" element={<InterfaceCuisine />} />
-              <Route path="/rh" element={<GestionEmployes />} />
-              <Route path="/paie" element={<GestionPaie />} />
-              <Route path="/stocks" element={<GestionStocks />} />
-              <Route path="/achats" element={<GestionAchats />} />
               <Route path="/tables" element={<GestionTables />} />
-              <Route path="/admin" element={<GestionFinance />} />
-              <Route path="/grand-livre" element={<GrandLivre />} />
               <Route path="/sessions" element={<GestionSessions />} />
               <Route path="/settings" element={<GestionEtablissement />} />
-
-              <Route path="/ia" element={<IAIntelligence />} />
               <Route path="/debug" element={<ModuleDebug />} />
+
+              {/* ── POS ── */}
+              <Route path="/caisse" element={
+                <ModuleGuard module="pos" modulesActifs={modulesActifs} navigate={navigate}>
+                  <InterfaceCaissier />
+                </ModuleGuard>
+              } />
+
+              {/* ── KDS ── */}
+              <Route path="/cuisine" element={
+                <ModuleGuard module="kds" modulesActifs={modulesActifs} navigate={navigate}>
+                  <InterfaceCuisine />
+                </ModuleGuard>
+              } />
+
+              {/* ── RH ── */}
+              <Route path="/rh" element={
+                <ModuleGuard module="hr" modulesActifs={modulesActifs} navigate={navigate}>
+                  <GestionEmployes />
+                </ModuleGuard>
+              } />
+              <Route path="/paie" element={
+                <ModuleGuard module="hr" modulesActifs={modulesActifs} navigate={navigate}>
+                  <GestionPaie />
+                </ModuleGuard>
+              } />
+
+              {/* ── STOCK ── */}
+              <Route path="/stocks" element={
+                <ModuleGuard module="stock" modulesActifs={modulesActifs} navigate={navigate}>
+                  <GestionStocks />
+                </ModuleGuard>
+              } />
+              <Route path="/achats" element={
+                <ModuleGuard module="stock" modulesActifs={modulesActifs} navigate={navigate}>
+                  <GestionAchats />
+                </ModuleGuard>
+              } />
+
+              {/* ── COMPTA ── */}
+              <Route path="/admin" element={
+                <ModuleGuard module="compta" modulesActifs={modulesActifs} navigate={navigate}>
+                  <GestionFinance />
+                </ModuleGuard>
+              } />
+              <Route path="/grand-livre" element={
+                <ModuleGuard module="compta" modulesActifs={modulesActifs} navigate={navigate}>
+                  <GrandLivre />
+                </ModuleGuard>
+              } />
+
+              {/* ── ANALYTICS ── */}
+              <Route path="/ia" element={
+                <ModuleGuard module="analytics" modulesActifs={modulesActifs} navigate={navigate}>
+                  <IAIntelligence />
+                </ModuleGuard>
+              } />
             </Routes>
           </div>
         </div>
@@ -598,6 +647,20 @@ const PerformanceCuisine = ({ commandes }: { commandes: any[] }) => {
         )}
      </div>
   );
+};
+
+const ModuleGuard = ({ module, modulesActifs, navigate, children }: any) => {
+  const isAllowed = modulesActifs.includes(module);
+  
+  useEffect(() => {
+    if (!isAllowed) {
+      toast.error(`Le module "${module}" n'est pas activé pour votre établissement.`);
+      navigate('/tableau-de-bord');
+    }
+  }, [isAllowed, module, navigate]);
+
+  if (!isAllowed) return null;
+  return children;
 };
 
 export default TableauClient;
