@@ -168,7 +168,61 @@ const ScenarioSeeder = () => {
       }
       await batch2.commit();
 
-      toast.success("Scénario initialisé ! ID: " + etablissementId, { id: toastId });
+      // 8. Simulation des ventes de la VEILLE (Hier)
+      const hier = new Date();
+      hier.setDate(hier.getDate() - 1);
+      const hierISO = hier.toISOString().split('T')[0];
+      
+      const sessionHierRef = doc(collection(db, 'sessions_caisse'));
+      const sessionHierId = sessionHierRef.id;
+      
+      await setDoc(sessionHierRef, {
+        etablissement_id: etablissementId,
+        caissier_id: "CAISS01",
+        caissier_nom: "Rodrigue",
+        dateOuverture: `${hierISO}T10:00:00.000Z`,
+        dateFermeture: `${hierISO}T23:59:00.000Z`,
+        montantInitial: 50000,
+        montantFinalAttendu: 235000,
+        montantFinalReel: 235000,
+        ecart: 0,
+        statut: 'fermee'
+      });
+
+      // Ajout de 10 transactions de test hier
+      const transactionsHier = [
+        { total: 15000, modePaiement: 'especes', serveurId: 'SERV01', serveurNom: 'Jean-Baptiste' },
+        { total: 8500, modePaiement: 'especes', serveurId: 'SERV02', serveurNom: 'Nadège' },
+        { total: 25000, modePaiement: 'especes', serveurId: 'SERV01', serveurNom: 'Jean-Baptiste' },
+        { total: 12000, modePaiement: 'orange_money', serveurId: 'SERV02', serveurNom: 'Nadège' },
+        { total: 45000, modePaiement: 'especes', serveurId: 'SERV01', serveurNom: 'Jean-Baptiste' },
+      ];
+
+      for (const t of transactionsHier) {
+        await addDoc(collection(db, 'transactions_pos'), {
+          ...t,
+          etablissement_id: etablissementId,
+          sessionId: sessionHierId,
+          date: `${hierISO}T${12 + Math.floor(Math.random()*10)}:00:00.000Z`,
+          statut: 'paye'
+        });
+      }
+
+      // 9. Pointage Personnel (Hier)
+      const personnelIds = ["SERV01", "SERV02", "CAISS01", "CUISTO1"];
+      for (const pId of personnelIds) {
+        await addDoc(collection(db, 'pointage_presence'), {
+          etablissement_id: etablissementId,
+          employe_id: pId,
+          employe_nom: pId === "SERV01" ? "Jean-Baptiste" : pId === "SERV02" ? "Nadège" : pId === "CAISS01" ? "Rodrigue" : "Céleste",
+          debut: new Date(`${hierISO}T10:00:00`),
+          fin: new Date(`${hierISO}T23:59:00`),
+          statut: 'termine',
+          date: hierISO
+        });
+      }
+
+      toast.success("Scénario initialisé avec ventes de la veille ! ID: " + etablissementId, { id: toastId });
       console.log("Etablissement ID:", etablissementId);
       
       // Save ID for convenience
