@@ -198,16 +198,18 @@ const PlanDeSalles = () => {
 };
 
 const StatPill = ({ label, value, icon, color }: any) => (
-  <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-blue-900/5 flex items-center gap-8 group hover:scale-[1.02] transition-all">
-    <div className={`w-16 h-16 flex items-center justify-center rounded-3xl shadow-lg transition-transform group-hover:rotate-12 ${
+  <div className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-blue-900/5 flex items-center gap-5 md:gap-8 group hover:scale-[1.02] transition-all">
+    <div className={`w-14 h-14 md:w-16 md:h-16 flex items-center justify-center rounded-3xl shadow-lg transition-transform group-hover:rotate-12 ${
       color === 'blue' ? 'bg-blue-50 text-[#1E3A8A] shadow-blue-900/5' :
+      color === 'emerald' ? 'bg-emerald-50 text-emerald-600 shadow-emerald-900/5' :
+      color === 'rose' ? 'bg-rose-50 text-rose-600 shadow-rose-900/5' :
       'bg-orange-50 text-orange-500 shadow-orange-900/5'
     }`}>
       {icon}
     </div>
-    <div>
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{label}</p>
-      <p className="text-2xl font-black text-[#1E3A8A] tracking-tighter uppercase leading-none">{value}</p>
+    <div className="min-w-0">
+      <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 md:mb-2 truncate">{label}</p>
+      <p className="text-xl md:text-2xl font-black text-[#1E3A8A] tracking-tighter uppercase leading-none truncate">{value}</p>
     </div>
   </div>
 );

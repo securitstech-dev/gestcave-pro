@@ -5,7 +5,7 @@ import {
   Layout, LayoutDashboard, Zap, Activity, ShieldCheck, Shield, ShieldAlert,
   Calendar, ArrowUpRight, ArrowDownRight, MoreVertical, DollarSign,
   Bell, Search, Menu, X, PlusCircle, Globe, History, ArrowRight, ArrowLeft, Receipt, Clock, Terminal,
-  ChefHat, Flame, Timer, Wallet, Bot, Monitor, BookOpen
+  ChefHat, Flame, Timer, Wallet, Bot, Monitor, BookOpen, Loader2
 } from 'lucide-react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -38,7 +38,7 @@ const TableauClient = () => {
   const location = useLocation();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [modulesActifs, setModulesActifs] = useState<string[]>(['pos', 'stock', 'hr', 'compta', 'kds', 'analytics']);
+  const [modulesActifs, setModulesActifs] = useState<string[] | null>(null);
 
   const etablissementId = etablissementSimuleId || profil?.etablissement_id;
 
@@ -52,7 +52,7 @@ const TableauClient = () => {
     return () => unsub();
   }, [etablissementId]);
 
-  const hasModule = (id: string) => modulesActifs.includes(id);
+  const hasModule = (id: string) => modulesActifs?.includes(id) ?? false;
 
   useEffect(() => {
     if (etablissementId) {
@@ -249,6 +249,11 @@ const TableauClient = () => {
         {/* Dynamic Content */}
         <div className="flex-1 overflow-y-auto p-8 no-scrollbar bg-slate-50/50">
           <div className="max-w-7xl mx-auto">
+            {!modulesActifs ? (
+              <div className="h-full flex items-center justify-center py-40">
+                <Loader2 className="animate-spin text-blue-200" size={48} />
+              </div>
+            ) : (
             <Routes>
               {/* ── Routes libres (toujours accessibles) ── */}
               <Route path="/" element={<DashboardAccueil profil={profil} etablissementSimuleId={etablissementSimuleId} navigate={navigate} />} />
@@ -315,6 +320,7 @@ const TableauClient = () => {
                 </ModuleGuard>
               } />
             </Routes>
+            )}
           </div>
         </div>
       </div>
