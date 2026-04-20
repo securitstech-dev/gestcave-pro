@@ -18,7 +18,10 @@ const GrandLivre = () => {
   const [etablissementNom, setEtablissementNom] = useState('Mon Établissement');
 
   const chargerRapport = async () => {
-    if (!etablissementId) return;
+    if (!etablissementId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const debut = new Date(annee, mois - 1, 1);
@@ -32,11 +35,15 @@ const GrandLivre = () => {
       );
       const snapTrans = await getDocs(qTrans);
       const transactions = snapTrans.docs.map(d => d.data());
-      const caTotal = transactions.reduce((s, t) => s + (t.totalVente || t.montant || 0), 0);
-      const caEspeces = transactions.filter(t => t.modePaiement === 'especes' || t.modePaiement === 'comptant').reduce((s, t) => s + (t.montant || 0), 0);
-      const caMobile = transactions.filter(t => t.modePaiement === 'mobile').reduce((s, t) => s + (t.montant || 0), 0);
-      const caCarte = transactions.filter(t => t.modePaiement === 'carte').reduce((s, t) => s + (t.montant || 0), 0);
-      const caCredit = transactions.filter(t => t.modePaiement === 'credit').reduce((s, t) => s + (t.montant || 0), 0);
+      
+      // CA Réel = Uniquement les transactions finales (pour éviter les doublons avec acomptes)
+      const transactionsFinales = transactions.filter(t => t.type === 'final');
+      const caTotal = transactionsFinales.reduce((s, t) => s + (Number(t.totalVente || t.montant) || 0), 0);
+      
+      const caEspeces = transactionsFinales.filter(t => t.modePaiement === 'especes' || t.modePaiement === 'comptant').reduce((s, t) => s + (Number(t.montant) || 0), 0);
+      const caMobile = transactionsFinales.filter(t => t.modePaiement === 'mobile').reduce((s, t) => s + (Number(t.montant) || 0), 0);
+      const caCarte = transactionsFinales.filter(t => t.modePaiement === 'carte').reduce((s, t) => s + (Number(t.montant) || 0), 0);
+      const caCredit = transactionsFinales.filter(t => t.modePaiement === 'credit').reduce((s, t) => s + (Number(t.totalVente) || 0), 0);
 
       // 2. Charges fixes saisies
       const qCharges = query(collection(db, 'charges_fixes'),
@@ -258,6 +265,15 @@ const GrandLivre = () => {
         <div className="py-32 text-center">
           <div className="w-16 h-16 border-4 border-[#1E3A8A] border-t-transparent rounded-full animate-spin mx-auto mb-6" />
           <p className="text-[#1E3A8A] font-bold uppercase tracking-widest text-xs">Compilation du Grand Livre...</p>
+        </div>
+      )}
+
+      {(!rapport && !loading) && (
+        <div className="flex-1 flex flex-col items-center justify-center text-center p-20 space-y-6">
+          <div className="w-24 h-24 bg-slate-50 rounded-[2rem] flex items-center justify-center text-slate-300">
+            <Info size={48} />
+          </div>
+          <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Aucune donnée disponible pour cette période.</p>
         </div>
       )}
 

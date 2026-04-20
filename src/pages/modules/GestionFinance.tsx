@@ -58,7 +58,11 @@ const GestionFinance = () => {
     const q = query(collection(db, 'transactions_pos'), where('etablissement_id', '==', etablissementId));
     const unsub = onSnapshot(q, (snap) => {
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Transaction[];
-      setTransactions(data.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      setTransactions(data.sort((a,b) => {
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        return dateB - dateA;
+      }));
       setLoading(false);
     });
 
@@ -156,8 +160,9 @@ const GestionFinance = () => {
         dataMap[key] = 0;
     }
     transactions.forEach(t => {
-        const key = t.date.split('T')[0];
-        if (dataMap[key] !== undefined && t.type !== 'depense') dataMap[key] += t.montantRecu || t.total;
+        const dateStr = t.date || '';
+        const key = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr.split(' ')[0] || '';
+        if (key && dataMap[key] !== undefined && t.type !== 'depense') dataMap[key] += t.montantRecu || t.total || 0;
     });
     return last7Days.map(day => ({ name: day.label.toUpperCase(), revenue: dataMap[day.key] }));
   })();

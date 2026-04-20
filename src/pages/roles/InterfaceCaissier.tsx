@@ -33,6 +33,15 @@ const InterfaceCaissier = () => {
       initPOS(etabId);
     }
   }, [etablissementId, profil?.etablissement_id, posEtabId, initPOS]);
+
+  // GARDE FOU : Si on accède sans identification poste, retour au terminal
+  useEffect(() => {
+    if (!idEmploye || idEmploye === 'inconnu') {
+      const etabId = etablissementId || profil?.etablissement_id;
+      if (etabId) navigate(`/poste/${etabId}`);
+      else navigate('/choisir-role');
+    }
+  }, [idEmploye, etablissementId, profil?.etablissement_id, navigate]);
   
   const [commandeSelectionnee, setCommandeSelectionnee] = useState<string | null>(null);
   const [modePaiement, setModePaiement] = useState<'especes' | 'mobile' | 'carte' | 'credit' | null>(null);
@@ -181,7 +190,9 @@ const InterfaceCaissier = () => {
                       </h1>
                       <div className="flex items-center gap-2 mt-2">
                         <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                        <p className="text-blue-300 font-bold text-[10px] uppercase tracking-widest">Session Active • {nomEmploye}</p>
+                        <p className="text-blue-300 font-bold text-[10px] uppercase tracking-widest">
+                          Session Active • {sessionActive?.caissierNom || nomEmploye}
+                        </p>
                       </div>
                   </div>
               </div>

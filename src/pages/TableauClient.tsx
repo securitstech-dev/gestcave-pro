@@ -27,11 +27,12 @@ import GestionSessions from './modules/GestionSessions';
 import GestionPaie from './modules/GestionPaie';
 import GrandLivre from './modules/GrandLivre';
 import IAIntelligence from './modules/IAIntelligence';
+import ModuleDebug from './modules/ModuleDebug';
 import SimulationLab from '../components/SimulationLab';
 
 const TableauClient = () => {
   const { profil, deconnexion, etablissementSimuleId } = useAuthStore();
-  const { initialiserTempsReel, arreterTempsReel } = usePOSStore();
+  const { initialiserTempsReel, arreterTempsReel, loading } = usePOSStore();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -134,6 +135,7 @@ const TableauClient = () => {
           <p className="px-4 text-[10px] font-bold text-[#FF7A00] uppercase tracking-widest mb-3">Intelligence & Lab</p>
           <div className="space-y-1 text-[#FF7A00]">
             <SidebarLink icon={<Bot size={18} />} label="Analyses Prédictives" path="/tableau-de-bord/ia" />
+            <SidebarLink icon={<Terminal size={18} />} label="Diagnostic Système" path="/tableau-de-bord/debug" />
             <SidebarLink icon={<Zap size={18} />} label="Laboratoire de Simulation" path="/tableau-de-bord/simulation" />
           </div>
         </div>
@@ -231,6 +233,7 @@ const TableauClient = () => {
               <Route path="/settings" element={<GestionEtablissement />} />
               <Route path="/simulation" element={<SimulationLab />} />
               <Route path="/ia" element={<IAIntelligence />} />
+              <Route path="/debug" element={<ModuleDebug />} />
             </Routes>
           </div>
         </div>
@@ -241,7 +244,7 @@ const TableauClient = () => {
 
 const DashboardAccueil = ({ profil, etablissementSimuleId, navigate }: any) => {
   const etablissementId = etablissementSimuleId || profil?.etablissement_id;
-  const { produits, tables, sessionActive, commandes } = usePOSStore();
+  const { produits, tables, sessionActive, commandes, loading } = usePOSStore();
   const [transactions, setTransactions] = React.useState<any[]>([]);
 
   const tablesOccupees = tables.filter(t => t.statut === 'occupee').length;
@@ -292,7 +295,17 @@ const DashboardAccueil = ({ profil, etablissementSimuleId, navigate }: any) => {
         </div>
 
         <div className="shrink-0 relative z-10">
-             {sessionActive ? (
+             {loading ? (
+                <div className="bg-slate-50 border border-slate-100 p-6 rounded-3xl flex items-center gap-5 pr-10 shadow-sm animate-pulse">
+                   <div className="w-14 h-14 bg-slate-200 rounded-2xl flex items-center justify-center">
+                      <Clock size={28} className="text-slate-400" />
+                   </div>
+                   <div>
+                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Synchronisation...</p>
+                      <p className="text-xl font-extrabold text-slate-300">Vérification caisse</p>
+                   </div>
+                </div>
+             ) : sessionActive ? (
                <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-3xl flex items-center gap-5 pr-10 shadow-sm">
                   <div className="w-14 h-14 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-200">
                      <Activity size={28} />
