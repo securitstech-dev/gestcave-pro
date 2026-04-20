@@ -112,7 +112,7 @@ const InterfaceCaissier = () => {
     });
   }, [commandeActive]);
 
-  const finaliserPaiement = () => {
+  const finaliserPaiement = async () => {
     if (!commandeSelectionnee || !modePaiement) return;
     
     if ((modePaiement === 'credit' || resteAPayer > 0) && (!nomClient || !contactClient)) {
@@ -127,7 +127,7 @@ const InterfaceCaissier = () => {
 
     const toastId = toast.loading("Enregistrement de la transaction...");
     try {
-      encaisserCommande(
+      await encaisserCommande(
         commandeSelectionnee, 
         modePaiement === 'credit' ? 'credit' : 'comptant', 
         nomClient, 
@@ -136,7 +136,10 @@ const InterfaceCaissier = () => {
         contactClient,
         modePaiement
       );
-      toast.success("Vente clôturée avec succès", { id: toastId });
+      
+      imprimerTicket(commandeActive!, profil?.etablissementNom || 'GESTCAVE PRO');
+      
+      toast.success("Vente clôturée et ticket imprimé", { id: toastId });
       setCommandeSelectionnee(null);
       setModePaiement(null);
       setMontantSaisi('');

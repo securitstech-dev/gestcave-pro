@@ -11,7 +11,7 @@ import {
   MoreVertical, Power, RefreshCcw, MoreHorizontal, ArrowRight, Check, Bell, Lock, AlertCircle
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { usePOSStore } from '../../store/posStore';
+import { usePOSStore, imprimerBonPreparation } from '../../store/posStore';
 import { usePosteSession } from '../../hooks/usePosteSession';
 import { useAuthStore } from '../../store/authStore';
 import { useNavigate } from 'react-router-dom';
@@ -485,8 +485,28 @@ const InterfaceServeur = () => {
                         <button 
                           onClick={async () => {
                               const toastId = toast.loading("Envoi en cuisine...");
+                              
+                              // Check if we have items for Kitchen vs Bar
+                              const produitsCuisine = panierActuel.filter(l => 
+                                produits.find(p => p.id === l.produitId)?.categorie !== 'Bière' && 
+                                produits.find(p => p.id === l.produitId)?.categorie !== 'Vin' &&
+                                produits.find(p => p.id === l.produitId)?.categorie !== 'Boisson'
+                              );
+                              const produitsBar = panierActuel.filter(l => 
+                                produits.find(p => p.id === l.produitId)?.categorie === 'Bière' || 
+                                produits.find(p => p.id === l.produitId)?.categorie === 'Vin' ||
+                                produits.find(p => p.id === l.produitId)?.categorie === 'Boisson'
+                              );
+
+                              if (produitsCuisine.length > 0) {
+                                imprimerBonPreparation(commandeActive!, produitsCuisine, "CUISINE", profil?.etablissementNom || 'GESTCAVE PRO');
+                              }
+                              if (produitsBar.length > 0) {
+                                imprimerBonPreparation(commandeActive!, produitsBar, "BAR", profil?.etablissementNom || 'GESTCAVE PRO');
+                              }
+
                               await envoyerCuisine(commandeId!);
-                              toast.success("Commande envoyée !", { id: toastId });
+                              toast.success("Commande envoyée et bons imprimés !", { id: toastId });
                           }}
                           className="w-full h-20 bg-[#1E3A8A] text-white rounded-[2rem] font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-900/20 flex items-center justify-center gap-4 hover:bg-blue-800 transition-all group"
                         >

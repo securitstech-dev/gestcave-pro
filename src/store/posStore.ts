@@ -102,6 +102,78 @@ export const imprimerTicket = (commande: Commande, etablissementNom: string) => 
   }
 };
 
+export const imprimerBonPreparation = (commande: Commande, lignes: LigneCommande[], destinationLabel: string, etablissementNom: string) => {
+  if (!lignes || lignes.length === 0) return;
+  const contenu = `
+    <html>
+      <head>
+        <title>BON - ${destinationLabel}</title>
+        <style>
+          @page { size: 80mm auto; margin: 0; }
+          body { 
+            width: 80mm; font-family: 'Courier New', Courier, monospace; 
+            padding: 5mm; font-size: 14px; line-height: 1.2;
+            color: black;
+          }
+          .header { text-align: center; border-bottom: 2px solid black; padding-bottom: 2mm; margin-bottom: 5mm; }
+          .title { font-size: 20px; font-weight: bold; text-transform: uppercase; }
+          .details { margin-bottom: 5mm; font-size: 12px; }
+          .table { width: 100%; border-collapse: collapse; margin-bottom: 5mm; }
+          .table th { text-align: left; border-bottom: 1px solid black; padding-bottom: 1mm; font-size: 12px; }
+          .item-row td { padding: 2mm 0; font-size: 14px; font-weight: bold; border-bottom: 1px dashed #ccc; }
+          .no-print { display: none; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="title">BON ${destinationLabel}</div>
+          <div style="font-size: 10px; margin-top: 2px;">${etablissementNom}</div>
+        </div>
+        
+        <div class="details">
+          <div><strong>Table: ${commande.tableNom || 'EMPORTE'}</strong></div>
+          <div>Ticket: ${commande.id.slice(-8).toUpperCase()}</div>
+          <div>Heure: ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</div>
+          <div>Serveur: ${commande.serveurNom}</div>
+        </div>
+
+        <table class="table">
+          <thead>
+            <tr>
+              <th width="20%">Qté</th>
+              <th width="80%">Article</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lignes.map(l => `
+              <tr class="item-row">
+                <td>${l.quantite}</td>
+                <td>${l.produitNom}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div style="text-align: center; margin-top: 10mm; font-size: 10px;">
+          --- FIN DU BON ---
+        </div>
+
+        <script>
+          window.focus();
+          window.print();
+          window.onafterprint = () => window.close();
+        </script>
+      </body>
+    </html>
+  `;
+
+  const fenetre = window.open('', '_blank', 'width=400,height=600');
+  if (fenetre) {
+    fenetre.document.write(contenu);
+    fenetre.document.close();
+  }
+};
+
 export interface LigneCommande {
   id: string;
   produitId: string;
