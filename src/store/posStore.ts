@@ -395,7 +395,11 @@ export const usePOSStore = create<PosState>((set, get) => ({
     };
 
     const docRef = await addDoc(collection(db, 'commandes'), nouvCmd);
-    await updateDoc(doc(db, 'tables', tableId), { statut: 'occupee', commandeActiveId: docRef.id });
+    await updateDoc(doc(db, 'tables', tableId), { 
+      statut: 'occupee', 
+      commandeActiveId: docRef.id,
+      serveurNom: serveurNom 
+    });
     return docRef.id;
   },
 
@@ -659,7 +663,11 @@ export const usePOSStore = create<PosState>((set, get) => ({
     });
 
     if (cmd.tableId) {
-      batch.update(doc(db, 'tables', cmd.tableId), { statut: 'libre', commandeActiveId: null });
+      batch.update(doc(db, 'tables', cmd.tableId), { 
+        statut: 'libre', 
+        commandeActiveId: null,
+        serveurNom: null
+      });
     }
 
     batch.set(doc(collection(db, 'transactions_pos')), {
@@ -692,7 +700,11 @@ export const usePOSStore = create<PosState>((set, get) => ({
     
     // Libération de la table
     if (data.tableId) {
-        batch.update(doc(db, 'tables', data.tableId), { statut: 'libre', commandeActiveId: null });
+        batch.update(doc(db, 'tables', data.tableId), { 
+          statut: 'libre', 
+          commandeActiveId: null,
+          serveurNom: null
+        });
     }
     
     // Restitution des stocks pour les lignes validées
@@ -752,7 +764,8 @@ export const usePOSStore = create<PosState>((set, get) => ({
   forcerLiberationTable: async (tableId) => {
     await updateDoc(doc(db, 'tables', tableId), { 
       statut: 'libre', 
-      commandeActiveId: null 
+      commandeActiveId: null,
+      serveurNom: null
     });
   }
 }));

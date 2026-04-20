@@ -242,10 +242,15 @@ const InterfaceServeur = () => {
                                 <div className="text-center">
                                     <h3 className={`text-2xl font-black tracking-tighter leading-none ${isOccupee || !isTable ? 'text-white' : 'text-[#1E3A8A]'}`}>{nomAffiche}</h3>
                                     {(isOccupee || isAddition || !isTable) && commande && (
-                                        <p className="text-orange-400 font-black text-xs mt-2 uppercase">
-                                          {( (commande.montantRestant !== undefined) ? commande.montantRestant : (commande.total || 0) ).toLocaleString()} 
-                                          <span className="text-[10px] opacity-60"> XAF</span>
-                                        </p>
+                                        <div className="mt-2 space-y-1">
+                                          <p className="text-orange-400 font-black text-xs uppercase">
+                                            {( (commande.montantRestant !== undefined) ? commande.montantRestant : (commande.total || 0) ).toLocaleString()} 
+                                            <span className="text-[10px] opacity-60"> XAF</span>
+                                          </p>
+                                          <div className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest mx-auto w-fit ${isOccupee ? 'bg-white/10 text-blue-200' : 'bg-slate-100 text-slate-400'}`}>
+                                            {commande.serveurNom?.split(' ')[0]}
+                                          </div>
+                                        </div>
                                     )}
                                     {aDesProduitsPrets && (
                                         <div className="absolute top-4 right-4 bg-orange-500 text-white px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest animate-pulse shadow-lg">

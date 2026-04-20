@@ -57,7 +57,12 @@ const PlanDeSalles = () => {
             {table.nom.split(' ')[1] || table.nom}
           </h3>
           {isOccupee && commande && (
-            <p className="text-orange-400 font-extrabold text-sm tracking-tight mt-1">{(commande.total || 0).toLocaleString()} <span className="text-[10px] opacity-60">XAF</span></p>
+            <div className="mt-2 space-y-1">
+              <p className="text-orange-400 font-extrabold text-sm tracking-tight">{(commande.total || 0).toLocaleString()} <span className="text-[10px] opacity-60">XAF</span></p>
+              <div className="bg-white/10 px-3 py-1 rounded-full border border-white/10 mx-auto w-fit">
+                <p className="text-[9px] font-black uppercase tracking-widest text-blue-200 truncate max-w-[80px]">{commande.serveurNom?.split(' ')[0]}</p>
+              </div>
+            </div>
           )}
         </div>
 
