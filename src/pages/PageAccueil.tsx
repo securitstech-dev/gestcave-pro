@@ -21,6 +21,26 @@ const PageAccueil = () => {
   const [operateur, setOperateur] = useState<'airtel' | 'mtn' | null>(null);
   const [justificatif, setJustificatif] = useState('');
   const [modalLegal, setModalLegal] = useState<{ ouvert: boolean, titre: string, contenu: string } | null>(null);
+  const [contactForm, setContactForm] = useState({ nom: '', contact: '', message: '' });
+  const [contactLoading, setContactLoading] = useState(false);
+
+  const handleSubmitContact = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setContactLoading(true);
+    try {
+      await addDoc(collection(db, 'messages_contact'), {
+        ...contactForm,
+        date: Timestamp.now(),
+        statut: 'nouveau'
+      });
+      toast.success("Message envoyé ! Nous vous contacterons rapidement.");
+      setContactForm({ nom: '', contact: '', message: '' });
+    } catch (error) {
+      toast.error("Erreur lors de l'envoi.");
+    } finally {
+      setContactLoading(false);
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -416,12 +436,12 @@ const PageAccueil = () => {
               Une question ? <br/> Contactez-nous.
             </h3>
             <p className="text-slate-500 mb-10 leading-relaxed">
-              Notre équipe est basée à Brazzaville et se tient prête à venir faire une démonstration gratuite directement dans votre établissement.
+              Notre équipe technique est basée à <strong>Pointe-Noire</strong> et se tient prête à venir faire une démonstration gratuite directement dans votre établissement.
             </p>
 
             <div className="space-y-6">
               <div className="flex items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <div className="w-12 h-12 bg-blue-50 text-[#1E3A8A] rounded-xl flex items-center justify-center">
+                <div className="w-12 h-12 bg-blue-50 text-[#1E3A8A] rounded-xl flex items-center justify-center shrink-0">
                   <Phone size={24} />
                 </div>
                 <div>
@@ -430,7 +450,7 @@ const PageAccueil = () => {
                 </div>
               </div>
               <div className="flex items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <div className="w-12 h-12 bg-blue-50 text-[#1E3A8A] rounded-xl flex items-center justify-center">
+                <div className="w-12 h-12 bg-blue-50 text-[#1E3A8A] rounded-xl flex items-center justify-center shrink-0">
                   <Mail size={24} />
                 </div>
                 <div>
@@ -438,25 +458,34 @@ const PageAccueil = () => {
                   <p className="text-lg font-bold text-[#1E3A8A]">securitstech@gmail.com</p>
                 </div>
               </div>
+              <div className="flex items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <div className="w-12 h-12 bg-orange-50 text-[#FF7A00] rounded-xl flex items-center justify-center shrink-0">
+                  <MapPin size={24} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-400 uppercase">Siège Social</p>
+                  <p className="text-sm font-bold text-[#1E3A8A] leading-tight">Bâtiment de la Préfecture, face au Trésor, Pointe-Noire</p>
+                </div>
+              </div>
             </div>
           </div>
 
           <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-100">
-            <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); toast.success("Message envoyé ! Nous vous contacterons rapidement."); }}>
+            <form className="space-y-6" onSubmit={handleSubmitContact}>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-400 uppercase">Nom Complet</label>
-                <input required type="text" placeholder="Jean Dupont" className="w-full h-14 px-6 bg-slate-50 border border-slate-200 rounded-xl focus:border-[#1E3A8A] outline-none transition-colors" />
+                <input required type="text" placeholder="Jean Dupont" value={contactForm.nom} onChange={e => setContactForm({...contactForm, nom: e.target.value})} className="w-full h-14 px-6 bg-slate-50 border border-slate-200 rounded-xl focus:border-[#1E3A8A] outline-none transition-colors" />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-400 uppercase">Email ou Téléphone</label>
-                <input required type="text" placeholder="Pour vous recontacter" className="w-full h-14 px-6 bg-slate-50 border border-slate-200 rounded-xl focus:border-[#1E3A8A] outline-none transition-colors" />
+                <input required type="text" placeholder="Pour vous recontacter" value={contactForm.contact} onChange={e => setContactForm({...contactForm, contact: e.target.value})} className="w-full h-14 px-6 bg-slate-50 border border-slate-200 rounded-xl focus:border-[#1E3A8A] outline-none transition-colors" />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-400 uppercase">Message</label>
-                <textarea required rows={4} placeholder="Comment pouvons-nous vous aider ?" className="w-full p-6 bg-slate-50 border border-slate-200 rounded-xl focus:border-[#1E3A8A] outline-none transition-colors" />
+                <textarea required rows={4} placeholder="Comment pouvons-nous vous aider ?" value={contactForm.message} onChange={e => setContactForm({...contactForm, message: e.target.value})} className="w-full p-6 bg-slate-50 border border-slate-200 rounded-xl focus:border-[#1E3A8A] outline-none transition-colors" />
               </div>
-              <button type="submit" className="w-full h-14 bg-[#1E3A8A] text-white rounded-xl font-bold hover:bg-[#FF7A00] transition-colors flex items-center justify-center gap-2">
-                Envoyer le message <Send size={18} />
+              <button type="submit" disabled={contactLoading} className="w-full h-14 bg-[#1E3A8A] text-white rounded-xl font-bold hover:bg-[#FF7A00] transition-colors flex items-center justify-center gap-2">
+                {contactLoading ? 'Envoi...' : 'Envoyer le message'} <Send size={18} />
               </button>
             </form>
           </div>
