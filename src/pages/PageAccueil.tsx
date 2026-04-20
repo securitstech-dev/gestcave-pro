@@ -16,6 +16,11 @@ const PageAccueil = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annually'>('monthly');
+  const [modalPaiement, setModalPaiement] = useState<{ ouvert: boolean, plan: string, prix: string } | null>(null);
+  const [etapePaiement, setEtapePaiement] = useState<'choix' | 'mobile' | 'direction'>('choix');
+  const [operateur, setOperateur] = useState<'airtel' | 'mtn' | null>(null);
+  const [justificatif, setJustificatif] = useState('');
+  const [modalLegal, setModalLegal] = useState<{ ouvert: boolean, titre: string, contenu: string } | null>(null);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -244,7 +249,7 @@ const PageAccueil = () => {
               price={billingCycle === 'monthly' ? "30.000" : "300.000"} 
               duration={billingCycle === 'monthly' ? "MOIS" : "AN"}
               features={['1 Établissement', 'Gestion Stocks de base', '100 Commandes/jour', 'Support Email']}
-              onClick={() => document.getElementById('inscription')?.scrollIntoView({ behavior: 'smooth' })}
+              onClick={() => setModalPaiement({ ouvert: true, plan: 'Starter', prix: billingCycle === 'monthly' ? "30.000" : "300.000" })}
             />
             <PriceCard 
               name="Premium" 
@@ -252,18 +257,141 @@ const PageAccueil = () => {
               duration={billingCycle === 'monthly' ? "MOIS" : "AN"}
               isRecommended 
               features={['3 Établissements', 'Stocks avancés + Ingrédients', 'Commandes illimitées', 'Rapports PDF exports', 'Support 24/7']}
-              onClick={() => document.getElementById('inscription')?.scrollIntoView({ behavior: 'smooth' })}
+              onClick={() => setModalPaiement({ ouvert: true, plan: 'Premium', prix: billingCycle === 'monthly' ? "55.000" : "550.000" })}
             />
             <PriceCard 
               name="Business" 
               price={billingCycle === 'monthly' ? "95.000" : "950.000"} 
               duration={billingCycle === 'monthly' ? "MOIS" : "AN"}
               features={['Établissements illimités', 'Gestion Multi-niveaux', 'Salaires & RH auto', 'Audit complet', 'Support Prioritaire']}
-              onClick={() => document.getElementById('inscription')?.scrollIntoView({ behavior: 'smooth' })}
+              onClick={() => setModalPaiement({ ouvert: true, plan: 'Business', prix: billingCycle === 'monthly' ? "95.000" : "950.000" })}
             />
           </div>
         </div>
       </section>
+
+      {/* Modal Paiement */}
+      {modalPaiement?.ouvert && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
+          <div onClick={() => setModalPaiement(null)} className="absolute inset-0 bg-[#1E3A8A]/90 backdrop-blur-xl" />
+          <div className="bg-white w-full max-w-2xl p-10 md:p-14 rounded-[3.5rem] shadow-2xl relative animate-in zoom-in-95 duration-500 overflow-y-auto max-h-[90vh] no-scrollbar">
+            <button onClick={() => setModalPaiement(null)} className="absolute top-8 right-8 p-3 bg-slate-50 text-slate-400 hover:text-[#1E3A8A] rounded-2xl transition-all">
+              <X size={24} />
+            </button>
+
+            <div className="text-center mb-10">
+               <h3 className="text-3xl font-black text-[#1E3A8A] uppercase tracking-tight mb-2">Finaliser mon abonnement</h3>
+               <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">{modalPaiement.plan} • {modalPaiement.prix} XAF</p>
+            </div>
+
+            {etapePaiement === 'choix' && (
+              <div className="space-y-4">
+                 <p className="text-sm font-bold text-slate-400 uppercase tracking-widest text-center mb-8">Choisissez votre mode de règlement</p>
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <button 
+                      onClick={() => { setEtapePaiement('mobile'); setOperateur('airtel'); }}
+                      className="p-8 bg-rose-50 border-2 border-rose-100 rounded-3xl flex flex-col items-center gap-4 hover:border-rose-300 transition-all group"
+                    >
+                       <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                          <img src="/logo_airtel.png" alt="Airtel" className="w-10 h-10 object-contain" />
+                       </div>
+                       <span className="font-black text-[#1E3A8A] uppercase tracking-widest text-xs">Airtel Money</span>
+                    </button>
+                    <button 
+                      onClick={() => { setEtapePaiement('mobile'); setOperateur('mtn'); }}
+                      className="p-8 bg-amber-50 border-2 border-amber-100 rounded-3xl flex flex-col items-center gap-4 hover:border-amber-300 transition-all group"
+                    >
+                       <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                          <img src="/logo_mtn.png" alt="MTN" className="w-10 h-10 object-contain" />
+                       </div>
+                       <span className="font-black text-[#1E3A8A] uppercase tracking-widest text-xs">MTN MoMo</span>
+                    </button>
+                 </div>
+                 <button 
+                    onClick={() => setEtapePaiement('direction')}
+                    className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl flex items-center justify-center gap-4 hover:border-blue-200 transition-all"
+                 >
+                    <MapPin size={24} className="text-[#1E3A8A]" />
+                    <span className="font-black text-[#1E3A8A] uppercase tracking-widest text-xs">Payer à la direction</span>
+                 </button>
+              </div>
+            )}
+
+            {etapePaiement === 'mobile' && (
+               <div className="space-y-8">
+                  <div className={`p-8 rounded-[2.5rem] text-center ${operateur === 'airtel' ? 'bg-rose-50' : 'bg-amber-50'}`}>
+                     <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Transfert Mobile</p>
+                     <p className="text-2xl font-black text-[#1E3A8A] mb-2">Envoyez votre paiement au :</p>
+                     <p className="text-4xl font-black text-[#FF7A00] tracking-tighter">
+                        {operateur === 'airtel' ? '05 302 83 83' : '06 902 44 44'}
+                     </p>
+                  </div>
+
+                  <div className="space-y-4">
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Message de justification (ID Transaction / Nom)</label>
+                     <textarea 
+                        value={justificatif}
+                        onChange={(e) => setJustificatif(e.target.value)}
+                        placeholder="Ex: ID 92837482 - Cave de la Paix"
+                        className="w-full p-6 bg-slate-50 border border-slate-100 rounded-3xl outline-none focus:border-[#1E3A8A] transition-all font-bold text-sm"
+                        rows={3}
+                     />
+                  </div>
+
+                  <div className="flex gap-4">
+                     <button onClick={() => setEtapePaiement('choix')} className="flex-1 h-16 bg-slate-50 text-slate-400 rounded-2xl font-bold uppercase tracking-widest text-xs">Retour</button>
+                     <button 
+                        onClick={() => { 
+                          toast.success("Demande de paiement envoyée !"); 
+                          setModalPaiement(null); 
+                          setEtapePaiement('choix');
+                          setJustificatif('');
+                        }}
+                        className="flex-[2] h-16 bg-[#1E3A8A] text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-blue-900/10"
+                     >
+                        Valider mon paiement
+                     </button>
+                  </div>
+               </div>
+            )}
+
+            {etapePaiement === 'direction' && (
+               <div className="space-y-8 text-center">
+                  <div className="w-20 h-20 bg-blue-50 text-[#1E3A8A] rounded-full flex items-center justify-center mx-auto shadow-inner">
+                     <MapPin size={40} />
+                  </div>
+                  <div className="space-y-4">
+                     <h4 className="text-2xl font-black text-[#1E3A8A] uppercase tracking-tight">Adresse de la Direction</h4>
+                     <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100 space-y-4 text-left">
+                        <div className="flex gap-4">
+                           <MapPin className="text-[#FF7A00] flex-shrink-0" size={24} />
+                           <p className="text-slate-600 font-bold leading-relaxed">
+                             Bâtiment de la préfecture en face du trésor <br/>
+                             À la direction départementale des loisirs de pointe-noire
+                           </p>
+                        </div>
+                        <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 flex gap-4">
+                           <ShieldCheck className="text-[#1E3A8A] flex-shrink-0" size={24} />
+                           <p className="text-xs font-bold text-[#1E3A8A] leading-relaxed italic">
+                             "Une fois sur place, nous encaissons le montant de l'abonnement contre un reçu officiel. Votre application sera débloquée instantanément."
+                           </p>
+                        </div>
+                     </div>
+                  </div>
+                  <div className="flex gap-4">
+                     <button onClick={() => setEtapePaiement('choix')} className="flex-1 h-16 bg-slate-50 text-slate-400 rounded-2xl font-bold uppercase tracking-widest text-xs">Retour</button>
+                     <button 
+                        onClick={() => setModalPaiement(null)}
+                        className="flex-[2] h-16 bg-[#1E3A8A] text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-blue-900/10"
+                     >
+                        J'ai compris
+                     </button>
+                  </div>
+               </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Registration Section */}
       <section id="inscription" className="py-32 bg-white">
@@ -332,21 +460,86 @@ const PageAccueil = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 bg-white border-t border-slate-100 text-slate-500">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <img src="/logo_gestcave.png" alt="Logo" className="w-8 h-8 object-contain rounded-lg" />
-            <span className="font-bold text-[#1E3A8A]">GestCave Pro © 2026</span>
+      {/* Footer Premium */}
+      <footer className="bg-[#0F172A] text-white pt-24 pb-12">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-16 mb-20">
+            <div className="space-y-8">
+              <div className="flex items-center gap-3">
+                <img src="/logo_gestcave.png" alt="Logo" className="w-10 h-10 object-contain rounded-xl" />
+                <span className="font-bold text-2xl tracking-tight">GestCave Pro</span>
+              </div>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                Le système d'exploitation souverain pour les établissements de loisirs. Conçu pour la performance, audité pour la sécurité.
+              </p>
+              <div className="flex gap-4">
+                <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center hover:bg-[#FF7A00] transition-colors cursor-pointer"><Globe size={18} /></div>
+                <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center hover:bg-[#FF7A00] transition-colors cursor-pointer"><Mail size={18} /></div>
+                <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center hover:bg-[#FF7A00] transition-colors cursor-pointer"><Phone size={18} /></div>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-black text-xs uppercase tracking-[0.3em] text-[#FF7A00] mb-8">Solution</h4>
+              <ul className="space-y-4 text-sm font-bold text-slate-400">
+                <li><a href="#services" className="hover:text-white transition-colors">Fonctionnalités</a></li>
+                <li><a href="#technologie" className="hover:text-white transition-colors">Infrastructure Cloud</a></li>
+                <li><a href="#abonnements" className="hover:text-white transition-colors">Tarifs & Plans</a></li>
+                <li><a href="/connexion" className="hover:text-white transition-colors">Portail Client</a></li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-black text-xs uppercase tracking-[0.3em] text-[#FF7A00] mb-8">Légal & Protection</h4>
+              <ul className="space-y-4 text-sm font-bold text-slate-400">
+                <li><button onClick={() => setModalLegal({ ouvert: true, titre: "Mentions Légales", contenu: "GestCave Pro est une solution éditée par Securits Tech, basée à Brazzaville et Pointe-Noire. Direction Départementale des Loisirs." })} className="hover:text-white transition-colors">Mentions Légales</button></li>
+                <li><button onClick={() => setModalLegal({ ouvert: true, titre: "Confidentialité", contenu: "Vos données de ventes, de stocks et de personnel sont strictement confidentielles et cryptées. Aucun accès tiers n'est autorisé." })} className="hover:text-white transition-colors">Politique de Confidentialité</button></li>
+                <li><button onClick={() => setModalLegal({ ouvert: true, titre: "Conditions d'Utilisation", contenu: "L'utilisation de GestCave Pro implique l'acceptation de nos audits de sécurité. L'abonnement est payable d'avance à la direction." })} className="hover:text-white transition-colors">Conditions (CGU)</button></li>
+                <li><button onClick={() => setModalLegal({ ouvert: true, titre: "Audit & Sécurité", contenu: "Le système est audité 24/7 pour prévenir toute fraude interne dans votre établissement." })} className="hover:text-white transition-colors">Rapport de Sécurité</button></li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-black text-xs uppercase tracking-[0.3em] text-[#FF7A00] mb-8">Siège Social</h4>
+              <p className="text-sm font-bold text-slate-400 leading-relaxed">
+                Bâtiment de la Préfecture<br/>
+                Face au Trésor Public<br/>
+                Direction des Loisirs<br/>
+                Pointe-Noire, Congo
+              </p>
+            </div>
           </div>
-          
-          <div className="flex items-center gap-6 text-sm font-semibold">
-            <a href="#" className="hover:text-[#1E3A8A]">Mentions Légales</a>
-            <a href="#" className="hover:text-[#1E3A8A]">Confidentialité</a>
-            <a href="#" className="hover:text-[#1E3A8A]">CGV</a>
+
+          <div className="pt-12 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-6">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+              © 2026 Securits Tech • Tous droits réservés
+            </p>
+            <div className="flex gap-8 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+              <span>Fait avec excellence au Congo</span>
+              <span className="flex items-center gap-2"><div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" /> Système Opérationnel</span>
+            </div>
           </div>
         </div>
       </footer>
+
+      {/* Modal Légal */}
+      {modalLegal?.ouvert && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-6">
+          <div onClick={() => setModalLegal(null)} className="absolute inset-0 bg-slate-900/90 backdrop-blur-md" />
+          <div className="bg-white w-full max-w-xl p-12 rounded-[2.5rem] shadow-2xl relative animate-in slide-in-from-bottom-8 duration-500">
+            <h3 className="text-2xl font-black text-[#1E3A8A] uppercase tracking-tight mb-6">{modalLegal.titre}</h3>
+            <div className="prose prose-slate mb-8">
+              <p className="text-slate-600 font-medium leading-relaxed">{modalLegal.contenu}</p>
+            </div>
+            <button 
+              onClick={() => setModalLegal(null)}
+              className="w-full h-14 bg-slate-100 text-[#1E3A8A] rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-slate-200 transition-colors"
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -407,6 +600,7 @@ const InscriptionDirecte = () => {
     telephone_contact: '',
     nom_contact: '',
     email_contact: '',
+    accepte_cgu: false,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -459,13 +653,25 @@ const InscriptionDirecte = () => {
         <input required type="tel" placeholder="+242 0x xxx xx xx" value={formData.telephone_contact} onChange={e => setFormData({...formData, telephone_contact: e.target.value})}
           className="w-full bg-slate-50 border border-slate-200 rounded-2xl h-14 px-6 outline-none focus:border-[#1E3A8A] transition-colors font-medium" />
       </div>
-      <div className="md:col-span-2 space-y-2">
-        <label className="text-xs font-bold text-slate-400 uppercase ml-1">Email professionnel</label>
-        <input required type="email" placeholder="contact@etablissement.com" value={formData.email_contact} onChange={e => setFormData({...formData, email_contact: e.target.value})}
-          className="w-full bg-slate-50 border border-slate-200 rounded-2xl h-14 px-6 outline-none focus:border-[#1E3A8A] transition-colors font-medium" />
+      <div className="md:col-span-2 space-y-4 pt-4">
+        <label className="flex items-start gap-4 cursor-pointer group">
+          <div className="relative flex items-center pt-1">
+            <input 
+              required 
+              type="checkbox" 
+              checked={formData.accepte_cgu} 
+              onChange={e => setFormData({...formData, accepte_cgu: e.target.checked})}
+              className="peer h-6 w-6 cursor-pointer appearance-none rounded-lg border-2 border-slate-200 bg-slate-50 transition-all checked:border-[#1E3A8A] checked:bg-[#1E3A8A] focus:outline-none"
+            />
+            <CheckCircle2 size={16} className="pointer-events-none absolute left-1 text-white opacity-0 transition-opacity peer-checked:opacity-100" />
+          </div>
+          <p className="text-xs font-bold text-slate-500 leading-relaxed">
+            Je certifie l'exactitude de ces informations et j'accepte les <span className="text-[#1E3A8A] underline">Conditions Générales d'Utilisation</span> de GestCave Pro pour protéger mon établissement et garantir la sécurité de mes données.
+          </p>
+        </label>
       </div>
-      <div className="md:col-span-2 pt-6">
-        <button type="submit" disabled={loading} className="w-full h-16 bg-[#FF7A00] text-white rounded-2xl font-bold text-lg shadow-xl shadow-orange-500/30 hover:scale-[1.02] active:scale-95 transition-all">
+      <div className="md:col-span-2 pt-2">
+        <button type="submit" disabled={loading} className="w-full h-16 bg-[#FF7A00] text-white rounded-2xl font-bold text-lg shadow-xl shadow-orange-500/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100">
           {loading ? 'Traitement en cours...' : 'Envoyer ma Demande d\'Accès'}
         </button>
       </div>

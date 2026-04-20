@@ -136,7 +136,7 @@ const TableauClient = () => {
           <div className="space-y-1 text-[#FF7A00]">
             <SidebarLink icon={<Bot size={18} />} label="Analyses Prédictives" path="/tableau-de-bord/ia" />
             <SidebarLink icon={<Terminal size={18} />} label="Diagnostic Système" path="/tableau-de-bord/debug" />
-            <SidebarLink icon={<Zap size={18} />} label="Laboratoire de Simulation" path="/tableau-de-bord/simulation" />
+
           </div>
         </div>
       </div>
@@ -247,7 +247,7 @@ const TableauClient = () => {
               <Route path="/grand-livre" element={<GrandLivre />} />
               <Route path="/sessions" element={<GestionSessions />} />
               <Route path="/settings" element={<GestionEtablissement />} />
-              <Route path="/simulation" element={<SimulationLab />} />
+
               <Route path="/ia" element={<IAIntelligence />} />
               <Route path="/debug" element={<ModuleDebug />} />
             </Routes>
