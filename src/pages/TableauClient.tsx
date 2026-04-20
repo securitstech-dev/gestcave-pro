@@ -205,9 +205,9 @@ const TableauClient = () => {
       {/* Modal Support */}
       {modalSupport && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
-          <div onClick={() => setModalSupport(null)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
+          <div onClick={() => setModalSupport(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
           <div className="bg-white w-full max-w-lg p-10 rounded-[2.5rem] shadow-2xl relative animate-in zoom-in-95 duration-300">
-            <button onClick={() => setModalSupport(null)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 transition-all"><X size={24} /></button>
+            <button onClick={() => setModalSupport(false)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 transition-all"><X size={24} /></button>
             <div className="mb-8">
               <h3 className="text-2xl font-black text-[#1E3A8A] uppercase tracking-tight mb-2">Contacter le Support</h3>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Une question ? Un problème technique ?</p>
