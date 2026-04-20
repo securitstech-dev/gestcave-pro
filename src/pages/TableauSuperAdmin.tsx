@@ -4,7 +4,7 @@ import {
   Search, Building2, CreditCard, TrendingUp, Shield,
   ArrowUpRight, AlertTriangle, Loader2, ExternalLink, X, Ban, Activity,
   Trash2, Database, AlertCircle, Info, Copy, Key, ArrowRight, ShieldCheck,
-  Globe, Landmark, Cpu, Sparkles, BarChart3, Settings, ZapOff, Zap, Calendar
+  Globe, Landmark, Cpu, Sparkles, BarChart3, Settings, ZapOff, Zap, Calendar, Mail, MessageSquare
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -13,12 +13,13 @@ import { db } from '../lib/firebase';
 import { collection, onSnapshot, doc, updateDoc, addDoc, query, orderBy, getDocs, deleteDoc } from 'firebase/firestore';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-type Onglet = 'demandes' | 'paiements' | 'etablissements' | 'comptabilite' | 'maintenance';
+type Onglet = 'demandes' | 'messages' | 'paiements' | 'etablissements' | 'comptabilite' | 'maintenance';
 
 const TableauSuperAdmin = () => {
   const [demandes, setDemandes] = useState<any[]>([]);
   const [etablissements, setEtablissements] = useState<any[]>([]);
   const [paiements, setPaiements] = useState<any[]>([]);
+  const [messagesContact, setMessagesContact] = useState<any[]>([]);
   const [chargement, setChargement] = useState(true);
   const [onglet, setOnglet] = useState<Onglet>('demandes');
   const [recherche, setRecherche] = useState('');
@@ -52,8 +53,23 @@ const TableauSuperAdmin = () => {
       (err) => { console.error(err); setChargement(false); }
     );
     const unsubEtabs = onSnapshot(collection(db, 'etablissements'), (snap) => setEtablissements(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-    const unsubPaiements = onSnapshot(query(collection(db, 'paiements'), orderBy('date', 'desc')), (snap) => setPaiements(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-    return () => { unsubDemandes(); unsubEtabs(); unsubPaiements(); };
+    const unsubPaiements = onSnapshot(
+      query(collection(db, 'paiements'), orderBy('date', 'desc')),
+      (snapshot) => setPaiements(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+    );
+
+    const unsubMessages = onSnapshot(
+      query(collection(db, 'messages_contact'), orderBy('date', 'desc')),
+      (snapshot) => setMessagesContact(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+    );
+
+    setChargement(false);
+    return () => {
+      unsubDemandes();
+      unsubEtabs();
+      unsubPaiements();
+      unsubMessages();
+    };
   }, []);
 
   const maintenant = new Date();
@@ -260,6 +276,7 @@ const TableauSuperAdmin = () => {
 
   const navItems = [
     { key: 'demandes', icon: <Users size={20} />, label: "Demandes d'accès", badge: demandes.filter(d => d.statut === 'en_attente').length },
+    { key: 'messages', icon: <MessageSquare size={20} />, label: "Messages", badge: messagesContact.filter(m => m.statut === 'nouveau').length },
     { key: 'etablissements', icon: <Building2 size={20} />, label: "Établissements", badge: etablissements.length },
     { key: 'paiements', icon: <CreditCard size={20} />, label: "Paiements & Abonnements", badge: paiements.filter(p => p.statut === 'en_attente').length },
     { key: 'comptabilite', icon: <TrendingUp size={20} />, label: "Comptabilité Globale" },
@@ -514,6 +531,58 @@ const TableauSuperAdmin = () => {
                     );
                   })}
                </div>
+            </div>
+          )}
+
+          {/* ── MESSAGES CONTACT ── */}
+          {onglet === 'messages' && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="grid gap-4">
+                {messagesContact.length === 0 ? (
+                  <div className="bg-white p-20 rounded-[3rem] text-center border-2 border-dashed border-slate-100">
+                    <p className="text-slate-400 font-bold uppercase tracking-widest">Aucun message pour le moment</p>
+                  </div>
+                ) : (
+                  messagesContact.map((msg) => (
+                    <div key={msg.id} className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 hover:border-blue-200 transition-all">
+                      <div className="flex justify-between items-start mb-6">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-blue-50 text-[#1E3A8A] rounded-full flex items-center justify-center">
+                            <Users size={20} />
+                          </div>
+                          <div>
+                            <h4 className="text-lg font-black text-[#1E3A8A] uppercase">{msg.nom}</h4>
+                            <p className="text-xs font-bold text-slate-400">{msg.contact}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-300 block mb-1">Date d'envoi</span>
+                          <p className="text-xs font-bold text-slate-500">{msg.date?.toDate().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                        </div>
+                      </div>
+                      <div className="bg-slate-50 p-6 rounded-2xl mb-6">
+                        <p className="text-slate-600 font-bold leading-relaxed whitespace-pre-line">{msg.message}</p>
+                      </div>
+                      <div className="flex gap-4">
+                        <a href={`mailto:${msg.contact}`} className="px-6 h-12 bg-blue-50 text-[#1E3A8A] rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-[#1E3A8A] hover:text-white transition-all">
+                          Répondre par Email <Mail size={16} />
+                        </a>
+                        <button 
+                          onClick={async () => {
+                            if(window.confirm("Supprimer ce message ?")) {
+                              await deleteDoc(doc(db, 'messages_contact', msg.id));
+                              toast.success("Message supprimé");
+                            }
+                          }}
+                          className="px-6 h-12 bg-rose-50 text-rose-600 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-rose-500 hover:text-white transition-all"
+                        >
+                          Supprimer <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           )}
 
