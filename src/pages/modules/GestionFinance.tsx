@@ -181,8 +181,8 @@ const GestionFinance = () => {
         t.type === 'depense' ? 'ACHAT' : 'VENTE',
         (t.clientNom || t.tableNom || t.description || 'COMPTOIR').toUpperCase(),
         t.modePaiement?.toUpperCase() || 'COMPTANT',
-        t.type !== 'depense' ? `${(t.montantRecu || t.total).toLocaleString()} XAF` : '-',
-        t.type === 'depense' ? `${t.total.toLocaleString()} XAF` : '-'
+        t.type !== 'depense' ? `${(t.montantRecu || t.total || 0).toLocaleString()} XAF` : '-',
+        t.type === 'depense' ? `${(t.total || 0).toLocaleString()} XAF` : '-'
       ]),
       headStyles: { fillColor: [30, 58, 138], fontSize: 8 }, 
       alternateRowStyles: { fillColor: [248, 250, 252] },
@@ -196,7 +196,7 @@ const GestionFinance = () => {
         autoTable(docPdf, {
             startY: currentY + 5,
             head: [['DATE', 'MOTIF', 'MONTANT']],
-            body: charges.map(c => [new Date(c.date).toLocaleDateString(), c.motif.toUpperCase(), `${c.montant.toLocaleString()} XAF`]),
+            body: charges.map(c => [new Date(c.date).toLocaleDateString(), c.motif.toUpperCase(), `${(c.montant || 0).toLocaleString()} XAF`]),
             headStyles: { fillColor: [255, 122, 0] },
             styles: { fontSize: 7 }
         });
@@ -204,12 +204,12 @@ const GestionFinance = () => {
     }
 
     docPdf.setFontSize(10); docPdf.setTextColor(30, 58, 138);
-    docPdf.text(`TOTAL ENCAISSÉ : ${totalEncaisse.toLocaleString()} XAF`, 14, currentY);
-    docPdf.text(`TOTAL ACHATS : -${depensesAchats.toLocaleString()} XAF`, 14, currentY + 7);
-    docPdf.text(`TOTAL CHARGES : -${totalCharges.toLocaleString()} XAF`, 14, currentY + 14);
+    docPdf.text(`TOTAL ENCAISSÉ : ${(totalEncaisse || 0).toLocaleString()} XAF`, 14, currentY);
+    docPdf.text(`TOTAL ACHATS : -${(depensesAchats || 0).toLocaleString()} XAF`, 14, currentY + 7);
+    docPdf.text(`TOTAL CHARGES : -${(totalCharges || 0).toLocaleString()} XAF`, 14, currentY + 14);
     
     docPdf.setFontSize(14); docPdf.setTextColor(255, 122, 0);
-    docPdf.text(`BÉNÉFICE NET : ${resultatNet.toLocaleString()} XAF`, 14, currentY + 28);
+    docPdf.text(`BÉNÉFICE NET : ${(resultatNet || 0).toLocaleString()} XAF`, 14, currentY + 28);
 
     docPdf.save(`Rapport_Financier_${date}.pdf`);
     toast.success("Rapport PDF généré");
@@ -254,23 +254,23 @@ const GestionFinance = () => {
           <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl shadow-blue-900/5 group hover:scale-[1.02] transition-all">
             <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-[#1E3A8A] mb-6"><TrendingUp size={24} /></div>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Chiffre d'Affaires</p>
-            <p className="text-3xl font-extrabold text-[#1E3A8A] tracking-tight">{totalEncaisse.toLocaleString()} <span className="text-sm font-bold opacity-30">XAF</span></p>
+            <p className="text-3xl font-extrabold text-[#1E3A8A] tracking-tight">{(totalEncaisse || 0).toLocaleString()} <span className="text-sm font-bold opacity-30">XAF</span></p>
           </div>
           <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl shadow-blue-900/5 group hover:scale-[1.02] transition-all">
             <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-[#FF7A00] mb-6"><AlertCircle size={24} /></div>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Dettes Clients</p>
-            <p className="text-3xl font-extrabold text-[#FF7A00] tracking-tight">{dettesClients.toLocaleString()} <span className="text-sm font-bold opacity-30">XAF</span></p>
+            <p className="text-3xl font-extrabold text-[#FF7A00] tracking-tight">{(dettesClients || 0).toLocaleString()} <span className="text-sm font-bold opacity-30">XAF</span></p>
           </div>
           <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl shadow-blue-900/5 group hover:scale-[1.02] transition-all">
             <div className="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-500 mb-6"><TrendingDown size={24} /></div>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Total Achats</p>
-            <p className="text-3xl font-extrabold text-[#1E3A8A] tracking-tight">{depensesAchats.toLocaleString()} <span className="text-sm font-bold opacity-30">XAF</span></p>
+            <p className="text-3xl font-extrabold text-[#1E3A8A] tracking-tight">{(depensesAchats || 0).toLocaleString()} <span className="text-sm font-bold opacity-30">XAF</span></p>
           </div>
           <div className={`p-8 rounded-[2rem] shadow-xl transition-all group hover:scale-[1.02] relative overflow-hidden ${resultatNet >= 0 ? 'bg-emerald-500 shadow-emerald-900/20' : 'bg-rose-500 shadow-rose-900/20'}`}>
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -mr-16 -mt-16" />
             <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-white mb-6"><PieChartIcon size={24} /></div>
             <p className="text-xs font-bold text-white/60 uppercase tracking-widest mb-2">Bénéfice Net</p>
-            <p className="text-3xl font-extrabold text-white tracking-tight">{resultatNet.toLocaleString()} <span className="text-sm font-bold opacity-30">XAF</span></p>
+            <p className="text-3xl font-extrabold text-white tracking-tight">{(resultatNet || 0).toLocaleString()} <span className="text-sm font-bold opacity-30">XAF</span></p>
           </div>
       </div>
 
@@ -424,9 +424,9 @@ const GestionFinance = () => {
                                     </td>
                                     <td className="px-10 py-6 text-right">
                                         <p className={`font-black text-xl tracking-tighter ${t.type === 'depense' ? 'text-rose-500' : 'text-[#1E3A8A]'}`}>
-                                          {t.type === 'depense' ? '-' : '+'}{(t.montantRecu || t.total).toLocaleString()} <span className="text-[10px] opacity-30">XAF</span>
+                                          {t.type === 'depense' ? '-' : '+'}{(t.montantRecu || t.total || 0).toLocaleString()} <span className="text-[10px] opacity-30">XAF</span>
                                         </p>
-                                        {t.montantRestant! > 0 && <p className="text-[10px] font-bold text-[#FF7A00] uppercase mt-1 tracking-widest">Dette : {t.montantRestant?.toLocaleString()}</p>}
+                                        {(t.montantRestant || 0) > 0 && <p className="text-[10px] font-bold text-[#FF7A00] uppercase mt-1 tracking-widest">Dette : {(t.montantRestant || 0).toLocaleString()}</p>}
                                     </td>
                                 </tr>
                             ))}
@@ -456,7 +456,7 @@ const GestionFinance = () => {
                           </div>
                           <div className="text-right">
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Solde dû</p>
-                              <p className="text-3xl font-black text-[#FF7A00] tracking-tighter mt-1">{t.montantRestant?.toLocaleString()} <span className="text-xs opacity-30">XAF</span></p>
+                              <p className="text-3xl font-black text-[#FF7A00] tracking-tighter mt-1">{(t.montantRestant || 0).toLocaleString()} <span className="text-xs opacity-30">XAF</span></p>
                           </div>
                       </div>
 
@@ -507,7 +507,7 @@ const GestionFinance = () => {
                </div>
                <div className="text-center md:text-right relative z-10">
                   <p className="text-xs font-bold text-orange-400 uppercase tracking-widest mb-3">Volume Mensuel Prévu</p>
-                  <p className="text-6xl font-black tracking-tighter">{totalChargesRecurrentes.toLocaleString()} <span className="text-2xl opacity-30">XAF</span></p>
+                  <p className="text-6xl font-black tracking-tighter">{(totalChargesRecurrentes || 0).toLocaleString()} <span className="text-2xl opacity-30">XAF</span></p>
                </div>
             </div>
 
@@ -524,7 +524,7 @@ const GestionFinance = () => {
                         </div>
                       </div>
                       <div className="text-right flex items-center gap-6">
-                        <p className="font-black text-[#1E3A8A] text-xl tracking-tighter">{c.montant.toLocaleString()} <span className="text-xs opacity-20 font-bold uppercase">XAF</span></p>
+                        <p className="font-black text-[#1E3A8A] text-xl tracking-tighter">{(c.montant || 0).toLocaleString()} <span className="text-xs opacity-20 font-bold uppercase">XAF</span></p>
                         <button onClick={() => supprimerCharge(c.id, 'charges_recurrentes')} className="p-3 text-slate-200 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
                            <Trash2 size={20} />
                         </button>
@@ -561,7 +561,7 @@ const GestionFinance = () => {
                                       <p className="font-bold text-[#1E3A8A] text-sm uppercase tracking-tight">{c.motif}</p>
                                   </td>
                                   <td className="px-10 py-6 font-black text-[#FF7A00] text-xl tracking-tighter">
-                                      -{c.montant.toLocaleString()} <span className="text-[10px] opacity-30">XAF</span>
+                                      -{(c.montant || 0).toLocaleString()} <span className="text-[10px] opacity-30">XAF</span>
                                   </td>
                                   <td className="px-10 py-6 text-right">
                                       <button onClick={() => supprimerCharge(c.id)} className="p-3 text-slate-200 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
