@@ -481,7 +481,7 @@ const InterfaceServeur = () => {
                         </button>
                         <button onClick={() => {
                             demanderAddition(commandeId!, tableSelectionnee?.id || '');
-                            imprimerTicket(commandeActive!, profil?.etablissementNom || 'GESTCAVE PRO');
+                            imprimerTicket(commandeActive!, profil?.etablissement_nom || 'GESTCAVE PRO');
                         }} className="flex-1 h-16 bg-emerald-50 text-emerald-600 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-emerald-100 hover:bg-emerald-100 transition-all">L'addition</button>
                     </div>
                     {commandeActive?.serveurId === idEmploye ? (
@@ -503,10 +503,10 @@ const InterfaceServeur = () => {
                                 );
 
                                 if (produitsCuisine.length > 0) {
-                                  imprimerBonPreparation(commandeActive!, produitsCuisine, "CUISINE (HORS-LIGNE)", profil?.etablissementNom || 'GESTCAVE PRO');
+                                  imprimerBonPreparation(commandeActive!, produitsCuisine, "CUISINE (HORS-LIGNE)", profil?.etablissement_nom || 'GESTCAVE PRO');
                                 }
                                 if (produitsBar.length > 0) {
-                                  imprimerBonPreparation(commandeActive!, produitsBar, "BAR (HORS-LIGNE)", profil?.etablissementNom || 'GESTCAVE PRO');
+                                  imprimerBonPreparation(commandeActive!, produitsBar, "BAR (HORS-LIGNE)", profil?.etablissement_nom || 'GESTCAVE PRO');
                                 }
                                 toast.success("Bons hors-ligne imprimés !", { id: toastId });
                               } else {

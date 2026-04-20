@@ -137,7 +137,7 @@ const InterfaceCaissier = () => {
         modePaiement
       );
       
-      imprimerTicket(commandeActive!, profil?.etablissementNom || 'GESTCAVE PRO');
+      imprimerTicket(commandeActive!, profil?.etablissement_nom || 'GESTCAVE PRO');
       
       toast.success("Vente clôturée et ticket imprimé", { id: toastId });
       setCommandeSelectionnee(null);
