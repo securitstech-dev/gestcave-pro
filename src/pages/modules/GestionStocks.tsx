@@ -397,7 +397,6 @@ const GestionStocks = () => {
                                   <button onClick={() => ajusterStock(p, -1, 'casier')} className="w-8 h-8 flex items-center justify-center text-white/40 hover:text-white transition-all"><Layers size={16} /></button>
                                   <button onClick={() => ajusterStock(p, 1, 'casier')} className="w-8 h-8 flex items-center justify-center bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"><Plus size={16} /></button>
                                </div>
-                             )}
                              <button onClick={() => ouvrirEdition(p)} className="p-2 text-slate-300 hover:text-[#1E3A8A] transition-all ml-2">
                                <Edit3 size={18} />
                              </button>

@@ -8,7 +8,7 @@ import {
   CheckCircle2, AlertTriangle, ArrowLeft, Star,
   ShieldCheck, Crown, User, Search, Receipt,
   ClipboardList, CreditCard, ChevronDown, History, Trash2,
-  MoreVertical, Power, RefreshCcw, MoreHorizontal, ArrowRight, Check, Bell
+  MoreVertical, Power, RefreshCcw, MoreHorizontal, ArrowRight, Check, Bell, Lock, AlertCircle
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { usePOSStore } from '../../store/posStore';

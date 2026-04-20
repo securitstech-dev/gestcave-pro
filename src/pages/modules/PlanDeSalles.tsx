@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, Clock, ShoppingBag, Package, X, Receipt, 
   CheckCircle2, CreditCard, Layout, MapPin, Wine, Info, ArrowUpRight, Activity,
-  Smartphone, Banknote, AlertTriangle, Loader2, DoorOpen, MoreVertical, Search, Settings,
-  Sparkles, Coffee, Beer, Utensils
+  Smartphone, Banknote, AlertTriangle, AlertCircle, Loader2, DoorOpen, MoreVertical, Search, Settings,
+  Sparkles, Coffee, Beer, Utensils, Lock
 } from 'lucide-react';
 import { usePOSStore, imprimerTicket } from '../../store/posStore';
 import type { TablePlan, Commande } from '../../store/posStore';
