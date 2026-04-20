@@ -4,7 +4,7 @@ import {
   ChevronRight, ArrowRight, ShieldCheck, Zap, 
   Smartphone, BarChart3, Clock, LayoutDashboard,
   Mail, Phone, MapPin, Menu, X, Globe, Star,
-  Server, Cpu, Lock, Send
+  Server, Cpu, Lock, Send, Flame, BookOpen, Monitor, Terminal
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { db } from '../lib/firebase';
@@ -76,24 +76,24 @@ const PageAccueil = () => {
         <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
           <div className="space-y-10 relative z-10">
             <div className="inline-flex items-center gap-3 px-4 py-2 bg-blue-100 rounded-full text-[#1E3A8A] text-xs font-bold tracking-wide uppercase">
-              <Star size={14} fill="currentColor" /> Ecosysteme de Gestion Premium
+              <Star size={14} fill="currentColor" /> Ecosysteme de Gestion Premium 2.0
             </div>
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-[#1E3A8A] leading-[1.1] tracking-tight">
-              L'excellence de la gestion <br/>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#1E3A8A] to-[#FF7A00]">pour votre bar.</span>
+              Pilotez votre bar <br/>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#1E3A8A] to-[#FF7A00]">avec précision chirurgicale.</span>
             </h1>
             <p className="text-lg text-slate-500 leading-relaxed max-w-xl">
-              Simplifiez vos opérations, sécurisez vos stocks et boostez votre rentabilité avec notre suite logicielle harmonisée. Conçu pour les établissements qui exigent la précision.
+              De la prise de commande à la clôture fiscale, GestCave Pro automatise chaque aspect de votre établissement. Stock, Cuisine, RH et Finance harmonisés dans une suite unique.
             </p>
             <div className="flex flex-col sm:flex-row gap-6">
               <button 
                 onClick={() => document.getElementById('inscription')?.scrollIntoView({ behavior: 'smooth' })}
                 className="px-10 py-5 bg-[#FF7A00] text-white rounded-2xl font-bold text-lg shadow-xl shadow-orange-500/30 hover:-translate-y-1 transition-all"
               >
-                Démarrer l'essai de 14 jours
+                Commencer l'expérience
               </button>
               <button className="px-10 py-5 bg-white border-2 border-slate-100 text-[#1E3A8A] rounded-2xl font-bold text-lg hover:bg-slate-50 transition-all flex items-center justify-center gap-3">
-                Voir la Démo <ChevronRight size={20} />
+                Découvrir les Modules <ChevronRight size={20} />
               </button>
             </div>
           </div>
@@ -153,39 +153,39 @@ const PageAccueil = () => {
       <section id="services" className="py-32 max-w-7xl mx-auto px-6">
         <div className="text-center space-y-4 mb-20">
           <h2 className="text-xs font-black text-[#FF7A00] uppercase tracking-[0.4em]">Propulsez votre établissement</h2>
-          <p className="text-4xl md:text-5xl font-extrabold text-[#1E3A8A] tracking-tight">Des fonctionnalités pensées <br/> pour le terrain.</p>
+          <p className="text-4xl md:text-5xl font-extrabold text-[#1E3A8A] tracking-tight">Une suite logicielle intégrale.</p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           <BenefitCard 
             icon={<ShoppingBag />} 
-            title="Gestion des Stocks" 
-            desc="Suivi en temps réel des bouteilles, ingrédients et consommables avec alertes automatiques." 
+            title="Inventaire Souverain" 
+            desc="Livre de compte intelligent avec suivi des bouteilles, ingrédients et consommables. Alertes de stock critique." 
           />
           <BenefitCard 
-            icon={<Smartphone />} 
-            title="Prise de Commande" 
-            desc="Interface intuitive pour vos serveurs sur tablettes ou téléphones. Zéro erreur de transmission." 
+            icon={<Flame />} 
+            title="KDS : Écran Cuisine" 
+            desc="Système d'affichage de cuisine automatisé. Suivi des temps de service et gestion des priorités en temps réel." 
           />
           <BenefitCard 
-            icon={<Receipt />} 
-            title="Caisse & Facturation" 
-            desc="Clôtures de caisse simplifiées, gestion des notes de frais et impression de reçus professionnels." 
+            icon={<BookOpen />} 
+            title="Grand Livre & Finance" 
+            desc="Moteur comptable intégré générant des rapports de rentabilité, P&L et bilans fiscaux exports en PDF." 
           />
           <BenefitCard 
-            icon={<Users />} 
-            title="Gestion du Personnel" 
-            desc="Pointage par PIN, calcul automatique des salaires et suivi des performances serveurs." 
+            icon={<Clock />} 
+            title="RH & Pointage" 
+            desc="Terminal de pointage indépendant par PIN. Calcul automatique de la paie et des commissions serveurs." 
           />
           <BenefitCard 
-            icon={<BarChart3 />} 
-            title="Rapports Fiscaux" 
-            desc="Visualisez votre rentabilité nette, vos marges et votre MRR en un coup d'œil." 
+            icon={<Monitor />} 
+            title="Multi-Terminaux" 
+            desc="Interface dédiée pour chaque rôle : Serveurs (tablettes), Cuisine (moniteur), Caissier et Gérant." 
           />
           <BenefitCard 
-            icon={<ShieldCheck />} 
-            title="Sécurité & Audit" 
-            desc="Chaque opération est enregistrée. Tracez les erreurs et les fraudes instantanément." 
+            icon={<Terminal />} 
+            title="Auto-Diagnostic" 
+            desc="Console de maintenance intégrée pour le dépannage autonome. Surveillance de la santé système 24/7." 
           />
         </div>
       </section>
@@ -198,16 +198,16 @@ const PageAccueil = () => {
             <div>
               <h2 className="text-xs font-black text-[#FF7A00] uppercase tracking-[0.4em] mb-4">Infrastructure Premium</h2>
               <h3 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-8 text-transparent bg-clip-text bg-gradient-to-r from-[#FF7A00] to-orange-300">
-                Une technologie conçue pour la tolérance zéro panne.
+                La puissance du Cloud, <br/> la robustesse du Local.
               </h3>
               <p className="text-blue-100/80 text-lg leading-relaxed mb-10">
-                GestCave Pro repose sur une architecture Cloud distribuée, assurant une disponibilité à 99.9% de vos terminaux, même en cas de latence réseau. 
+                GestCave Pro fusionne la flexibilité du Cloud avec une résilience locale. Votre établissement ne s'arrête jamais, même sans internet.
               </p>
               
               <div className="space-y-6">
-                <TechItem icon={<Server />} title="Cloud Distribué" desc="Vos données sont répliquées en temps réel sur des serveurs sécurisés." />
-                <TechItem icon={<Zap />} title="Mode Hors-Ligne" desc="Continuez à prendre des commandes même lors d'une coupure internet." />
-                <TechItem icon={<Lock />} title="Chiffrement de bout en bout" desc="Données financières et informations clients protégées (AES-256)." />
+                <TechItem icon={<Server />} title="Cloud Distribué" desc="Synchronisation multi-sites instantanée via Firebase Production." />
+                <TechItem icon={<Cpu />} title="Intelligence & Lab" desc="Moteur de simulation intégré pour prévoir vos stocks et vos revenus." />
+                <TechItem icon={<ShieldCheck />} title="Audit Sécurisé" desc="Chaque centime est tracé. Protection contre la fraude et les erreurs de saisie." />
               </div>
             </div>
             <div className="relative">
