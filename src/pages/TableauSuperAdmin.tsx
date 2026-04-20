@@ -4,7 +4,7 @@ import {
   Search, Building2, CreditCard, TrendingUp, Shield,
   ArrowUpRight, AlertTriangle, Loader2, ExternalLink, X, Ban, Activity,
   Trash2, Database, AlertCircle, Info, Copy, Key, ArrowRight, ShieldCheck,
-  Globe, Landmark, Cpu, Sparkles, BarChart3, Settings, ZapOff, Zap
+  Globe, Landmark, Cpu, Sparkles, BarChart3, Settings, ZapOff, Zap, Calendar
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
