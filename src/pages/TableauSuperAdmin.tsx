@@ -4,7 +4,7 @@ import {
   Search, Building2, CreditCard, TrendingUp, Shield,
   ArrowUpRight, AlertTriangle, Loader2, ExternalLink, X, Ban, Activity,
   Trash2, Database, AlertCircle, Info, Copy, Key, ArrowRight, ShieldCheck,
-  Globe, Landmark, Cpu, Sparkles, BarChart3, Settings, ZapOff, Zap, Calendar, Mail, MessageSquare
+  Globe, Landmark, Cpu, Sparkles, BarChart3, Settings, ZapOff, Zap, Calendar, Mail, MessageSquare, LayoutDashboard
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -44,6 +44,8 @@ const TableauSuperAdmin = () => {
   const [modalResetPassword, setModalResetPassword] = useState<any | null>(null);
   const [modalExtendSub, setModalExtendSub] = useState<any | null>(null);
   const [joursProlongation, setJoursProlongation] = useState(30);
+  const [modalModules, setModalModules] = useState<any | null>(null);
+  const [modulesActifs, setModulesActifs] = useState<string[]>([]);
 
   useEffect(() => {
     setChargement(true);
@@ -103,6 +105,7 @@ const TableauSuperAdmin = () => {
         email_contact: demande.email_contact, subscription_plan: typePlan,
         subscription_status: statut, subscription_start_date: new Date().toISOString(),
         subscription_end_date: new Date(Date.now() + jours * 24 * 60 * 60 * 1000).toISOString(),
+        modules_actifs: ['pos', 'stock', 'hr', 'compta', 'kds', 'analytics']
       });
       await updateDoc(doc(db, 'demandes_acces', demandeId), { statut: 'valide', etablissement_id: etabRef.id });
       const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -162,6 +165,7 @@ const TableauSuperAdmin = () => {
         subscription_status: 'actif',
         subscription_start_date: new Date().toISOString(),
         subscription_end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        modules_actifs: ['pos', 'stock', 'hr', 'compta', 'kds', 'analytics']
       });
 
       // 2. Création de l'invitation pour que le gérant puisse s'inscrire
@@ -227,6 +231,20 @@ const TableauSuperAdmin = () => {
       // ou simplement informer que l'email a été envoyé.
       toast.success(`Un email de réinitialisation a été envoyé à ${modalResetPassword.email_contact}`, { id: toastId });
       setModalResetPassword(null);
+    } catch (err: any) {
+      toast.error(err.message, { id: toastId });
+    }
+  };
+
+  const sauvegarderModules = async () => {
+    if (!modalModules) return;
+    const toastId = toast.loading('Sauvegarde des modules...');
+    try {
+      await updateDoc(doc(db, 'etablissements', modalModules.id), {
+        modules_actifs: modulesActifs
+      });
+      toast.success('Modules mis à jour avec succès', { id: toastId });
+      setModalModules(null);
     } catch (err: any) {
       toast.error(err.message, { id: toastId });
     }
@@ -523,6 +541,10 @@ const TableauSuperAdmin = () => {
                               ) : (
                                 <button onClick={() => suspendreEtablissement(etab)} className="w-16 h-16 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all shadow-inner" title="Suspendre"><Ban size={24} /></button>
                               )}
+                               <button onClick={() => {
+                                  setModalModules(etab);
+                                  setModulesActifs(etab.modules_actifs || ['pos', 'stock', 'hr', 'compta']);
+                               }} className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all shadow-inner" title="Gérer les Modules"><LayoutDashboard size={24} /></button>
                                <button onClick={() => setModalResetPassword(etab)} className="w-16 h-16 bg-blue-50 text-[#1E3A8A] rounded-2xl flex items-center justify-center hover:bg-[#1E3A8A] hover:text-white transition-all shadow-inner" title="Réinitialiser Mot de Passe"><Key size={24} /></button>
                               <button onClick={() => setModalExtendSub(etab)} className="w-16 h-16 bg-orange-50 text-[#FF7A00] rounded-2xl flex items-center justify-center hover:bg-[#FF7A00] hover:text-white transition-all shadow-inner" title="Prolonger Abonnement"><Calendar size={24} /></button>
                            </div>
@@ -880,6 +902,45 @@ const TableauSuperAdmin = () => {
                     Confirmer la prolongation
                   </button>
                   <button onClick={() => setModalExtendSub(null)} className="w-full h-16 bg-slate-50 text-slate-400 rounded-2xl font-bold uppercase tracking-widest text-xs">Annuler</button>
+               </div>
+            </div>
+         </div>
+      )}
+
+      {modalModules && (
+         <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
+            <div onClick={() => setModalModules(null)} className="absolute inset-0 bg-slate-900/90 backdrop-blur-xl" />
+            <div className="bg-white w-full max-w-2xl p-10 md:p-12 rounded-[3.5rem] shadow-2xl relative animate-in zoom-in-95 duration-500">
+               <h3 className="text-3xl font-black text-[#1E3A8A] uppercase tracking-tight mb-2">Modules Actifs</h3>
+               <p className="text-sm font-bold text-slate-400 mb-8 uppercase tracking-widest">{modalModules.nom}</p>
+               
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                  {[
+                    { id: 'pos', nom: 'Point de Vente (Caisse/Serveurs)' },
+                    { id: 'stock', nom: 'Gestion des Stocks' },
+                    { id: 'hr', nom: 'Ressources Humaines (Paie)' },
+                    { id: 'compta', nom: 'Comptabilité & Finances' },
+                    { id: 'kds', nom: 'Cuisine / Bar (KDS)' },
+                    { id: 'analytics', nom: 'Statistiques Avancées' }
+                  ].map(mod => (
+                    <label key={mod.id} className="flex items-center gap-4 p-4 border border-slate-100 rounded-2xl cursor-pointer hover:bg-slate-50 transition-colors">
+                      <input 
+                        type="checkbox" 
+                        checked={modulesActifs.includes(mod.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) setModulesActifs([...modulesActifs, mod.id]);
+                          else setModulesActifs(modulesActifs.filter(id => id !== mod.id));
+                        }}
+                        className="w-6 h-6 text-[#1E3A8A] rounded-lg focus:ring-[#1E3A8A]"
+                      />
+                      <span className="font-bold text-slate-700 text-sm">{mod.nom}</span>
+                    </label>
+                  ))}
+               </div>
+
+               <div className="flex gap-4">
+                  <button onClick={() => setModalModules(null)} className="flex-1 h-16 bg-slate-50 text-slate-400 rounded-2xl font-bold uppercase tracking-widest text-xs">Annuler</button>
+                  <button onClick={sauvegarderModules} className="flex-[2] h-16 bg-[#1E3A8A] text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-blue-900/10 hover:bg-blue-800 transition-all">Sauvegarder les modules</button>
                </div>
             </div>
          </div>
