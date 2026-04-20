@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { 
   Wine, ShoppingCart, TrendingUp, AlertTriangle, Users, 
   Settings, LogOut, ChevronRight, Package, CreditCard, 
-  Layout, LayoutDashboard, Zap, Activity, ShieldCheck, Shield,
+  Layout, LayoutDashboard, Zap, Activity, ShieldCheck, Shield, ShieldAlert,
   Calendar, ArrowUpRight, ArrowDownRight, MoreVertical, DollarSign,
   Bell, Search, Menu, X, PlusCircle, Globe, History, ArrowRight, ArrowLeft, Receipt, Clock,
   ChefHat, Flame, Timer, Wallet, Bot, Monitor, BookOpen
@@ -175,7 +175,23 @@ const TableauClient = () => {
       )}
 
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        {/* Topbar */}
+      {/* Alerte Validation */}
+      {profil?.etablissement_status === 'en_attente_validation' && (
+        <div className="mb-10 bg-orange-50 border-2 border-orange-200 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center gap-8 animate-in slide-in-from-top duration-700 shadow-xl shadow-orange-900/5">
+          <div className="w-20 h-20 bg-[#FF7A00] rounded-[1.5rem] flex items-center justify-center text-white shadow-lg shadow-orange-200 shrink-0">
+             <ShieldAlert size={40} />
+          </div>
+          <div className="flex-1 space-y-2 text-center md:text-left">
+             <h3 className="text-2xl font-black text-[#1E3A8A] tracking-tight uppercase leading-none">Compte en attente de validation</h3>
+             <p className="text-slate-500 font-medium">Votre établissement est en cours de vérification par nos services. Certaines fonctionnalités de reporting global sont limitées jusqu'à l'activation complète.</p>
+          </div>
+          <button className="h-14 px-8 bg-[#1E3A8A] text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-blue-800 transition-all whitespace-nowrap">
+            Contacter le support
+          </button>
+        </div>
+      )}
+
+      {/* Header Info */}
         <header className="h-20 bg-white border-b border-slate-100 flex items-center justify-between px-8 flex-shrink-0 z-50">
           <div className="flex items-center gap-6">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2.5 bg-slate-50 text-slate-600 rounded-xl">

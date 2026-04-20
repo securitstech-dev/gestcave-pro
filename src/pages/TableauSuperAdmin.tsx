@@ -133,19 +133,51 @@ const TableauSuperAdmin = () => {
     if (!nouvelEtab.nom || !nouvelEtab.email) return toast.error("Nom et Email requis");
     const toastId = toast.loading('Création...');
     try {
-      await addDoc(collection(db, 'etablissements'), {
+      // 1. Création de l'établissement
+      const etabRef = await addDoc(collection(db, 'etablissements'), {
         nom: nouvelEtab.nom,
-        contact_principal: nouvelEtab.contact || 'Admin Test',
+        contact_principal: nouvelEtab.contact || 'Administrateur',
         email_contact: nouvelEtab.email,
         subscription_plan: nouvelEtab.plan,
         subscription_status: 'actif',
         subscription_start_date: new Date().toISOString(),
         subscription_end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       });
-      toast.success("Établissement créé !", { id: toastId });
+
+      // 2. Création de l'invitation pour que le gérant puisse s'inscrire
+      const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      await addDoc(collection(db, 'invitations'), { 
+        token: invitationToken, 
+        email: nouvelEtab.email, 
+        nom: nouvelEtab.contact || 'Gérant', 
+        etablissement_id: etabRef.id, 
+        role: 'client_admin', 
+        date_creation: new Date().toISOString(), 
+        expire: Date.now() + (72 * 60 * 60 * 1000) 
+      });
+
+      const urlComplete = `${window.location.origin}/activation?token=${invitationToken}`;
+      setLienActivation({ url: urlComplete, nom: nouvelEtab.nom });
+
+      toast.success("Établissement créé et invitation générée !", { id: toastId });
       setModalAjoutEtab(false);
       setNouvelEtab({ nom: '', contact: '', email: '', plan: 'premium' });
-    } catch (err: any) { toast.error(err.message, { id: toastId }); }
+    } catch (err: any) { 
+      toast.error(err.message, { id: toastId }); 
+    }
+  };
+
+  const reactiverEtablissement = async (etabId: string) => {
+    const toastId = toast.loading('Réactivation...');
+    try {
+      await updateDoc(doc(db, 'etablissements', etabId), { 
+        subscription_status: 'actif',
+        subscription_end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      });
+      toast.success("Établissement réactivé !", { id: toastId });
+    } catch (err: any) {
+      toast.error(err.message, { id: toastId });
+    }
   };
 
   const suspendreEtablissement = async (etab: any) => {
@@ -433,8 +465,12 @@ const TableauSuperAdmin = () => {
                            </div>
 
                            <div className="flex gap-2">
+                              {etab.subscription_status === 'suspendu' || expire ? (
+                                <button onClick={() => reactiverEtablissement(etab.id)} className="w-16 h-16 bg-blue-50 text-[#1E3A8A] rounded-2xl flex items-center justify-center hover:bg-[#1E3A8A] hover:text-white transition-all shadow-inner" title="Réactiver"><Zap size={24} /></button>
+                              ) : (
+                                <button onClick={() => suspendreEtablissement(etab)} className="w-16 h-16 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all shadow-inner" title="Suspendre"><Ban size={24} /></button>
+                              )}
                               <button onClick={() => { useAuthStore.getState().setEtablissementSimule(etab.id); navigate('/tableau-de-bord'); }} className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all shadow-inner" title="Prendre le contrôle"><ExternalLink size={24} /></button>
-                              <button onClick={() => suspendreEtablissement(etab)} className="w-16 h-16 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all shadow-inner" title="Suspendre"><Ban size={24} /></button>
                            </div>
                         </div>
                       </div>

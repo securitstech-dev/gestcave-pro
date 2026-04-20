@@ -15,6 +15,7 @@ export interface ProfilUtilisateur {
   role: 'super_admin' | 'client_admin' | 'employe';
   etablissement_id: string;
   etablissement_nom?: string;
+  etablissement_status?: string;
   nom: string;
   prenom?: string;
 }
@@ -59,9 +60,20 @@ export const useAuthStore = create<EtatAuth>((set, get) => ({
           const profilSnap = await getDoc(profilRef);
           
           if (profilSnap.exists()) {
+            const profilData = profilSnap.data() as ProfilUtilisateur;
+            let statusEtab = 'actif';
+            
+            // On vérifie le statut de l'établissement
+            if (profilData.etablissement_id) {
+              const etabSnap = await getDoc(doc(db, 'etablissements', profilData.etablissement_id));
+              if (etabSnap.exists()) {
+                statusEtab = etabSnap.data().statut || etabSnap.data().subscription_status || 'actif';
+              }
+            }
+
             set({ 
               utilisateur: utilisateurFirebase, 
-              profil: { id: profilSnap.id, ...profilSnap.data() } as ProfilUtilisateur, 
+              profil: { ...profilData, id: profilSnap.id, etablissement_status: statusEtab } as ProfilUtilisateur, 
               initialise: true 
             });
           } else {
