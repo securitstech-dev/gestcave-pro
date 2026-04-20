@@ -492,10 +492,10 @@ const PageAccueil = () => {
             <div>
               <h4 className="font-black text-xs uppercase tracking-[0.3em] text-[#FF7A00] mb-8">Légal & Protection</h4>
               <ul className="space-y-4 text-sm font-bold text-slate-400">
-                <li><button onClick={() => setModalLegal({ ouvert: true, titre: "Mentions Légales", contenu: "GestCave Pro est une solution éditée par Securits Tech, basée à Brazzaville et Pointe-Noire. Direction Départementale des Loisirs." })} className="hover:text-white transition-colors">Mentions Légales</button></li>
-                <li><button onClick={() => setModalLegal({ ouvert: true, titre: "Confidentialité", contenu: "Vos données de ventes, de stocks et de personnel sont strictement confidentielles et cryptées. Aucun accès tiers n'est autorisé." })} className="hover:text-white transition-colors">Politique de Confidentialité</button></li>
-                <li><button onClick={() => setModalLegal({ ouvert: true, titre: "Conditions d'Utilisation", contenu: "L'utilisation de GestCave Pro implique l'acceptation de nos audits de sécurité. L'abonnement est payable d'avance à la direction." })} className="hover:text-white transition-colors">Conditions (CGU)</button></li>
-                <li><button onClick={() => setModalLegal({ ouvert: true, titre: "Audit & Sécurité", contenu: "Le système est audité 24/7 pour prévenir toute fraude interne dans votre établissement." })} className="hover:text-white transition-colors">Rapport de Sécurité</button></li>
+                <li><button onClick={() => setModalLegal({ ouvert: true, titre: "Mentions Légales", contenu: `Éditeur : Securits Technologies SARL\nGérant : Jacques Alphonse MATOKO\nSiège : Bâtiment de la Préfecture, Pointe-Noire, Congo.\nÉquipe Technique : Agents experts de la Direction des Loisirs de Pointe-Noire.\nHébergement : Infrastructure Cloud Vercel/Firebase (Google Cloud).` })} className="hover:text-white transition-colors">Mentions Légales</button></li>
+                <li><button onClick={() => setModalLegal({ ouvert: true, titre: "Confidentialité", contenu: `Engagement de Confidentialité :\n1. Securits Technologies SARL garantit que les données financières, de stocks et de personnel sont traitées exclusivement pour le fonctionnement du service.\n2. Aucune donnée n'est cédée, vendue ou utilisée à des fins de surveillance commerciale.\n3. Cryptage de bout en bout des transactions sensibles.` })} className="hover:text-white transition-colors">Politique de Confidentialité</button></li>
+                <li><button onClick={() => setModalLegal({ ouvert: true, titre: "Conditions d'Utilisation", contenu: `Clauses de Protection GestCave Pro :\n- Propriété Intellectuelle : Interdiction formelle de copier, reproduire ou analyser la logique de l'application (Reverse Engineering).\n- Paiements : Tout paiement donne lieu à un reçu officiel à l'entête de Securits Tech.\n- Activation : Les preuves de paiement mobile sont vérifiées par nos agents sous 30 minutes.\n- Limitation de Responsabilité : Notre responsabilité est plafonnée au montant du dernier mois d'abonnement payé par le client.\n- Suspension : En cas de défaut de paiement, l'accès est suspendu après un préavis de 48 heures.` })} className="hover:text-white transition-colors">Conditions (CGU)</button></li>
+                <li><button onClick={() => setModalLegal({ ouvert: true, titre: "Audit & Sécurité", contenu: "Dispositif Anti-Fraude :\nLe système GestCave Pro intègre des protocoles d'audit permanent pour détecter et prévenir les détournements de fonds et les erreurs de caisse au sein de votre établissement." })} className="hover:text-white transition-colors">Rapport de Sécurité</button></li>
               </ul>
             </div>
 
@@ -526,16 +526,16 @@ const PageAccueil = () => {
       {modalLegal?.ouvert && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-6">
           <div onClick={() => setModalLegal(null)} className="absolute inset-0 bg-slate-900/90 backdrop-blur-md" />
-          <div className="bg-white w-full max-w-xl p-12 rounded-[2.5rem] shadow-2xl relative animate-in slide-in-from-bottom-8 duration-500">
-            <h3 className="text-2xl font-black text-[#1E3A8A] uppercase tracking-tight mb-6">{modalLegal.titre}</h3>
+          <div className="bg-white w-full max-w-xl p-12 rounded-[2.5rem] shadow-2xl relative animate-in slide-in-from-bottom-8 duration-500 overflow-y-auto max-h-[80vh]">
+            <h3 className="text-2xl font-black text-[#1E3A8A] uppercase tracking-tight mb-6 border-b pb-4 border-slate-100">{modalLegal.titre}</h3>
             <div className="prose prose-slate mb-8">
-              <p className="text-slate-600 font-medium leading-relaxed">{modalLegal.contenu}</p>
+              <p className="text-slate-600 font-bold leading-relaxed whitespace-pre-line text-sm">{modalLegal.contenu}</p>
             </div>
             <button 
               onClick={() => setModalLegal(null)}
-              className="w-full h-14 bg-slate-100 text-[#1E3A8A] rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-slate-200 transition-colors"
+              className="w-full h-14 bg-[#1E3A8A] text-white rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-[#FF7A00] transition-colors"
             >
-              Fermer
+              J'ai pris connaissance
             </button>
           </div>
         </div>
