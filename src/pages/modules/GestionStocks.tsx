@@ -94,6 +94,52 @@ const GestionStocks = () => {
 
   const reinitialiserForm = () => {
       setNom(''); setPrix(0); setEmoji('🥤'); setStockAlerte(10);
+      setSelectedProduct(null);
+  };
+
+  const ouvrirEdition = (p: Produit) => {
+    setSelectedProduct(p);
+    setNom(p.nom);
+    setPrix(p.prix);
+    setCategorie(p.categorie as any);
+    setUnitesParCasier(p.unitesParCasier || 1);
+    setStockAlerte(p.stockAlerte || 0);
+    setEmoji(p.emoji || '📦');
+    setUniteMesure(p.uniteMesure || 'u');
+    setDestination(p.destination_production || 'bar');
+    setShowModal(true);
+  };
+
+  const modifierProduit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProduct) return;
+    try {
+      await updateDoc(doc(db, 'produits', selectedProduct.id), {
+        nom,
+        prix,
+        categorie,
+        unitesParCasier,
+        stockAlerte,
+        emoji,
+        uniteMesure,
+        destination_production: destination
+      });
+      toast.success(`${nom} mis à jour`);
+      setShowModal(false);
+      reinitialiserForm();
+    } catch {
+      toast.error("Erreur lors de la modification");
+    }
+  };
+
+  const supprimerProduit = async (p: Produit) => {
+    if (!window.confirm(`Voulez-vous vraiment supprimer définitivement ${p.nom.toUpperCase()} ?`)) return;
+    try {
+      await deleteDoc(doc(db, 'produits', p.id));
+      toast.success("Article supprimé");
+    } catch {
+      toast.error("Erreur lors de la suppression");
+    }
   };
 
   const ajusterStock = async (p: Produit, delta: number, type: 'unite' | 'casier') => {
@@ -347,12 +393,17 @@ const GestionStocks = () => {
                                 <button onClick={() => ajusterStock(p, -1, 'unite')} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-500 transition-all"><Minus size={16} /></button>
                                 <button onClick={() => ajusterStock(p, 1, 'unite')} className="w-8 h-8 flex items-center justify-center bg-white text-[#1E3A8A] rounded-lg shadow-sm border border-slate-100"><Plus size={16} /></button>
                              </div>
-                             {p.categorie === 'Boisson' && (
-                               <div className="flex bg-[#1E3A8A] p-1 rounded-xl shadow-lg shadow-blue-900/10">
+                              <div className="flex bg-[#1E3A8A] p-1 rounded-xl shadow-lg shadow-blue-900/10">
                                   <button onClick={() => ajusterStock(p, -1, 'casier')} className="w-8 h-8 flex items-center justify-center text-white/40 hover:text-white transition-all"><Layers size={16} /></button>
                                   <button onClick={() => ajusterStock(p, 1, 'casier')} className="w-8 h-8 flex items-center justify-center bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"><Plus size={16} /></button>
                                </div>
                              )}
+                             <button onClick={() => ouvrirEdition(p)} className="p-2 text-slate-300 hover:text-[#1E3A8A] transition-all ml-2">
+                               <Edit3 size={18} />
+                             </button>
+                             <button onClick={() => supprimerProduit(p)} className="p-2 text-slate-300 hover:text-rose-500 transition-all">
+                               <Trash2 size={18} />
+                             </button>
                           </div>
                         </td>
                       </tr>
@@ -371,11 +422,13 @@ const GestionStocks = () => {
             <button onClick={() => setShowModal(false)} className="absolute top-8 right-8 p-3 bg-slate-50 text-slate-400 hover:text-slate-900 rounded-2xl transition-all"><X size={24} /></button>
             <div className="mb-10">
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-full text-[#1E3A8A] text-[10px] font-bold uppercase tracking-widest mb-4">
-                  Nouveau Référencement
+                  {selectedProduct ? 'Modification Article' : 'Nouveau Référencement'}
                 </div>
-                <h3 className="text-3xl font-extrabold text-[#1E3A8A] tracking-tight leading-tight">Nouvel Article</h3>
+                <h3 className="text-3xl font-extrabold text-[#1E3A8A] tracking-tight leading-tight">
+                  {selectedProduct ? `Editer ${selectedProduct.nom}` : 'Nouvel Article'}
+                </h3>
             </div>
-            <form onSubmit={ajouterProduit} className="grid grid-cols-2 gap-6">
+            <form onSubmit={selectedProduct ? modifierProduit : ajouterProduit} className="grid grid-cols-2 gap-6">
               <div className="col-span-2">
                 <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-2 px-1">Désignation de l'article</label>
                 <input type="text" value={nom} onChange={(e)=>setNom(e.target.value)} placeholder="Ex: Heineken Prestige 33cl" required 
@@ -411,7 +464,9 @@ const GestionStocks = () => {
               </div>
               <div className="col-span-2 flex gap-4 mt-6">
                 <button type="button" onClick={()=>setShowModal(false)} className="flex-1 h-16 bg-slate-100 text-slate-500 rounded-2xl font-bold text-sm hover:bg-slate-200 transition-all">Annuler</button>
-                <button type="submit" className="flex-1 h-16 bg-[#1E3A8A] text-white rounded-2xl font-bold text-sm hover:bg-blue-800 transition-all shadow-lg shadow-blue-900/10">Enregistrer l'article</button>
+                <button type="submit" className="flex-1 h-16 bg-[#1E3A8A] text-white rounded-2xl font-bold text-sm hover:bg-blue-800 transition-all shadow-lg shadow-blue-900/10">
+                  {selectedProduct ? 'Enregistrer les modifications' : "Enregistrer l'article"}
+                </button>
               </div>
             </form>
           </div>
