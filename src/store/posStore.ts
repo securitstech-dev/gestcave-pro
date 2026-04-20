@@ -685,6 +685,18 @@ export const usePOSStore = create<PosState>((set, get) => ({
       type: 'final'
     });
 
+    const session = get().sessionActive;
+    if (session) {
+      const modeAmount = paye || totalFinal;
+      batch.update(doc(db, 'sessions_caisse', session.id), {
+        totalVentesTheorique: increment(modeAmount),
+        ...(mode === 'mobile' ? { totalMobile: increment(modeAmount) } : {}),
+        ...(mode === 'especes' || mode === 'comptant' ? { totalEspeces: increment(modeAmount) } : {}),
+        ...(mode === 'carte' ? { totalCarte: increment(modeAmount) } : {}),
+        ...(mode === 'credit' ? { totalCredit: increment(modeAmount) } : {})
+      });
+    }
+
     await batch.commit();
     await get().refreshCommande(commandeId);
   },
@@ -757,6 +769,18 @@ export const usePOSStore = create<PosState>((set, get) => ({
     };
     
     batch.set(doc(collection(db, 'transactions_pos')), transaction);
+
+    const session = get().sessionActive;
+    if (session) {
+      batch.update(doc(db, 'sessions_caisse', session.id), {
+        totalVentesTheorique: increment(montant),
+        ...(mode === 'mobile' ? { totalMobile: increment(montant) } : {}),
+        ...(mode === 'especes' || mode === 'comptant' ? { totalEspeces: increment(montant) } : {}),
+        ...(mode === 'carte' ? { totalCarte: increment(montant) } : {}),
+        ...(mode === 'credit' ? { totalCredit: increment(montant) } : {})
+      });
+    }
+
     await batch.commit();
     await get().refreshCommande(commandeId);
   },
