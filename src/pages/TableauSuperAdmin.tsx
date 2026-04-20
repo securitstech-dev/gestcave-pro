@@ -482,41 +482,50 @@ const TableauSuperAdmin = () => {
                       </div>
                     ) : (
                       paiements.map((p) => (
-                        <div key={p.id} className="bg-white rounded-[2rem] border border-slate-50 p-8 flex flex-col md:flex-row items-center justify-between gap-8 hover:border-orange-100 transition-all group shadow-sm hover:shadow-md relative overflow-hidden">
+                        <div key={p.id} className="bg-white rounded-[2rem] border border-slate-50 p-8 flex flex-col gap-6 hover:border-orange-100 transition-all group shadow-sm hover:shadow-md relative overflow-hidden">
                           <div className="absolute top-0 left-0 w-2 h-full bg-[#FF7A00]/10 group-hover:bg-[#FF7A00] transition-colors" />
                           
-                          <div className="flex items-center gap-8 flex-1">
-                              <div className="w-20 h-20 bg-slate-50 rounded-[1.5rem] flex items-center justify-center font-black text-xs text-slate-400 shadow-inner border border-slate-100 group-hover:bg-orange-50 transition-colors uppercase">
-                                  {p.methode?.slice(0, 4) || 'VIRE'}
-                              </div>
-                              <div>
-                                  <h4 className="text-2xl font-black text-[#1E3A8A] tracking-tight uppercase leading-none mb-3">{nomEtab(p.etablissement_id)}</h4>
-                                  <div className="flex flex-wrap gap-2">
-                                      <span className="text-[10px] font-bold bg-orange-50 text-[#FF7A00] px-3 py-1.5 rounded-lg tracking-widest uppercase border border-orange-100">{p.plan_id || 'PREMIUM'}</span>
-                                      <span className="text-[10px] font-bold bg-slate-100 text-slate-400 px-3 py-1.5 rounded-lg tracking-widest uppercase border border-slate-200">{new Date(p.date).toLocaleDateString()}</span>
-                                      <BadgeStatut statut={p.statut} />
-                                  </div>
-                              </div>
+                          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                            <div className="flex items-center gap-8 flex-1">
+                                <div className="w-20 h-20 bg-slate-50 rounded-[1.5rem] flex items-center justify-center font-black text-xs text-slate-400 shadow-inner border border-slate-100 group-hover:bg-orange-50 transition-colors uppercase">
+                                    {p.methode?.slice(0, 4) || 'VIRE'}
+                                </div>
+                                <div>
+                                    <h4 className="text-2xl font-black text-[#1E3A8A] tracking-tight uppercase leading-none mb-3">{nomEtab(p.etablissement_id)}</h4>
+                                    <div className="flex flex-wrap gap-2">
+                                        <span className="text-[10px] font-bold bg-orange-50 text-[#FF7A00] px-3 py-1.5 rounded-lg tracking-widest uppercase border border-orange-100">{p.plan_id || 'PREMIUM'}</span>
+                                        <span className="text-[10px] font-bold bg-slate-100 text-slate-400 px-3 py-1.5 rounded-lg tracking-widest uppercase border border-slate-200">{new Date(p.date).toLocaleDateString()}</span>
+                                        <BadgeStatut statut={p.statut} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-10 w-full md:w-auto">
+                                <div className="text-right">
+                                    <p className="text-3xl font-black text-[#1E3A8A] tracking-tighter">{(p.montant || 0).toLocaleString()} <span className="text-sm font-bold opacity-30">XAF</span></p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{p.periode || 'Mensuel'}</p>
+                                </div>
+
+                                {p.statut === 'en_attente' ? (
+                                  <button onClick={() => { setPlanPaiement(p.plan_id || 'premium'); setModalPaiement(p); }} className="h-16 px-10 bg-[#FF7A00] text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-orange-600 transition-all shadow-xl shadow-orange-900/10 active:scale-95">Valider</button>
+                                ) : (
+                                    <div className="flex gap-2">
+                                        {p.preuve_url && (
+                                          <a href={p.preuve_url} target="_blank" rel="noreferrer" className="w-16 h-16 bg-slate-50 text-slate-400 rounded-2xl flex items-center justify-center hover:bg-[#1E3A8A] hover:text-white transition-all shadow-inner">
+                                            <ExternalLink size={24} />
+                                          </a>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                           </div>
 
-                          <div className="flex items-center gap-10 w-full md:w-auto">
-                              <div className="text-right">
-                                  <p className="text-3xl font-black text-[#1E3A8A] tracking-tighter">{(p.montant || 0).toLocaleString()} <span className="text-sm font-bold opacity-30">XAF</span></p>
-                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{p.periode || 'Mensuel'}</p>
-                              </div>
-
-                              {p.statut === 'en_attente' ? (
-                                <button onClick={() => { setPlanPaiement(p.plan_id || 'premium'); setModalPaiement(p); }} className="h-16 px-10 bg-[#FF7A00] text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-orange-600 transition-all shadow-xl shadow-orange-900/10 active:scale-95">Valider</button>
-                              ) : (
-                                  <div className="flex gap-2">
-                                      {p.preuve_url && (
-                                        <a href={p.preuve_url} target="_blank" rel="noreferrer" className="w-16 h-16 bg-slate-50 text-slate-400 rounded-2xl flex items-center justify-center hover:bg-[#1E3A8A] hover:text-white transition-all shadow-inner">
-                                          <ExternalLink size={24} />
-                                        </a>
-                                      )}
-                                  </div>
-                              )}
-                          </div>
+                          {p.message && (
+                            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                               <p className="text-[10px] font-black text-[#1E3A8A] uppercase tracking-widest mb-2">Message du client :</p>
+                               <p className="text-sm font-medium text-slate-500 italic leading-relaxed">"{p.message}"</p>
+                            </div>
+                          )}
                         </div>
                       ))
                     )}

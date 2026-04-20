@@ -169,11 +169,65 @@ const TableauClient = () => {
     </div>
   );
 
+  const [modalSupport, setModalSupport] = useState(false);
+  const [supportMessage, setSupportMessage] = useState('');
+  const [envoiSupport, setEnvoiSupport] = useState(false);
+
+  const envoyerMessageSupport = async () => {
+    if (!supportMessage.trim()) return;
+    setEnvoiSupport(true);
+    try {
+      await addDoc(collection(db, 'messages_contact'), {
+        nom: profil?.prenom + ' ' + profil?.nom || 'Client GestCave',
+        contact: profil?.email || profil?.telephone || 'N/A',
+        etablissement: profil?.etablissement_nom || 'N/A',
+        message: supportMessage,
+        date: new Date(),
+        statut: 'nouveau',
+        type: 'support_client'
+      });
+      toast.success('Message envoyé au support !');
+      setSupportMessage('');
+      setModalSupport(false);
+    } catch (error) {
+      toast.error('Erreur lors de l\'envoi');
+    } finally {
+      setEnvoiSupport(false);
+    }
+  };
+
   return (
     <div className="flex h-screen bg-[#F8FAFC] overflow-hidden font-['Inter',sans-serif]">
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
       `}</style>
+
+      {/* Modal Support */}
+      {modalSupport && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
+          <div onClick={() => setModalSupport(null)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
+          <div className="bg-white w-full max-w-lg p-10 rounded-[2.5rem] shadow-2xl relative animate-in zoom-in-95 duration-300">
+            <button onClick={() => setModalSupport(null)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 transition-all"><X size={24} /></button>
+            <div className="mb-8">
+              <h3 className="text-2xl font-black text-[#1E3A8A] uppercase tracking-tight mb-2">Contacter le Support</h3>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Une question ? Un problème technique ?</p>
+            </div>
+            <textarea 
+              value={supportMessage}
+              onChange={(e) => setSupportMessage(e.target.value)}
+              placeholder="Décrivez votre besoin ici..."
+              className="w-full p-6 bg-slate-50 border border-slate-100 rounded-3xl outline-none focus:border-[#1E3A8A] transition-all font-bold text-sm min-h-[150px] mb-8"
+            />
+            <button 
+              onClick={envoyerMessageSupport}
+              disabled={envoiSupport || !supportMessage.trim()}
+              className="w-full h-16 bg-[#1E3A8A] text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-blue-900/20 hover:bg-blue-800 transition-all disabled:opacity-50"
+            >
+              {envoiSupport ? 'Envoi...' : 'Envoyer le message'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Desktop Sidebar */}
       <div className="hidden lg:block w-[300px] h-full flex-shrink-0">
@@ -201,7 +255,10 @@ const TableauClient = () => {
              <h3 className="text-2xl font-black text-[#1E3A8A] tracking-tight uppercase leading-none">Compte en attente de validation</h3>
              <p className="text-slate-500 font-medium">Votre établissement est en cours de vérification par nos services. Certaines fonctionnalités de reporting global sont limitées jusqu'à l'activation complète.</p>
           </div>
-          <button className="h-14 px-8 bg-[#1E3A8A] text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-blue-800 transition-all whitespace-nowrap">
+          <button 
+            onClick={() => setModalSupport(true)}
+            className="h-14 px-8 bg-[#1E3A8A] text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-blue-800 transition-all whitespace-nowrap"
+          >
             Contacter le support
           </button>
         </div>
