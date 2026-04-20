@@ -23,7 +23,12 @@ const GestionEtablissement = () => {
     logo: '',
     siteWeb: '',
     horaires: '',
-    description: ''
+    description: '',
+    heureOuvertureStandard: '08:00',
+    toleranceRetard: 5,
+    malusRetardParMinute: 100,
+    seuilRetardRepetitif: 3,
+    multiplicateurMalusRepetitif: 2
   });
 
   useEffect(() => {
@@ -147,6 +152,50 @@ const GestionEtablissement = () => {
                         <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-4 px-1">Site Web / Réseaux Sociaux</label>
                         <input type="text" value={formData.siteWeb} onChange={e => setFormData({...formData, siteWeb: e.target.value})}
                           className="w-full h-16 bg-slate-50 border border-slate-100 rounded-2xl px-8 outline-none focus:ring-4 focus:ring-blue-100 transition-all font-bold text-[#1E3A8A] text-sm uppercase tracking-widest shadow-sm placeholder:text-slate-200" />
+                    </div>
+                </div>
+            </div>
+
+            {/* HR & Discipline Protocols */}
+            <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl shadow-blue-900/5 space-y-10">
+                <div className="flex items-center gap-6">
+                    <div className="w-14 h-14 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-500 shadow-inner">
+                        <Clock size={24} />
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-extrabold text-[#1E3A8A] uppercase tracking-tight">Protocole RH & Discipline</h3>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Gestion automatique des retards et sanctions</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div>
+                        <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-4 px-1">Heure de Prise de Poste Standard</label>
+                        <input type="time" value={formData.heureOuvertureStandard} onChange={e => setFormData({...formData, heureOuvertureStandard: e.target.value})}
+                          className="w-full h-16 bg-slate-50 border border-slate-100 rounded-2xl px-8 outline-none focus:ring-4 focus:ring-blue-100 transition-all font-bold text-[#1E3A8A] text-sm shadow-sm" />
+                    </div>
+                    <div>
+                        <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-4 px-1">Tolérance Acceptée (minutes)</label>
+                        <input type="number" value={formData.toleranceRetard} onChange={e => setFormData({...formData, toleranceRetard: Number(e.target.value)})}
+                          className="w-full h-16 bg-slate-50 border border-slate-100 rounded-2xl px-8 outline-none focus:ring-4 focus:ring-blue-100 transition-all font-bold text-[#1E3A8A] text-sm shadow-sm" />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                    <div>
+                        <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-4 px-1">Malus / Minute (XAF)</label>
+                        <input type="number" value={formData.malusRetardParMinute} onChange={e => setFormData({...formData, malusRetardParMinute: Number(e.target.value)})}
+                          className="w-full h-16 bg-slate-50 border border-slate-100 rounded-2xl px-8 outline-none focus:ring-4 focus:ring-blue-100 transition-all font-bold text-rose-500 text-sm shadow-sm" />
+                    </div>
+                    <div>
+                        <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-4 px-1">Seuil Répétitif (Retards/Mois)</label>
+                        <input type="number" value={formData.seuilRetardRepetitif} onChange={e => setFormData({...formData, seuilRetardRepetitif: Number(e.target.value)})}
+                          className="w-full h-16 bg-slate-50 border border-slate-100 rounded-2xl px-8 outline-none focus:ring-4 focus:ring-blue-100 transition-all font-bold text-[#1E3A8A] text-sm shadow-sm" />
+                    </div>
+                    <div>
+                        <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-4 px-1">Multiplicateur Récidive</label>
+                        <input type="number" step="0.5" value={formData.multiplicateurMalusRepetitif} onChange={e => setFormData({...formData, multiplicateurMalusRepetitif: Number(e.target.value)})}
+                          className="w-full h-16 bg-slate-50 border border-slate-100 rounded-2xl px-8 outline-none focus:ring-4 focus:ring-blue-100 transition-all font-bold text-[#1E3A8A] text-sm shadow-sm" />
                     </div>
                 </div>
             </div>

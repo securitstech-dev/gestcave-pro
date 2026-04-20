@@ -56,6 +56,7 @@ const GestionEmployes = () => {
   const [showAvanceModal, setShowAvanceModal] = useState(false);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [presents, setPresents] = useState<any[]>([]);
+  const [sanctions, setSanctions] = useState<any[]>([]);
 
   useEffect(() => {
     if (!etablissementId) {
@@ -101,7 +102,16 @@ const GestionEmployes = () => {
       setAvances(snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Avance[]);
     });
 
-    return () => { unsubEmp(); unsubAvances(); unsubTrans(); unsubPresence(); };
+    const qSanctions = query(
+      collection(db, 'discipline'),
+      where('etablissement_id', '==', etablissementId),
+      where('date', '>=', debutMois.toISOString())
+    );
+    const unsubSanctions = onSnapshot(qSanctions, (snapshot) => {
+      setSanctions(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
+    return () => { unsubEmp(); unsubAvances(); unsubTrans(); unsubPresence(); unsubSanctions(); };
   }, [etablissementId]);
 
   const genererPIN = () => Math.floor(1000 + Math.random() * 9000).toString();
@@ -295,9 +305,10 @@ const GestionEmployes = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {employes.map((emp) => {
               const totalAvances = avances.filter(a => a.employe_id === emp.id).reduce((acc, curr) => acc + curr.montant, 0);
+              const totalSanctions = sanctions.filter(s => s.employe_id === emp.id).reduce((acc, curr) => acc + curr.montant, 0);
               const ventesEmploye = transactions.filter(t => t.serveurId === emp.id).reduce((acc, t) => acc + (t.total || 0), 0);
               const commission = emp.role === 'serveur' ? Math.floor(ventesEmploye * 0.02) : 0;
-              const soldeNet = (emp.salaire || 0) + commission - totalAvances;
+              const soldeNet = (emp.salaire || 0) + commission - totalAvances - totalSanctions;
 
               return (
               <div key={emp.id} className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl shadow-blue-900/5 hover:border-blue-200 transition-all relative group overflow-hidden">
@@ -354,6 +365,12 @@ const GestionEmployes = () => {
                     <div className="flex justify-between items-center text-xs font-bold text-orange-500 uppercase tracking-widest">
                       <span>Avances à déduire</span>
                       <span>-{totalAvances.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {totalSanctions > 0 && (
+                    <div className="flex justify-between items-center text-xs font-bold text-rose-500 uppercase tracking-widest">
+                      <span>Sanctions (Retards/Abs)</span>
+                      <span>-{totalSanctions.toLocaleString()}</span>
                     </div>
                   )}
                   <div className="h-[1px] bg-slate-200/50 my-2" />

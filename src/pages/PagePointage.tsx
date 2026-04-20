@@ -19,11 +19,12 @@ const PagePointage = () => {
   const [employe, setEmploye] = useState<any>(null);
   const [sessionActuelle, setSessionActuelle] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [configRH, setConfigRH] = useState<any>(null);
 
   // Support clavier physique
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (loading || employe) return; // Ne pas écouter si déjà identifié
+      if (loading || employe) return;
 
       if (e.key >= '0' && e.key <= '9') {
         if (pin.length < 4) {
@@ -39,9 +40,19 @@ const PagePointage = () => {
       }
     };
 
+    const fetchConfig = async () => {
+      if (!etablissementId) return;
+      const snap = await getDocs(query(collection(db, 'etablissements'), where('proprietaire_id', '!=', ''))); // Simplifié
+      // Mieux : fetch par ID direct
+      const docRef = doc(db, 'etablissements', etablissementId);
+      const docSnap = await getDocs(query(collection(db, 'etablissements'), where('__name__', '==', etablissementId)));
+      if (!docSnap.empty) setConfigRH(docSnap.docs[0].data());
+    };
+
+    fetchConfig();
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [pin, loading, employe]);
+  }, [pin, loading, employe, etablissementId]);
 
   const [time, setTime] = useState(new Date());
   useEffect(() => {
@@ -122,15 +133,66 @@ const PagePointage = () => {
     setLoading(true);
     try {
       if (type === 'arrivee') {
+        const maintenant = new Date();
+        let noteRetard = "";
+        let malusCalcule = 0;
+
+        if (configRH?.heureOuvertureStandard) {
+          const [h, m] = configRH.heureOuvertureStandard.split(':').map(Number);
+          const heureLimite = new Date();
+          heureLimite.setHours(h, m + (configRH.toleranceRetard || 0), 0, 0);
+
+          if (maintenant > heureLimite) {
+            const minutesRetard = Math.floor((maintenant.getTime() - heureLimite.getTime()) / 60000);
+            malusCalcule = minutesRetard * (configRH.malusRetardParMinute || 0);
+            
+            // Vérification récidive (30 derniers jours)
+            const debutMois = new Date();
+            debutMois.setDate(1);
+            const qRetards = query(
+              collection(db, 'discipline'),
+              where('employe_id', '==', employe.id),
+              where('type', '==', 'retard'),
+              where('date', '>=', debutMois.toISOString())
+            );
+            const snapRetards = await getDocs(qRetards);
+            const nbRetards = snapRetards.size + 1;
+
+            if (nbRetards >= (configRH.seuilRetardRepetitif || 3)) {
+              malusCalcule *= (configRH.multiplicateurMalusRepetitif || 2);
+              noteRetard = `Retard de ${minutesRetard}min. RÉCIDIVE détectée (${nbRetards}e retard du mois). Malus doublé.`;
+            } else {
+              noteRetard = `Retard de ${minutesRetard}min constaté.`;
+            }
+
+            // Enregistrement de la sanction
+            await addDoc(collection(db, 'discipline'), {
+              employe_id: employe.id,
+              employe_nom: employe.nom,
+              type: 'retard',
+              montant: malusCalcule,
+              date: maintenant.toISOString(),
+              etablissement_id: etablissementId,
+              note: noteRetard
+            });
+          }
+        }
+
         await addDoc(collection(db, 'pointage_presence'), {
           employe_id: employe.id,
           employe_nom: employe.nom,
           etablissement_id: etablissementId,
           debut: Timestamp.now(),
           statut: 'present',
-          pauses: []
+          pauses: [],
+          retard_minutes: malusCalcule > 0 ? noteRetard : null
         });
-        toast.success(`Bon service, ${employe.nom} !`);
+
+        if (malusCalcule > 0) {
+          toast.error(`Retard enregistré : -${malusCalcule.toLocaleString()} XAF`, { duration: 5000 });
+        } else {
+          toast.success(`Bon service, ${employe.nom} !`);
+        }
       } else if (type === 'depart') {
         const ref = doc(db, 'pointage_presence', sessionActuelle.id);
         await updateDoc(ref, {
