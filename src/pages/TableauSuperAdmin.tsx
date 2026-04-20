@@ -37,7 +37,7 @@ const TableauSuperAdmin = () => {
   const [modalPaiement, setModalPaiement] = useState<any | null>(null);
   const [planPaiement, setPlanPaiement] = useState<'mensuel' | 'premium' | 'business'>('mensuel');
   
-  const [lienActivation, setLienActivation] = useState<{ url: string; nom: string } | null>(null);
+  const [lienActivation, setLienActivation] = useState<{ url: string; nom: string; email?: string; plan?: string; nomGerant?: string } | null>(null);
   const [modalAjoutEtab, setModalAjoutEtab] = useState(false);
   const [nouvelEtab, setNouvelEtab] = useState({ nom: '', contact: '', email: '', plan: 'premium' });
   
@@ -81,6 +81,31 @@ const TableauSuperAdmin = () => {
 
   const nomEtab = (etabId: string) => { const etab = etablissements.find(e => e.id === etabId); return etab?.nom || etab?.contact_principal || `...${etabId?.slice(-6)}`; };
 
+  // --- Plan → Modules mapping ---
+  const MODULES_PAR_PLAN: Record<string, string[]> = {
+    'essai_gratuit': ['pos', 'stock', 'hr', 'compta', 'kds', 'analytics'],
+    'starter':       ['pos', 'stock', 'kds'],
+    'premium':       ['pos', 'stock', 'hr', 'compta', 'kds'],
+    'business':      ['pos', 'stock', 'hr', 'compta', 'kds', 'analytics'],
+  };
+
+  const NOMS_MODULES: Record<string, string> = {
+    pos:       '✅ Point de Vente (Caisse / Serveurs)',
+    stock:     '✅ Gestion des Stocks & Inventaire',
+    hr:        '✅ Ressources Humaines & Pointage',
+    compta:    '✅ Comptabilité & Grand Livre',
+    kds:       '✅ Écran Cuisine / Bar (KDS)',
+    analytics: '✅ Analyses Prédictives & Rapports',
+  };
+
+  const DESCRIPTIONS_PLAN: Record<string, string> = {
+    essai_gratuit: 'Essai Gratuit 14 jours (tous les modules débloqués)',
+    starter:       'Formule Starter — POS, Stocks, KDS',
+    premium:       'Formule Premium — POS, Stocks, KDS, RH, Comptabilité',
+    business:      'Formule Business — Accès complet à tous les modules',
+  };
+
+
   const validerApprobation = async () => {
     if (!modalApprobation) return;
     const { demandeId, demande } = modalApprobation;
@@ -105,13 +130,13 @@ const TableauSuperAdmin = () => {
         email_contact: demande.email_contact, subscription_plan: typePlan,
         subscription_status: statut, subscription_start_date: new Date().toISOString(),
         subscription_end_date: new Date(Date.now() + jours * 24 * 60 * 60 * 1000).toISOString(),
-        modules_actifs: ['pos', 'stock', 'hr', 'compta', 'kds', 'analytics']
+        modules_actifs: MODULES_PAR_PLAN[typePlan] || MODULES_PAR_PLAN['essai_gratuit']
       });
       await updateDoc(doc(db, 'demandes_acces', demandeId), { statut: 'valide', etablissement_id: etabRef.id });
       const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       await addDoc(collection(db, 'invitations'), { token: invitationToken, email: demande.email_contact, nom: demande.nom_contact, etablissement_id: etabRef.id, role: 'client_admin', date_creation: new Date().toISOString(), expire: Date.now() + (72 * 60 * 60 * 1000) });
       const urlComplete = `${window.location.origin}/activation?token=${invitationToken}`;
-      setLienActivation({ url: urlComplete, nom: demande.nom_etablissement });
+      setLienActivation({ url: urlComplete, nom: demande.nom_etablissement, email: demande.email_contact, plan: typePlan, nomGerant: demande.nom_contact });
       setModalApprobation(null);
       toast.dismiss(toastId); toast.success(`Accès accordé pour ${demande.nom_etablissement}`);
     } catch (err: any) { toast.dismiss(toastId); toast.error(`Erreur: ${err.message}`); }
@@ -165,7 +190,7 @@ const TableauSuperAdmin = () => {
         subscription_status: 'actif',
         subscription_start_date: new Date().toISOString(),
         subscription_end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        modules_actifs: ['pos', 'stock', 'hr', 'compta', 'kds', 'analytics']
+        modules_actifs: MODULES_PAR_PLAN[nouvelEtab.plan] || MODULES_PAR_PLAN['premium']
       });
 
       // 2. Création de l'invitation pour que le gérant puisse s'inscrire
@@ -181,7 +206,7 @@ const TableauSuperAdmin = () => {
       });
 
       const urlComplete = `${window.location.origin}/activation?token=${invitationToken}`;
-      setLienActivation({ url: urlComplete, nom: nouvelEtab.nom });
+      setLienActivation({ url: urlComplete, nom: nouvelEtab.nom, email: nouvelEtab.email, plan: nouvelEtab.plan, nomGerant: nouvelEtab.contact || 'Gérant' });
 
       toast.success("Établissement créé et invitation générée !", { id: toastId });
       setModalAjoutEtab(false);
@@ -956,15 +981,61 @@ const TableauSuperAdmin = () => {
                <h3 className="text-4xl font-black text-slate-800 tracking-tight uppercase leading-none mb-6">Compte Créé !</h3>
                <p className="text-slate-500 font-medium text-lg mb-12">Transmettez ce lien unique au gérant de <span className="font-bold text-[#1E3A8A]">{lienActivation.nom}</span>.</p>
                
-               <div className="bg-slate-50 border border-slate-100 rounded-[2rem] p-10 mb-12 font-mono text-sm text-[#1E3A8A] break-all select-all flex items-center justify-center shadow-inner">
+               <div className="bg-slate-50 border border-slate-100 rounded-[2rem] p-8 mb-8 font-mono text-sm text-[#1E3A8A] break-all select-all flex items-center justify-center shadow-inner">
                   {lienActivation.url}
                </div>
 
+               {lienActivation.plan && (
+                 <div className="bg-blue-50 border border-blue-100 rounded-[2rem] p-6 mb-8 text-left">
+                   <p className="text-[10px] font-black text-[#1E3A8A] uppercase tracking-widest mb-3">Modules activés ({DESCRIPTIONS_PLAN[lienActivation.plan] || lienActivation.plan})</p>
+                   <div className="space-y-1">
+                     {(MODULES_PAR_PLAN[lienActivation.plan] || []).map(m => (
+                       <p key={m} className="text-sm font-bold text-slate-700">{NOMS_MODULES[m]}</p>
+                     ))}
+                     {['pos','stock','hr','compta','kds','analytics'].filter(m => !(MODULES_PAR_PLAN[lienActivation.plan] || []).includes(m)).map(m => (
+                       <p key={m} className="text-sm font-bold text-slate-300">❌ {NOMS_MODULES[m]?.replace('✅','')}</p>
+                     ))}
+                   </div>
+                 </div>
+               )}
+
                <div className="flex flex-col sm:flex-row gap-4">
                   <button onClick={() => setLienActivation(null)} className="flex-1 h-16 bg-slate-50 text-slate-400 rounded-2xl font-bold uppercase tracking-widest text-xs hover:bg-slate-100 transition-all">Fermer</button>
-                  <button onClick={() => { navigator.clipboard.writeText(lienActivation.url); toast.success("Lien copié"); }} className="flex-[2] h-16 bg-[#1E3A8A] text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-blue-900/10 hover:bg-blue-800 flex items-center justify-center gap-3 transition-all active:scale-95">
-                    <Copy size={20} /> Copier le lien
+                  <button onClick={() => { navigator.clipboard.writeText(lienActivation.url); toast.success("Lien copié"); }} className="flex-1 h-16 bg-[#1E3A8A] text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-blue-900/10 hover:bg-blue-800 flex items-center justify-center gap-3 transition-all active:scale-95">
+                    <Copy size={18} /> Copier le lien
                   </button>
+                  {lienActivation.email && (
+                    <button onClick={() => {
+                      const modules = (MODULES_PAR_PLAN[lienActivation.plan!] || []).map(m => `• ${NOMS_MODULES[m]?.replace('✅ ','')}`).join('%0A');
+                      const inactifs = ['pos','stock','hr','compta','kds','analytics'].filter(m => !(MODULES_PAR_PLAN[lienActivation.plan!]||[]).includes(m)).map(m => `• ${NOMS_MODULES[m]?.replace('✅ ','') || m} (non inclus)`).join('%0A');
+                      const sujet = encodeURIComponent(`Votre accès GestCave Pro — ${lienActivation.nom}`);
+                      const corps = encodeURIComponent(`Bonjour ${lienActivation.nomGerant || ''},
+
+Votre compte GestCave Pro pour l'établissement "${lienActivation.nom}" a été créé avec succès.
+
+═══════════════════════════════
+  VOTRE FORMULE : ${(DESCRIPTIONS_PLAN[lienActivation.plan!] || lienActivation.plan || '').toUpperCase()}
+═══════════════════════════════
+
+MODULES INCLUS DANS VOTRE FORMULE :
+`) + modules + encodeURIComponent(`
+
+MODULES NON INCLUS (disponibles sur une formule supérieure) :
+`) + inactifs + encodeURIComponent(`
+
+POUR ACTIVER VOTRE COMPTE, CLIQUEZ SUR CE LIEN :
+${lienActivation.url}
+
+⚠️ Ce lien est valable 72 heures. Si vous ne l'activez pas dans ce délai, contactez notre support.
+
+Pour toute question : support@gestcave.pro
+
+L'équipe GestCave Pro`);
+                      window.open(`mailto:${lienActivation.email}?subject=${sujet}&body=${corps}`, '_blank');
+                    }} className="flex-1 h-16 bg-emerald-600 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-emerald-900/10 hover:bg-emerald-700 flex items-center justify-center gap-3 transition-all active:scale-95">
+                      <Mail size={18} /> Envoyer l'email
+                    </button>
+                  )}
                </div>
             </div>
          </div>
