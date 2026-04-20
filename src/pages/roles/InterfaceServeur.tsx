@@ -352,7 +352,13 @@ const InterfaceServeur = () => {
                 <div className="flex-1 overflow-y-auto p-8 no-scrollbar bg-slate-50/50">
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
                         {produitsFiltres.map(p => (
-                            <button key={p.id} onClick={() => ajouterLigne(commandeId!, p)}
+                            <button key={p.id} onClick={() => {
+                                if (commandeActive && commandeActive.serveurId !== idEmploye) {
+                                    toast.error(`Cette table est gérée par ${commandeActive.serveurNom}`);
+                                    return;
+                                }
+                                ajouterLigne(commandeId!, p);
+                            }}
                               className="aspect-[4/5] bg-white rounded-[2.5rem] p-6 border border-slate-100 shadow-xl shadow-blue-900/5 flex flex-col justify-between text-left group hover:border-[#FF7A00] transition-all hover:-translate-y-1"
                             >
                                 <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-2xl shadow-inner group-hover:bg-blue-50 transition-colors">
@@ -433,37 +439,64 @@ const InterfaceServeur = () => {
 
                 <div className="p-8 md:p-10 bg-white border-t border-slate-50 space-y-6">
                     {commandeActive?.lignes.some(l => l.statut === 'pret') && (
-                      <button 
-                        onClick={async () => {
-                            const toastId = toast.loading("Mise à jour du service...");
-                            await marquerCommandeServie(commandeId!);
-                            toast.success("Plats marqués comme servis !", { id: toastId });
-                        }}
-                        className="w-full h-20 bg-orange-500 text-white rounded-[2rem] font-black uppercase tracking-widest text-sm shadow-xl shadow-orange-900/20 flex items-center justify-center gap-4 hover:bg-orange-600 transition-all animate-pulse"
-                      >
-                          <Utensils size={24} /> CONFIRMER LE SERVICE (À RÉCUPÉRER)
-                      </button>
+                      commandeActive.serveurId === idEmploye ? (
+                        <button 
+                          onClick={async () => {
+                              const toastId = toast.loading("Mise à jour du service...");
+                              await marquerCommandeServie(commandeId!);
+                              toast.success("Plats marqués comme servis !", { id: toastId });
+                          }}
+                          className="w-full h-20 bg-orange-500 text-white rounded-[2rem] font-black uppercase tracking-widest text-sm shadow-xl shadow-orange-900/20 flex items-center justify-center gap-4 hover:bg-orange-600 transition-all animate-pulse"
+                        >
+                            <Utensils size={24} /> CONFIRMER LE SERVICE (À RÉCUPÉRER)
+                        </button>
+                      ) : (
+                        <div className="w-full p-6 bg-slate-50 rounded-[2rem] border border-slate-200 flex items-center gap-4">
+                            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-slate-400 shadow-sm">
+                                <ShieldCheck size={24} />
+                            </div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+                                Seul <span className="text-[#1E3A8A]">{commandeActive.serveurNom}</span> peut valider ce service.
+                            </p>
+                        </div>
+                      )
                     )}
 
                     <div className="flex gap-4">
                         <button 
-                          onClick={() => handleFermerTable(commandeId!)} 
-                          className="flex-1 h-16 bg-rose-50 text-rose-600 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-rose-100 hover:bg-rose-500 hover:text-white transition-all shadow-sm flex items-center justify-center gap-2"
+                          onClick={() => {
+                              if (commandeActive && commandeActive.serveurId !== idEmploye) {
+                                  toast.error("Action réservée au serveur responsable");
+                                  return;
+                              }
+                              handleFermerTable(commandeId!);
+                          }} 
+                          className={`flex-1 h-16 rounded-2xl font-black uppercase tracking-widest text-[10px] border transition-all shadow-sm flex items-center justify-center gap-2 ${
+                            commandeActive?.serveurId === idEmploye 
+                              ? 'bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-500 hover:text-white' 
+                              : 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed'
+                          }`}
                         >
                           <Trash2 size={16} /> ANNULER / LIBÉRER LA TABLE
                         </button>
                         <button onClick={() => demanderAddition(commandeId!, tableSelectionnee?.id || '')} className="flex-1 h-16 bg-emerald-50 text-emerald-600 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-emerald-100 hover:bg-emerald-100 transition-all">L'addition</button>
                     </div>
-                    <button 
-                      onClick={async () => {
-                          const toastId = toast.loading("Envoi en cuisine...");
-                          await envoyerCuisine(commandeId!);
-                          toast.success("Commande envoyée !", { id: toastId });
-                      }}
-                      className="w-full h-20 bg-[#1E3A8A] text-white rounded-[2rem] font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-900/20 flex items-center justify-center gap-4 hover:bg-blue-800 transition-all group"
-                    >
-                        Envoyer en production <Send size={20} className="group-hover:translate-x-1 transition-transform" />
-                    </button>
+                    {commandeActive?.serveurId === idEmploye ? (
+                        <button 
+                          onClick={async () => {
+                              const toastId = toast.loading("Envoi en cuisine...");
+                              await envoyerCuisine(commandeId!);
+                              toast.success("Commande envoyée !", { id: toastId });
+                          }}
+                          className="w-full h-20 bg-[#1E3A8A] text-white rounded-[2rem] font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-900/20 flex items-center justify-center gap-4 hover:bg-blue-800 transition-all group"
+                        >
+                            Envoyer en production <Send size={20} className="group-hover:translate-x-1 transition-transform" />
+                        </button>
+                    ) : (
+                        <div className="w-full h-20 bg-slate-100 text-slate-400 rounded-[2rem] font-black uppercase tracking-widest text-xs flex items-center justify-center gap-4 cursor-not-allowed border border-slate-200">
+                           <Lock size={20} /> COMMANDE VERROUILLÉE
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
