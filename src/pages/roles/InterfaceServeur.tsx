@@ -11,7 +11,7 @@ import {
   MoreVertical, Power, RefreshCcw, MoreHorizontal, ArrowRight, Check, Bell, Lock, AlertCircle
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { usePOSStore, imprimerBonPreparation } from '../../store/posStore';
+import { usePOSStore, imprimerBonPreparation, imprimerTicket } from '../../store/posStore';
 import { usePosteSession } from '../../hooks/usePosteSession';
 import { useAuthStore } from '../../store/authStore';
 import { useNavigate } from 'react-router-dom';
@@ -22,7 +22,7 @@ const InterfaceServeur = () => {
     tables, produits, commandes, 
     ouvrirTable, ajouterLigne, modifierQuantite, 
     supprimerLigne, envoyerCuisine, annulerCommande, demanderAddition,
-    marquerCommandeServie, forcerLiberationTable, initPOS, etablissement_id: posEtabId
+    marquerCommandeServie, forcerLiberationTable, initPOS, etablissement_id: posEtabId, isOnline
   } = usePOSStore();
   const { profil } = useAuthStore();
   
@@ -479,34 +479,41 @@ const InterfaceServeur = () => {
                         >
                           <Trash2 size={16} /> ANNULER / LIBÉRER LA TABLE
                         </button>
-                        <button onClick={() => demanderAddition(commandeId!, tableSelectionnee?.id || '')} className="flex-1 h-16 bg-emerald-50 text-emerald-600 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-emerald-100 hover:bg-emerald-100 transition-all">L'addition</button>
+                        <button onClick={() => {
+                            demanderAddition(commandeId!, tableSelectionnee?.id || '');
+                            imprimerTicket(commandeActive!, profil?.etablissementNom || 'GESTCAVE PRO');
+                        }} className="flex-1 h-16 bg-emerald-50 text-emerald-600 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-emerald-100 hover:bg-emerald-100 transition-all">L'addition</button>
                     </div>
                     {commandeActive?.serveurId === idEmploye ? (
                         <button 
                           onClick={async () => {
                               const toastId = toast.loading("Envoi en cuisine...");
                               
-                              // Check if we have items for Kitchen vs Bar
-                              const produitsCuisine = panierActuel.filter(l => 
-                                produits.find(p => p.id === l.produitId)?.categorie !== 'Bière' && 
-                                produits.find(p => p.id === l.produitId)?.categorie !== 'Vin' &&
-                                produits.find(p => p.id === l.produitId)?.categorie !== 'Boisson'
-                              );
-                              const produitsBar = panierActuel.filter(l => 
-                                produits.find(p => p.id === l.produitId)?.categorie === 'Bière' || 
-                                produits.find(p => p.id === l.produitId)?.categorie === 'Vin' ||
-                                produits.find(p => p.id === l.produitId)?.categorie === 'Boisson'
-                              );
+                              if (!isOnline) {
+                                // Check if we have items for Kitchen vs Bar
+                                const produitsCuisine = panierActuel.filter(l => 
+                                  produits.find(p => p.id === l.produitId)?.categorie !== 'Bière' && 
+                                  produits.find(p => p.id === l.produitId)?.categorie !== 'Vin' &&
+                                  produits.find(p => p.id === l.produitId)?.categorie !== 'Boisson'
+                                );
+                                const produitsBar = panierActuel.filter(l => 
+                                  produits.find(p => p.id === l.produitId)?.categorie === 'Bière' || 
+                                  produits.find(p => p.id === l.produitId)?.categorie === 'Vin' ||
+                                  produits.find(p => p.id === l.produitId)?.categorie === 'Boisson'
+                                );
 
-                              if (produitsCuisine.length > 0) {
-                                imprimerBonPreparation(commandeActive!, produitsCuisine, "CUISINE", profil?.etablissementNom || 'GESTCAVE PRO');
-                              }
-                              if (produitsBar.length > 0) {
-                                imprimerBonPreparation(commandeActive!, produitsBar, "BAR", profil?.etablissementNom || 'GESTCAVE PRO');
+                                if (produitsCuisine.length > 0) {
+                                  imprimerBonPreparation(commandeActive!, produitsCuisine, "CUISINE (HORS-LIGNE)", profil?.etablissementNom || 'GESTCAVE PRO');
+                                }
+                                if (produitsBar.length > 0) {
+                                  imprimerBonPreparation(commandeActive!, produitsBar, "BAR (HORS-LIGNE)", profil?.etablissementNom || 'GESTCAVE PRO');
+                                }
+                                toast.success("Bons hors-ligne imprimés !", { id: toastId });
+                              } else {
+                                toast.success("Commande envoyée !", { id: toastId });
                               }
 
                               await envoyerCuisine(commandeId!);
-                              toast.success("Commande envoyée et bons imprimés !", { id: toastId });
                           }}
                           className="w-full h-20 bg-[#1E3A8A] text-white rounded-[2rem] font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-900/20 flex items-center justify-center gap-4 hover:bg-blue-800 transition-all group"
                         >
