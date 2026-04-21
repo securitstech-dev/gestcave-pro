@@ -55,6 +55,8 @@ const GestionConformite = () => {
   const [departement, setDepartement] = useState(profil?.departement || 'Pointe-Noire');
   const [nbChaises, setNbChaises] = useState(profil?.nb_chaises || 0);
   const [typeEtablissement, setTypeEtablissement] = useState<'restaurant' | 'bar' | 'mixte'>(profil?.type_etablissement || 'mixte');
+  const [editingTaxId, setEditingTaxId] = useState<string | null>(null);
+  const [editingMontant, setEditingMontant] = useState<number>(0);
   const [documents, setDocuments] = useState<DocumentConformite[]>([
     { nom: "Autorisation d'Exploitation", present: false },
     { nom: "Licence de Vente d'Alcool", present: false },
@@ -79,31 +81,31 @@ const GestionConformite = () => {
   }, [etablissementId]);
 
   const initialiserTaxesStandard = async () => {
-    if (!window.confirm("Voulez-vous générer la liste des taxes standards pour le Congo ?")) return;
+    if (!window.confirm("Générer la liste des taxes ? Vous devrez ensuite saisir les montants négociés avec chaque entité.")) return;
     
     const taxesStandards = [
       {
         nom: "Autorisation d'Exploitation",
-        description: `Basée sur la capacité (${nbChaises} chaises). Tutelle: ${typeEtablissement === 'restaurant' ? 'Tourisme' : 'Loisirs'}`,
-        montant: nbChaises * 5000, // Estimation
+        description: `Capacité: ${nbChaises} chaises. Tutelle: ${typeEtablissement === 'restaurant' ? 'Tourisme' : 'Loisirs'}`,
+        montant: 0,
         frequence: 'annuel',
-        entite: typeEtablissement === 'restaurant' ? 'Direction Départementale du Tourisme' : 'Direction Départementale des Loisirs',
+        entite: typeEtablissement === 'restaurant' ? 'Dir. Dépt. Tourisme' : 'Dir. Dépt. Loisirs',
         negociable: true,
         paye: false
       },
       {
         nom: "Licence de Vente d'Alcool",
-        description: "Services Préfectoraux",
-        montant: 150000,
+        description: "Services Préfectoraux — Montant à définir",
+        montant: 0,
         frequence: 'unique',
         entite: "Préfecture",
-        negociable: false,
+        negociable: true,
         paye: false
       },
       {
         nom: "Droits d'Auteurs (BCDA)",
-        description: "Redevance pour la diffusion de musique",
-        montant: 60000,
+        description: "Redevance musique — payable trimestriellement",
+        montant: 0,
         frequence: 'annuel',
         entite: "BCDA",
         negociable: true,
@@ -111,8 +113,8 @@ const GestionConformite = () => {
       },
       {
         nom: "Autorisation d'Ouverture (Mairie)",
-        description: "Taxe municipale annuelle",
-        montant: 100000,
+        description: "Taxe municipale — Montant à négocier",
+        montant: 0,
         frequence: 'annuel',
         entite: "Mairie",
         negociable: true,
@@ -120,7 +122,7 @@ const GestionConformite = () => {
       },
       {
         nom: "Impôts (Forfait Fiscal)",
-        description: "Impôt forfaitaire sur le chiffre d'affaires",
+        description: "Forfait fiscal — Montant à définir avec les Impôts",
         montant: 0,
         frequence: 'trimestriel',
         entite: "Impôts",
@@ -138,9 +140,19 @@ const GestionConformite = () => {
           dateCreation: new Date().toISOString()
         });
       }
-      toast.success("Taxes standards initialisées");
+      toast.success("Taxes créées ! Saisissez maintenant les montants négociés.");
     } catch {
       toast.error("Erreur lors de l'initialisation");
+    }
+  };
+
+  const updateMontantTaxe = async (taxeId: string, nouveauMontant: number) => {
+    try {
+      await updateDoc(doc(db, 'taxes_conformite', taxeId), { montant: nouveauMontant });
+      toast.success("Montant mis à jour");
+      setEditingTaxId(null);
+    } catch {
+      toast.error("Erreur de sauvegarde");
     }
   };
 
@@ -189,7 +201,7 @@ const GestionConformite = () => {
 
         <div className="flex flex-wrap gap-3 relative z-10">
             <button onClick={initialiserTaxesStandard} className="px-6 py-4 bg-white border border-slate-200 text-[#1E3A8A] rounded-2xl font-bold text-xs flex items-center gap-3 hover:bg-slate-50 transition-all shadow-sm">
-              <RefreshCcw size={18} /> Initialiser Taxes Congo
+              <RefreshCcw size={18} /> Générer la Liste des Taxes
             </button>
             <button className="px-6 py-4 bg-slate-900 text-white rounded-2xl font-bold text-xs flex items-center gap-3 hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20">
               <ClipboardCheck size={18} /> Nouveau Contrôle
@@ -319,8 +331,34 @@ const GestionConformite = () => {
                                 )}
                             </td>
                             <td className="px-10 py-8">
-                                <p className="font-black text-[#1E3A8A] text-lg tracking-tight">{t.montant.toLocaleString()} <span className="text-[10px] opacity-30">XAF</span></p>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">{t.frequence}</p>
+                                {editingTaxId === t.id ? (
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="number"
+                                      value={editingMontant}
+                                      onChange={(e) => setEditingMontant(Number(e.target.value))}
+                                      className="w-32 h-10 bg-blue-50 border-2 border-[#1E3A8A] rounded-xl px-3 font-black text-[#1E3A8A] outline-none text-sm"
+                                      autoFocus
+                                      onKeyDown={(e) => { if (e.key === 'Enter') updateMontantTaxe(t.id, editingMontant); if (e.key === 'Escape') setEditingTaxId(null); }}
+                                    />
+                                    <button onClick={() => updateMontantTaxe(t.id, editingMontant)} className="p-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-all"><ClipboardCheck size={14} /></button>
+                                    <button onClick={() => setEditingTaxId(null)} className="p-2 bg-slate-100 text-slate-400 rounded-lg hover:bg-slate-200 transition-all"><X size={14} /></button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => { setEditingTaxId(t.id); setEditingMontant(t.montant); }}
+                                    className="text-left group/montant cursor-pointer hover:bg-blue-50 px-3 py-2 -mx-3 rounded-xl transition-all"
+                                    title="Cliquer pour modifier le montant négocié"
+                                  >
+                                    <p className={`font-black text-lg tracking-tight ${t.montant === 0 ? 'text-[#FF7A00] animate-pulse' : 'text-[#1E3A8A]'}`}>
+                                      {t.montant === 0 ? 'À DÉFINIR' : `${t.montant.toLocaleString()} XAF`}
+                                    </p>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase mt-1 group-hover/montant:text-[#FF7A00] transition-colors">
+                                      {t.montant === 0 ? '✏️ Cliquer pour saisir' : `${t.frequence} · ✏️ modifier`}
+                                    </p>
+                                  </button>
+                                )}
+                            
                             </td>
                             <td className="px-10 py-8">
                                 {t.paye ? (
