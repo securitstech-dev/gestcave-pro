@@ -35,8 +35,13 @@ const PageAccueil = () => {
       });
       toast.success("Message envoyé ! Nous vous contacterons rapidement.");
       setContactForm({ nom: '', contact: '', message: '' });
-    } catch (error) {
-      toast.error("Erreur lors de l'envoi.");
+    } catch (error: any) {
+      console.error("Erreur d'envoi Firestore:", error);
+      if (error.code === 'permission-denied') {
+        toast.error("Erreur : Accès refusé par la base de données.");
+      } else {
+        toast.error("Erreur lors de l'envoi. Vérifiez votre connexion.");
+      }
     } finally {
       setContactLoading(false);
     }
@@ -646,8 +651,9 @@ const InscriptionDirecte = () => {
       });
       setEnvoye(true);
       toast.success("Demande envoyée avec succès");
-    } catch (error) {
-      toast.error("Erreur lors de l'envoi");
+    } catch (error: any) {
+      console.error("Erreur d'inscription Firestore:", error);
+      toast.error("Erreur lors de l'envoi. Veuillez réessayer.");
     } finally {
       setLoading(false);
     }
