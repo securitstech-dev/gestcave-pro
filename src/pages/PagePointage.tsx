@@ -338,6 +338,30 @@ const PagePointage = () => {
                     </div>
 
                     <div className="grid grid-cols-1 gap-4">
+                        {sessionActuelle && (
+                            <div className="bg-blue-50/50 p-6 rounded-3xl border border-blue-100 mb-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                                <div className="flex justify-between items-center mb-4">
+                                    <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Session en cours</span>
+                                    <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter ${sessionActuelle.statut === 'pause' ? 'bg-orange-500 text-white animate-pulse' : 'bg-emerald-500 text-white'}`}>
+                                        {sessionActuelle.statut === 'pause' ? 'EN PAUSE' : 'EN SERVICE'}
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex-1">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Arrivée</p>
+                                        <p className="text-lg font-black text-[#1E3A8A]">{new Date(sessionActuelle.debut?.seconds * 1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p>
+                                    </div>
+                                    <div className="w-px h-8 bg-blue-100" />
+                                    <div className="flex-1 text-right">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Durée</p>
+                                        <p className="text-lg font-black text-[#1E3A8A]">
+                                            {Math.floor((Date.now() - sessionActuelle.debut?.toMillis()) / (1000 * 60 * 60))}h {Math.floor(((Date.now() - sessionActuelle.debut?.toMillis()) / (1000 * 60)) % 60)}m
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        
                         {!sessionActuelle ? (
                             <button onClick={() => actionPointage('arrivee')} disabled={loading}
                                 className="h-24 bg-[#1E3A8A] text-white rounded-[2rem] font-black uppercase tracking-widest text-lg shadow-2xl shadow-blue-900/30 hover:bg-blue-800 transition-all flex items-center justify-center gap-4 disabled:opacity-50 active:scale-95">
@@ -347,23 +371,32 @@ const PagePointage = () => {
                         ) : (
                             <div className="space-y-4">
                                 {sessionActuelle.statut === 'present' ? (
-                                    <button onClick={() => actionPointage('pause_debut')} disabled={loading}
-                                        className="w-full h-24 bg-orange-50 text-orange-600 rounded-[2rem] font-black uppercase tracking-widest text-lg border-2 border-orange-100 hover:bg-orange-100 transition-all flex items-center justify-center gap-4 active:scale-95">
-                                        <CoffeeIcon size={32} />
-                                        Prendre une pause
-                                    </button>
+                                    <div className="grid grid-cols-1 gap-4">
+                                        <button onClick={() => actionPointage('pause_debut')} disabled={loading}
+                                            className="w-full h-24 bg-orange-50 text-orange-600 rounded-[2rem] font-black uppercase tracking-widest text-lg border-2 border-orange-100 hover:bg-orange-100 transition-all flex items-center justify-center gap-4 active:scale-95 shadow-sm">
+                                            <CoffeeIcon size={32} />
+                                            Début de Pause
+                                        </button>
+                                        <button onClick={() => actionPointage('depart')} disabled={loading}
+                                            className="w-full h-24 bg-rose-50 text-rose-600 rounded-[2rem] font-black uppercase tracking-widest text-lg border-2 border-rose-100 hover:bg-rose-100 transition-all flex items-center justify-center gap-4 active:scale-95 shadow-sm">
+                                            <LogOut size={32} />
+                                            Fin de Travail
+                                        </button>
+                                    </div>
                                 ) : (
-                                    <button onClick={() => actionPointage('pause_fin')} disabled={loading}
-                                        className="w-full h-24 bg-emerald-50 text-emerald-600 rounded-[2rem] font-black uppercase tracking-widest text-lg border-2 border-emerald-100 hover:bg-emerald-100 transition-all flex items-center justify-center gap-4 active:scale-95">
-                                        <CheckCircle2 size={32} />
-                                        Reprendre le service
-                                    </button>
+                                    <div className="grid grid-cols-1 gap-4">
+                                        <button onClick={() => actionPointage('pause_fin')} disabled={loading}
+                                            className="w-full h-24 bg-emerald-50 text-emerald-600 rounded-[2rem] font-black uppercase tracking-widest text-lg border-2 border-emerald-100 hover:bg-emerald-100 transition-all flex items-center justify-center gap-4 active:scale-95 shadow-sm">
+                                            <CheckCircle2 size={32} />
+                                            Fin de Pause / Reprise
+                                        </button>
+                                        <button onClick={() => actionPointage('depart')} disabled={loading}
+                                            className="w-full h-20 bg-slate-100 text-slate-400 rounded-[2rem] font-black uppercase tracking-widest text-xs flex items-center justify-center gap-4 opacity-50 cursor-not-allowed">
+                                            <LogOut size={20} />
+                                            Fin de Travail (Reprendre d'abord)
+                                        </button>
+                                    </div>
                                 )}
-                                <button onClick={() => actionPointage('depart')} disabled={loading}
-                                    className="w-full h-24 bg-[#1E3A8A] text-white rounded-[2rem] font-black uppercase tracking-widest text-lg shadow-2xl shadow-blue-900/20 hover:bg-blue-800 transition-all flex items-center justify-center gap-4 active:scale-95">
-                                    <LogOut size={32} className="text-rose-400" />
-                                    Terminer le service
-                                </button>
                             </div>
                         )}
                         <button onClick={reinitialiser} className="w-full h-16 text-slate-400 font-bold uppercase tracking-widest text-xs hover:text-rose-500 transition-all">
