@@ -8,7 +8,9 @@ import {
   Sparkles, TrendingDown, Landmark, ReceiptText, Smartphone, Phone
 } from 'lucide-react';
 import { db } from '../../lib/firebase';
-import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { 
+  collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc 
+} from 'firebase/firestore';
 import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
 import { 
@@ -32,6 +34,7 @@ interface Transaction {
   date: string;
   serveurNom?: string;
   tableNom?: string;
+  commandeId?: string;
 }
 
 const GestionFinance = () => {

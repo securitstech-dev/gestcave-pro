@@ -198,7 +198,7 @@ export interface Commande {
   serveurId: string;
   serveurNom: string;
   dateOuverture: string;
-  statut: 'ouverte' | 'envoyee' | 'en_preparation' | 'servie' | 'payee' | 'en_attente_paiement';
+  statut: 'ouverte' | 'envoyee' | 'en_preparation' | 'servie' | 'payee' | 'en_attente_paiement' | 'en_arriere';
   lignes: LigneCommande[];
   total: number;
   nombreCouverts: number;
@@ -288,6 +288,7 @@ interface PosState {
   demanderAddition: (commandeId: string, tableId: string) => Promise<void>;
   enregistrerAcompte: (commandeId: string, montant: number, mode: string) => Promise<void>;
   forcerLiberationTable: (tableId: string) => Promise<void>;
+  mettreEnArriere: (commandeId: string) => Promise<void>;
 }
 
 export const usePOSStore = create<PosState>((set, get) => ({

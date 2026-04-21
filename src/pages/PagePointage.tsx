@@ -7,7 +7,7 @@ import {
 import { db } from '../lib/firebase';
 import { 
   collection, query, where, getDocs, doc, updateDoc, 
-  Timestamp, addDoc, limit, orderBy 
+  Timestamp, addDoc, limit, orderBy, getDoc 
 } from 'firebase/firestore';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
