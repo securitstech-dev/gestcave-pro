@@ -4,7 +4,7 @@ import {
   ChevronRight, ArrowRight, ShieldCheck, Zap, 
   Smartphone, BarChart3, Clock, LayoutDashboard,
   Mail, Phone, MapPin, Menu, X, Globe, Star,
-  Server, Cpu, Lock, Send, Flame, BookOpen, Monitor, Terminal
+  Server, Cpu, Lock, Send, Flame, BookOpen, Monitor, Terminal, Scale
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { db, storage } from '../lib/firebase';
@@ -260,9 +260,14 @@ const PageAccueil = () => {
             desc="Rapports financiers automatiques, P&L, et suivi des charges fixes. Une visibilité totale sur votre cash-flow." 
           />
           <BenefitCard 
+            icon={<Scale />} 
+            title="Conformité Étatique" 
+            desc="Gérez vos taxes (Loisirs, Tourisme, Mairie) basées sur votre capacité. Soyez en règle avec la préfecture et le commerce." 
+          />
+          <BenefitCard 
             icon={<Terminal />} 
-            title="Souveraineté & Maintenance" 
-            desc="Console d'auto-diagnostic pour réparer les bugs de cache instantanément. Votre système reste opérationnel 24h/7." 
+            title="Diagnostic & Lab" 
+            desc="Console d'auto-diagnostic pour réparer les bugs instantanément et moteur de simulation pour prévoir vos revenus." 
           />
         </div>
       </section>

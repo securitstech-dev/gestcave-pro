@@ -19,6 +19,9 @@ export interface ProfilUtilisateur {
   nom: string;
   prenom?: string;
   telephone?: string;
+  departement?: string;
+  nb_chaises?: number;
+  type_etablissement?: 'restaurant' | 'bar' | 'mixte';
 }
 
 interface EtatAuth {

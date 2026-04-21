@@ -5,7 +5,7 @@ import {
   Layout, LayoutDashboard, Zap, Activity, ShieldCheck, Shield, ShieldAlert,
   Calendar, ArrowUpRight, ArrowDownRight, MoreVertical, DollarSign,
   Bell, Search, Menu, X, PlusCircle, Globe, History, ArrowRight, ArrowLeft, Receipt, Clock, Terminal,
-  ChefHat, Flame, Timer, Wallet, Bot, Monitor, BookOpen, Loader2
+  ChefHat, Flame, Timer, Wallet, Bot, Monitor, BookOpen, Loader2, Scale
 } from 'lucide-react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -28,6 +28,7 @@ import GestionSessions from './modules/GestionSessions';
 import GestionPaie from './modules/GestionPaie';
 import GrandLivre from './modules/GrandLivre';
 import IAIntelligence from './modules/IAIntelligence';
+import GestionConformite from './modules/GestionConformite';
 import ModuleDebug from './modules/ModuleDebug';
 import SimulationLab from '../components/SimulationLab';
 
@@ -143,6 +144,7 @@ const TableauClient = () => {
             {hasModule('hr') && <SidebarLink icon={<Users size={18} />} label="Équipe & Personnel" path="/tableau-de-bord/rh" />}
             {hasModule('hr') && <SidebarLink icon={<Wallet size={18} />} label="Paies & Salaires" path="/tableau-de-bord/paie" />}
             {hasModule('hr') && <SidebarLink icon={<Clock size={18} />} label="Borne de Pointage" path={`/pointage/${profil?.etablissement_id}`} />}
+            {hasModule('compta') && <SidebarLink icon={<Scale size={18} />} label="Conformité & Taxes" path="/tableau-de-bord/conformite" />}
             <SidebarLink icon={<Settings size={18} />} label="Paramètres" path="/tableau-de-bord/settings" />
           </div>
         </div>
@@ -367,6 +369,11 @@ const TableauClient = () => {
               <Route path="/grand-livre" element={
                 <ModuleGuard module="compta" modulesActifs={modulesActifs} navigate={navigate}>
                   <GrandLivre />
+                </ModuleGuard>
+              } />
+              <Route path="/conformite" element={
+                <ModuleGuard module="compta" modulesActifs={modulesActifs} navigate={navigate}>
+                  <GestionConformite />
                 </ModuleGuard>
               } />
 
