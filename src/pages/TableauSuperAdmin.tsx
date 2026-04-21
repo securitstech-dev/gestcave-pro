@@ -4,7 +4,7 @@ import {
   Search, Building2, CreditCard, TrendingUp, Shield,
   ArrowUpRight, AlertTriangle, Loader2, ExternalLink, X, Ban, Activity,
   Trash2, Database, AlertCircle, Info, Copy, Key, ArrowRight, ShieldCheck,
-  Globe, Landmark, Cpu, Sparkles, BarChart3, Settings, ZapOff, Zap, Calendar, Mail, MessageSquare, LayoutDashboard
+  Globe, Landmark, Cpu, Sparkles, BarChart3, Settings, ZapOff, Zap, Calendar, Mail, MessageSquare, LayoutDashboard, Tablet
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -13,8 +13,9 @@ import { db } from '../lib/firebase';
 import { collection, onSnapshot, doc, updateDoc, addDoc, query, orderBy, getDocs, deleteDoc } from 'firebase/firestore';
 import { clearFirestoreCache } from '../lib/firebase';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import SimulateurTablette from './modules/SimulateurTablette';
 
-type Onglet = 'demandes' | 'messages' | 'paiements' | 'etablissements' | 'comptabilite' | 'maintenance';
+type Onglet = 'demandes' | 'messages' | 'paiements' | 'etablissements' | 'comptabilite' | 'maintenance' | 'laboratoire';
 
 const TableauSuperAdmin = () => {
   const [demandes, setDemandes] = useState<any[]>([]);
@@ -324,6 +325,7 @@ const TableauSuperAdmin = () => {
     { key: 'etablissements', icon: <Building2 size={20} />, label: "Établissements", badge: etablissements.length },
     { key: 'paiements', icon: <CreditCard size={20} />, label: "Paiements & Abonnements", badge: paiements.filter(p => p.statut === 'en_attente').length },
     { key: 'comptabilite', icon: <TrendingUp size={20} />, label: "Comptabilité Globale" },
+    { key: 'laboratoire', icon: <Tablet size={20} />, label: "Lab de Simulation (Tablette)" },
     { key: 'maintenance', icon: <Database size={20} />, label: "Maintenance", danger: true },
   ];
 
@@ -398,6 +400,7 @@ const TableauSuperAdmin = () => {
               {onglet === 'comptabilite' && 'Comptabilité Globale'}
               {onglet === 'etablissements' && 'Gestion des Établissements'}
               {onglet === 'maintenance' && 'Maintenance du Système'}
+              {onglet === 'laboratoire' && 'Laboratoire de Simulation'}
              </h1>
           </div>
           <div className="relative w-full lg:w-96">
@@ -762,6 +765,8 @@ const TableauSuperAdmin = () => {
                </div>
             </div>
           )}
+
+          {onglet === 'laboratoire' && <SimulateurTablette />}
         </div>
       </main>
 
