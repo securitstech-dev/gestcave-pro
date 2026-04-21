@@ -18,6 +18,7 @@ export interface ProfilUtilisateur {
   etablissement_status?: string;
   nom: string;
   prenom?: string;
+  telephone?: string;
 }
 
 interface EtatAuth {
