@@ -4,7 +4,7 @@ import {
   ChevronRight, ArrowRight, ShieldCheck, Zap, 
   Smartphone, BarChart3, Clock, LayoutDashboard,
   Mail, Phone, MapPin, Menu, X, Globe, Star,
-  Server, Cpu, Lock, Send, Flame, BookOpen, Monitor, Terminal, Scale
+  Server, Cpu, Lock, Send, Flame, BookOpen, Monitor, Terminal, Scale, Gavel
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { db, storage } from '../lib/firebase';
@@ -269,6 +269,82 @@ const PageAccueil = () => {
             title="Diagnostic & Lab" 
             desc="Console d'auto-diagnostic pour réparer les bugs instantanément et moteur de simulation pour prévoir vos revenus." 
           />
+        </div>
+      </section>
+
+      {/* NEW: Fiscal Compliance Highlight Section */}
+      <section className="py-24 bg-[#0F172A] relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#FF7A00] to-transparent" />
+        <div className="absolute -top-24 -right-24 w-96 h-96 bg-[#FF7A00]/10 rounded-full blur-[100px]" />
+        
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
+          <div className="grid lg:grid-cols-2 gap-20 items-center">
+            <div className="space-y-8">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#FF7A00]/20 rounded-xl text-[#FF7A00] text-xs font-black uppercase tracking-widest">
+                <ShieldCheck size={16} /> Exclusivité GestCave Pro
+              </div>
+              <h2 className="text-4xl md:text-5xl font-black text-white leading-tight uppercase">
+                Le Bouclier de <br/>
+                <span className="text-[#FF7A00]">Conformité Étatique.</span>
+              </h2>
+              <p className="text-xl text-slate-400 leading-relaxed font-medium">
+                Ne craignez plus les contrôles impromptus du Commerce, de la Mairie ou du BCDA. GestCave Pro intègre les réalités administratives de la République du Congo.
+              </p>
+              
+              <div className="grid sm:grid-cols-2 gap-6">
+                {[
+                  { title: "Calcul par Capacité", desc: "Taxes calculées automatiquement selon votre nombre de chaises." },
+                  { title: "Gestion des Tutelles", desc: "Différenciation Loisirs vs Tourisme selon votre type de bar/cave." },
+                  { title: "Suivi BCDA & Impôts", desc: "Alertes sur les paiements trimestriels et annuels pour éviter les pénalités." },
+                  { title: "Checklist Documents", desc: "Vérifiez la présence physique du RCCM, Patente et Agréments." }
+                ].map((item, i) => (
+                  <div key={i} className="flex gap-4 items-start">
+                    <div className="w-6 h-6 rounded-full bg-[#FF7A00]/20 flex items-center justify-center shrink-0 mt-1">
+                      <div className="w-2 h-2 rounded-full bg-[#FF7A00]" />
+                    </div>
+                    <div>
+                      <h4 className="text-white font-bold text-sm uppercase mb-1">{item.title}</h4>
+                      <p className="text-slate-500 text-xs leading-relaxed">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="relative group">
+              <div className="absolute -inset-4 bg-gradient-to-r from-[#FF7A00] to-orange-400 rounded-[3rem] blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
+              <div className="relative bg-[#1E3A8A]/20 backdrop-blur-xl border border-white/10 p-10 rounded-[3rem] shadow-2xl">
+                <div className="flex justify-between items-start mb-8">
+                  <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                    <Gavel size={32} className="text-[#FF7A00]" />
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[#FF7A00] font-black text-xs uppercase tracking-widest">Statut Fiscal</div>
+                    <div className="text-white font-black text-2xl">100% CONFORME</div>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  {[
+                    { label: "Autorisation Exploitation", status: "Payé", color: "bg-emerald-500" },
+                    { label: "Droits d'Auteur (BCDA)", status: "À jour", color: "bg-emerald-500" },
+                    { label: "Licence Alcool", status: "En cours", color: "bg-amber-500" },
+                    { label: "Taxe Municipale", status: "Vérifié", color: "bg-emerald-500" }
+                  ].map((tax, i) => (
+                    <div key={i} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                      <span className="text-slate-300 font-bold text-xs uppercase">{tax.label}</span>
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black text-white ${tax.color}`}>{tax.status}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-8 pt-8 border-t border-white/10 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
+                    <Phone size={18} />
+                  </div>
+                  <p className="text-xs text-slate-400">Support local basé à <strong>Pointe-Noire</strong> pour vous assister avec l'administration.</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
