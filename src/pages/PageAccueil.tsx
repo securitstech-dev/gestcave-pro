@@ -7,9 +7,11 @@ import {
   Server, Cpu, Lock, Send, Flame, BookOpen, Monitor, Terminal
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { db } from '../lib/firebase';
+import { db, storage } from '../lib/firebase';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import toast from 'react-hot-toast';
+import { Upload, ImageIcon, FileCheck } from 'lucide-react';
 
 const PageAccueil = () => {
   const navigate = useNavigate();
@@ -23,6 +25,48 @@ const PageAccueil = () => {
   const [modalLegal, setModalLegal] = useState<{ ouvert: boolean, titre: string, contenu: string } | null>(null);
   const [contactForm, setContactForm] = useState({ nom: '', contact: '', message: '' });
   const [contactLoading, setContactLoading] = useState(false);
+  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(false);
+
+  const handlePaiementMobile = async () => {
+    if (!justificatif.trim() && !screenshotFile) {
+      toast.error("Veuillez fournir une justification ou une capture d'écran.");
+      return;
+    }
+
+    setUploadProgress(true);
+    try {
+      let screenshotUrl = '';
+
+      if (screenshotFile) {
+        const fileRef = ref(storage, `paiements/${Date.now()}_${screenshotFile.name}`);
+        const snapshot = await uploadBytes(fileRef, screenshotFile);
+        screenshotUrl = await getDownloadURL(snapshot.ref);
+      }
+
+      await addDoc(collection(db, 'paiements'), {
+        plan: modalPaiement?.plan,
+        montant: modalPaiement?.prix,
+        operateur: operateur,
+        justification: justificatif,
+        screenshot: screenshotUrl,
+        date: Timestamp.now(),
+        statut: 'en_attente',
+        source: 'landing_page'
+      });
+
+      toast.success("Paiement enregistré ! Nous validons votre accès.");
+      setModalPaiement(null);
+      setEtapePaiement('choix');
+      setJustificatif('');
+      setScreenshotFile(null);
+    } catch (error) {
+      console.error("Erreur paiement:", error);
+      toast.error("Erreur lors de l'enregistrement du paiement.");
+    } finally {
+      setUploadProgress(false);
+    }
+  };
 
   const handleSubmitContact = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -366,18 +410,58 @@ const PageAccueil = () => {
                      />
                   </div>
 
+                  <div className="space-y-4">
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Capture d'écran du transfert (Optionnel)</label>
+                     <div className="relative">
+                        <input 
+                           type="file" 
+                           accept="image/*" 
+                           onChange={(e) => setScreenshotFile(e.target.files?.[0] || null)}
+                           className="hidden" 
+                           id="screenshot-upload"
+                        />
+                        <label 
+                           htmlFor="screenshot-upload"
+                           className={`w-full p-6 border-2 border-dashed rounded-[2rem] flex flex-col items-center justify-center gap-3 cursor-pointer transition-all ${
+                              screenshotFile ? 'border-emerald-200 bg-emerald-50 text-emerald-600' : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-blue-200'
+                           }`}
+                        >
+                           {screenshotFile ? (
+                              <>
+                                 <FileCheck size={32} />
+                                 <span className="text-xs font-bold uppercase tracking-tight">Capture jointe : {screenshotFile.name.substring(0, 20)}...</span>
+                              </>
+                           ) : (
+                              <>
+                                 <Upload size={32} />
+                                 <span className="text-xs font-bold uppercase tracking-tight">Cliquez pour joindre la preuve</span>
+                              </>
+                           )}
+                        </label>
+                     </div>
+                  </div>
+
                   <div className="flex gap-4">
-                     <button onClick={() => setEtapePaiement('choix')} className="flex-1 h-16 bg-slate-50 text-slate-400 rounded-2xl font-bold uppercase tracking-widest text-xs">Retour</button>
                      <button 
-                        onClick={() => { 
-                          toast.success("Demande de paiement envoyée !"); 
-                          setModalPaiement(null); 
-                          setEtapePaiement('choix');
-                          setJustificatif('');
-                        }}
-                        className="flex-[2] h-16 bg-[#1E3A8A] text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-blue-900/10"
+                        onClick={() => setEtapePaiement('choix')} 
+                        disabled={uploadProgress}
+                        className="flex-1 h-16 bg-slate-50 text-slate-400 rounded-2xl font-bold uppercase tracking-widest text-xs"
                      >
-                        Valider mon paiement
+                        Retour
+                     </button>
+                     <button 
+                        onClick={handlePaiementMobile}
+                        disabled={uploadProgress}
+                        className="flex-[2] h-16 bg-[#1E3A8A] text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-blue-900/10 flex items-center justify-center gap-2"
+                     >
+                        {uploadProgress ? (
+                           <>
+                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                              Traitement...
+                           </>
+                        ) : (
+                           "Valider mon paiement"
+                        )}
                      </button>
                   </div>
                </div>
