@@ -314,27 +314,54 @@ export const usePOSStore = create<PosState>((set, get) => ({
     }));
 
     // TABLES
-    unsubs.push(onSnapshot(query(collection(db, 'tables'), where('etablissement_id', '==', etablissementId)), (snap) => {
-      set({ tables: snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as TablePlan)) });
-    }));
+    unsubs.push(onSnapshot(
+      query(collection(db, 'tables'), where('etablissement_id', '==', etablissementId)), 
+      (snap) => {
+        const tablesData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as TablePlan[];
+        set({ tables: tablesData });
+      },
+      (error) => {
+        console.error("Erreur tables:", error);
+        toast.error("Erreur de synchronisation des tables");
+      }
+    ));
 
     // PRODUITS
-    unsubs.push(onSnapshot(query(collection(db, 'produits'), where('etablissement_id', '==', etablissementId)), (snap) => {
-      set({ produits: snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Produit)) });
-    }));
+    unsubs.push(onSnapshot(
+      query(collection(db, 'produits'), where('etablissement_id', '==', etablissementId)), 
+      (snap) => {
+        const produitsData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Produit[];
+        set({ produits: produitsData });
+      },
+      (error) => {
+        console.error("Erreur produits:", error);
+      }
+    ));
 
     // SESSIONS
-    unsubs.push(onSnapshot(query(collection(db, 'sessions_caisse'), where('etablissement_id', '==', etablissementId), where('statut', '==', 'ouverte')), (snap) => {
-      if (!snap.empty) {
-        set({ sessionActive: { id: snap.docs[0].id, ...snap.docs[0].data() } as SessionCaisse });
-      } else {
-        set({ sessionActive: null });
+    unsubs.push(onSnapshot(
+      query(collection(db, 'sessions_caisse'), where('etablissement_id', '==', etablissementId), where('statut', '==', 'ouverte')), 
+      (snap) => {
+        if (!snap.empty) {
+          set({ sessionActive: { id: snap.docs[0].id, ...snap.docs[0].data() } as SessionCaisse });
+        } else {
+          set({ sessionActive: null });
+        }
+      },
+      (error) => {
+        console.error("Erreur session caisse:", error);
       }
-    }));
+    ));
 
-    unsubs.push(onSnapshot(query(collection(db, 'sessions_caisse'), where('etablissement_id', '==', etablissementId), where('statut', '==', 'fermee')), (snap) => {
-      set({ historiqueSessions: snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SessionCaisse)) });
-    }));
+    unsubs.push(onSnapshot(
+      query(collection(db, 'sessions_caisse'), where('etablissement_id', '==', etablissementId), where('statut', '==', 'fermee')), 
+      (snap) => {
+        set({ historiqueSessions: snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SessionCaisse)) });
+      },
+      (error) => {
+        console.error("Erreur historique sessions:", error);
+      }
+    ));
 
     // COMMANDES
     const handleCommandes = (snap: any) => {
@@ -352,7 +379,14 @@ export const usePOSStore = create<PosState>((set, get) => ({
       });
     };
 
-    unsubs.push(onSnapshot(query(collection(db, 'commandes'), where('etablissement_id', '==', etablissementId)), handleCommandes));
+    unsubs.push(onSnapshot(
+      query(collection(db, 'commandes'), where('etablissement_id', '==', etablissementId)), 
+      handleCommandes,
+      (error) => {
+        console.error("Erreur commandes:", error);
+        toast.error("Erreur de synchronisation des commandes");
+      }
+    ));
     unsubs.push(onSnapshot(query(collection(db, 'commandes'), where('etablissementId', '==', etablissementId)), handleCommandes));
 
     // SESSIONS
@@ -856,6 +890,33 @@ export const usePOSStore = create<PosState>((set, get) => ({
 
     await batch.commit();
     await get().refreshCommande(commandeId);
+  },
+
+  mettreEnArriere: async (commandeId) => {
+    const cmd = get().commandes.find(c => c.id === commandeId);
+    if (!cmd) return;
+
+    const batch = writeBatch(db);
+    const commandeRef = doc(db, 'commandes', commandeId);
+
+    // On marque la commande comme étant en arriéré
+    batch.update(commandeRef, { 
+      statut: 'en_arriere',
+      dateMiseEnArriere: new Date().toISOString()
+    });
+
+    // On libère la table pour d'autres clients
+    if (cmd.tableId) {
+      batch.update(doc(db, 'tables', cmd.tableId), { 
+        statut: 'libre', 
+        commandeActiveId: null,
+        serveurNom: null
+      });
+    }
+
+    await batch.commit();
+    await get().refreshCommande(commandeId);
+    toast.success("Commande mise en arriéré. La table est libérée.");
   },
 
   forcerLiberationTable: async (tableId) => {

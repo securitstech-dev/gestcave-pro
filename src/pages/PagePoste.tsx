@@ -142,12 +142,18 @@ const PagePoste = () => {
         where('pin', '==', pin)
       );
       
-      const snap = await getDocs(q);
+      // Ajout d'un timeout de sécurité
+      const getDocsPromise = getDocs(q);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Timeout")), 8000)
+      );
+
+      const snap = await Promise.race([getDocsPromise, timeoutPromise]) as any;
       
-      if (snap.empty) {
-        setPinError("CODE PIN INTROUVABLE OU INCORRECT");
-        setPin('');
+      if (!snap || snap.empty) {
+        toast.error('Code PIN ou établissement invalide');
         setLoading(false);
+        setPin('');
         return;
       }
 
@@ -194,8 +200,13 @@ const PagePoste = () => {
       
       navigate(selectedMode.route);
       
-    } catch (error) {
-      toast.error('Erreur de validation');
+    } catch (error: any) {
+      console.error("Erreur validation PIN:", error);
+      if (error.message === "Timeout") {
+        toast.error('Le serveur ne répond pas. Vérifiez votre connexion.');
+      } else {
+        toast.error('Erreur de validation (Vérifiez les accès)');
+      }
     } finally {
       setLoading(false);
     }

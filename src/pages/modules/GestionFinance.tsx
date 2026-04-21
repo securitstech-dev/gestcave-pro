@@ -5,7 +5,7 @@ import {
   ArrowDownRight, PieChart as PieChartIcon, 
   ShieldCheck, Calculator, Activity, ArrowRight, X, Download,
   Wallet, ShoppingCart, Users, AlertCircle, History, Receipt, Trash2, Search, RefreshCcw,
-  Sparkles, TrendingDown, Landmark, ReceiptText, Smartphone
+  Sparkles, TrendingDown, Landmark, ReceiptText, Smartphone, Phone
 } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
@@ -116,7 +116,7 @@ const GestionFinance = () => {
     } catch { toast.error("Erreur système"); }
   };
 
-  const encaisserDette = async (transactionId: string, montant: number) => {
+  const encaisserDette = async (transactionId: string, montant: number, mode: 'comptant' | 'mobile' = 'comptant', ref: string = '') => {
     try {
       const trans = transactions.find(t => t.id === transactionId);
       if (!trans) return;
@@ -128,14 +128,35 @@ const GestionFinance = () => {
       await updateDoc(docRef, {
         montantRecu: nouveauRecu,
         montantRestant: nouveauRestant,
-        modePaiement: nouveauRestant <= 0 ? 'comptant' : 'credit'
+        modePaiement: nouveauRestant <= 0 ? 'comptant' : 'credit',
+        dernierModePaiement: mode,
+        derniereRefMobile: ref || null
       });
 
-      toast.success(`Recouvrement : ${montant.toLocaleString()} XAF`);
+      // On crée une petite transaction de trace pour la comptabilité
+      await addDoc(collection(db, 'transactions_pos'), {
+        commandeId: trans.commandeId || trans.id,
+        etablissement_id: etablissementId,
+        montant: montant,
+        type: 'recouvrement',
+        modePaiement: mode,
+        refPaiement: ref || null,
+        clientNom: trans.clientNom,
+        date: new Date().toISOString()
+      });
+
+      toast.success(`Recouvrement enregistré : ${montant.toLocaleString()} XAF (${mode.toUpperCase()})`);
     } catch (error) {
       toast.error("Erreur système");
       console.error(error);
     }
+  };
+
+  const relancerWhatsApp = (t: Transaction) => {
+    if (!t.clientContact) return;
+    const message = `Bonjour ${t.clientNom || 'Cher client'}, nous vous rappelons que votre ardoise chez ${profil?.etablissement_nom || 'notre établissement'} s'élève à ${t.montantRestant?.toLocaleString()} XAF. Vous pouvez régler par Mobile Money. Merci !`;
+    const encoded = encodeURIComponent(message);
+    window.open(`https://wa.me/${t.clientContact.replace(/\s/g, '')}?text=${encoded}`, '_blank');
   };
 
   const totalEncaisse = transactions.filter(t => t.type !== 'depense').reduce((acc, t) => acc + (t.montantRecu || t.total), 0);
@@ -474,22 +495,47 @@ const GestionFinance = () => {
                           )}
                       </div>
 
-                      <div className="pt-8 border-t border-slate-100 grid grid-cols-2 gap-3 relative z-10">
-                          <button 
-                            onClick={() => encaisserDette(t.id, t.montantRestant!)}
-                            className="h-14 bg-[#1E3A8A] text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-blue-800 transition-all shadow-lg shadow-blue-900/10"
-                          >
-                            Tout solder
-                          </button>
-                          <button 
-                            onClick={() => {
-                              const m = prompt("MONTANT DU VERSEMENT PARTIEL (XAF) ?");
-                              if (m) encaisserDette(t.id, parseInt(m));
-                            }}
-                            className="h-14 bg-white border border-slate-200 text-[#1E3A8A] rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-slate-50 transition-all"
-                          >
-                            Versement
-                          </button>
+                      <div className="pt-8 border-t border-slate-100 grid grid-cols-1 gap-3 relative z-10">
+                          <div className="grid grid-cols-2 gap-3">
+                              <button 
+                                onClick={() => {
+                                  const mode = window.confirm("Payer par Mobile Money ? (Annuler pour Espèces)") ? 'mobile' : 'comptant';
+                                  let ref = '';
+                                  if (mode === 'mobile') {
+                                    ref = prompt("RÉFÉRENCE DE LA TRANSACTION MOBILE MONEY ?") || '';
+                                    if (!ref) return;
+                                  }
+                                  encaisserDette(t.id, t.montantRestant!, mode, ref);
+                                }}
+                                className="h-14 bg-[#1E3A8A] text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-blue-800 transition-all shadow-lg shadow-blue-900/10"
+                              >
+                                Tout solder
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  const m = prompt("MONTANT DU VERSEMENT PARTIEL (XAF) ?");
+                                  if (!m) return;
+                                  const mode = window.confirm("Payer par Mobile Money ?") ? 'mobile' : 'comptant';
+                                  let ref = '';
+                                  if (mode === 'mobile') {
+                                    ref = prompt("RÉFÉRENCE MOBILE MONEY ?") || '';
+                                  }
+                                  encaisserDette(t.id, parseInt(m), mode, ref);
+                                }}
+                                className="h-14 bg-white border border-slate-200 text-[#1E3A8A] rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-slate-50 transition-all"
+                              >
+                                Versement
+                              </button>
+                          </div>
+                          
+                          {t.clientContact && (
+                            <button 
+                              onClick={() => relancerWhatsApp(t)}
+                              className="h-14 bg-emerald-50 text-emerald-600 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-100 transition-all border border-emerald-100 flex items-center justify-center gap-2"
+                            >
+                              <Phone size={14} /> Relancer par WhatsApp
+                            </button>
+                          )}
                       </div>
                   </div>
                 ))

@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, terminate, clearIndexedDbPersistence } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 // Configuration chargée via les variables d'environnement (Vite)
@@ -23,6 +23,18 @@ export const db = initializeFirestore(app, {
     tabManager: persistentMultipleTabManager()
   })
 });
+
+// Fonction pour vider le cache en cas de "moulinage" (appelée depuis l'admin)
+export const clearFirestoreCache = async () => {
+  try {
+    await terminate(db);
+    await clearIndexedDbPersistence(db);
+    window.location.reload();
+  } catch (err) {
+    console.error("Erreur vidage cache:", err);
+    window.location.reload();
+  }
+};
 
 export const storage = getStorage(app);
 

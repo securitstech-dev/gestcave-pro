@@ -157,7 +157,7 @@ const PageAccueil = () => {
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#1E3A8A] to-[#FF7A00]">avec précision chirurgicale.</span>
             </h1>
             <p className="text-lg text-slate-500 leading-relaxed max-w-xl">
-              De la prise de commande à la clôture fiscale, GestCave Pro automatise chaque aspect de votre établissement. Stock, Cuisine, RH et Finance harmonisés dans une suite unique.
+              De la prise de commande intelligente à la gestion automatisée des dettes et de la paie. GestCave Pro harmonise vos Stocks, votre Cuisine, vos RH et vos Finances dans une suite souveraine unique.
             </p>
             <div className="flex flex-col sm:flex-row gap-6">
               <button 
@@ -236,34 +236,61 @@ const PageAccueil = () => {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           <BenefitCard 
             icon={<ShoppingBag />} 
-            title="Inventaire Souverain" 
-            desc="Livre de compte intelligent avec suivi des bouteilles, ingrédients et consommables. Alertes de stock critique." 
-          />
-          <BenefitCard 
-            icon={<Flame />} 
-            title="KDS : Écran Cuisine" 
-            desc="Système d'affichage de cuisine automatisé. Suivi des temps de service et gestion des priorités en temps réel." 
-          />
-          <BenefitCard 
-            icon={<BookOpen />} 
-            title="Grand Livre & Finance" 
-            desc="Moteur comptable intégré générant des rapports de rentabilité, P&L et bilans fiscaux exports en PDF." 
-          />
-          <BenefitCard 
-            icon={<Clock />} 
-            title="RH & Pointage" 
-            desc="Terminal de pointage indépendant par PIN. Calcul automatique de la paie et des commissions serveurs." 
+            title="Inventaire & Stocks" 
+            desc="Suivi millimétré des bouteilles et ingrédients. Alertes de rupture et gestion des pertes pour une rentabilité maximale." 
           />
           <BenefitCard 
             icon={<Monitor />} 
-            title="Multi-Terminaux" 
-            desc="Interface dédiée pour chaque rôle : Serveurs (tablettes), Cuisine (moniteur), Caissier et Gérant." 
+            title="Écran Cuisine (KDS)" 
+            desc="Finis les bons perdus. Un écran tactile en cuisine ou au bar pour gérer les commandes en temps réel avec chronomètre." 
+          />
+          <BenefitCard 
+            icon={<Users />} 
+            title="Pointage RH (PIN)" 
+            desc="Borne autonome où vos employés badgent avec leur PIN unique. Calcul auto des salaires, retards et commissions." 
+          />
+          <BenefitCard 
+            icon={<Receipt />} 
+            title="Dettes & Arriérés" 
+            desc="Gérez les avances clients et les ardoises. Relancez les débiteurs via WhatsApp et validez les paiements Mobile Money." 
+          />
+          <BenefitCard 
+            icon={<BarChart3 />} 
+            title="Finance & Grand Livre" 
+            desc="Rapports financiers automatiques, P&L, et suivi des charges fixes. Une visibilité totale sur votre cash-flow." 
           />
           <BenefitCard 
             icon={<Terminal />} 
-            title="Auto-Diagnostic" 
-            desc="Console de maintenance intégrée pour le dépannage autonome. Surveillance de la santé système 24/7." 
+            title="Souveraineté & Maintenance" 
+            desc="Console d'auto-diagnostic pour réparer les bugs de cache instantanément. Votre système reste opérationnel 24h/7." 
           />
+        </div>
+      </section>
+
+      {/* Roles / Workflow Section */}
+      <section className="py-32 bg-slate-50/50">
+        <div className="max-w-7xl mx-auto px-6">
+           <div className="text-center mb-20 space-y-4">
+              <h2 className="text-xs font-black text-[#1E3A8A] uppercase tracking-[0.4em]">L'Harmonie Opérationnelle</h2>
+              <p className="text-4xl font-extrabold text-[#1E3A8A]">Un rôle pour chaque terminal.</p>
+           </div>
+
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                { role: "Serveur", icon: <Smartphone />, desc: "Prise de commande sur mobile/tablette à la table.", color: "bg-blue-500" },
+                { role: "Cuisine / Bar", icon: <Monitor />, desc: "Réception et préparation instantanée via l'écran KDS.", color: "bg-orange-500" },
+                { role: "Caissier", icon: <Receipt />, desc: "Encaissement, acomptes, dettes et clôture de session.", color: "bg-[#1E3A8A]" },
+                { role: "Manager", icon: <LayoutDashboard />, desc: "Pilotage global, stocks, RH et rapports financiers.", color: "bg-emerald-600" }
+              ].map((r, i) => (
+                <div key={i} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all">
+                   <div className={`w-14 h-14 ${r.color} text-white rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-900/10`}>
+                      {r.icon}
+                   </div>
+                   <h4 className="text-lg font-black text-[#1E3A8A] uppercase mb-3">{r.role}</h4>
+                   <p className="text-sm text-slate-500 font-medium leading-relaxed">{r.desc}</p>
+                </div>
+              ))}
+           </div>
         </div>
       </section>
 

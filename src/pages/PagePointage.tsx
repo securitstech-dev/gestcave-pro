@@ -21,7 +21,24 @@ const PagePointage = () => {
   const [loading, setLoading] = useState(false);
   const [configRH, setConfigRH] = useState<any>(null);
 
-  // Support clavier physique
+  // 1. Chargement de la configuration (une seule fois à l'initialisation ou si l'ID change)
+  useEffect(() => {
+    const fetchConfig = async () => {
+      if (!etablissementId) return;
+      try {
+        const docRef = doc(db, 'etablissements', etablissementId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setConfigRH(docSnap.data());
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement de la config RH:", error);
+      }
+    };
+    fetchConfig();
+  }, [etablissementId]);
+
+  // 2. Support clavier physique (séparé)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (loading || employe) return;
@@ -40,19 +57,9 @@ const PagePointage = () => {
       }
     };
 
-    const fetchConfig = async () => {
-      if (!etablissementId) return;
-      const snap = await getDocs(query(collection(db, 'etablissements'), where('proprietaire_id', '!=', ''))); // Simplifié
-      // Mieux : fetch par ID direct
-      const docRef = doc(db, 'etablissements', etablissementId);
-      const docSnap = await getDocs(query(collection(db, 'etablissements'), where('__name__', '==', etablissementId)));
-      if (!docSnap.empty) setConfigRH(docSnap.docs[0].data());
-    };
-
-    fetchConfig();
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [pin, loading, employe, etablissementId]);
+  }, [pin, loading, employe]);
 
   const [time, setTime] = useState(new Date());
   useEffect(() => {

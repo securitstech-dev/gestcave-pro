@@ -20,7 +20,7 @@ const InterfaceCaissier = () => {
   const isAdmin = profil?.role === 'client_admin' || profil?.role === 'super_admin';
   const { 
     tables, commandes, encaisserCommande, ouvrirVenteEmporter,
-    sessionActive, ouvrirSession, fermerSession, enregistrerAcompte, 
+    sessionActive, ouvrirSession, fermerSession, enregistrerAcompte, mettreEnArriere,
     historiqueSessions, initPOS, etablissement_id: posEtabId
   } = usePOSStore();
   const { nomEmploye, idEmploye, etablissementId, quitterPoste } = usePosteSession();
@@ -70,15 +70,17 @@ const InterfaceCaissier = () => {
   }, [sessionActive, fondAttendu]);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [vueActive, setVueActive] = useState<'actives' | 'arrieres'>('actives');
 
   const commandesActives = useMemo(() => {
     return commandes
-      .filter(c => c.statut !== 'payee')
+      .filter(c => vueActive === 'actives' ? c.statut !== 'payee' && c.statut !== 'en_arriere' : c.statut === 'en_arriere')
       .filter(c => 
         (c.tableNom || 'DIRECTE').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (c.serveurNom || '').toLowerCase().includes(searchQuery.toLowerCase())
+        (c.serveurNom || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (c.clientNom || '').toLowerCase().includes(searchQuery.toLowerCase())
       );
-  }, [commandes, searchQuery]);
+  }, [commandes, searchQuery, vueActive]);
 
   const commandeActive = commandes.find(c => c.id === commandeSelectionnee);
   
@@ -164,6 +166,13 @@ const InterfaceCaissier = () => {
     } catch (error) {
       toast.error("Erreur lors de l'acompte");
     }
+  };
+
+  const relancerWhatsApp = (cmd: any) => {
+    if (!cmd.clientContact) return;
+    const message = `Bonjour ${cmd.clientNom || 'Cher client'}, nous vous rappelons que votre ardoise chez ${profil?.etablissement_nom || 'notre établissement'} s'élève à ${cmd.montantRestant?.toLocaleString()} XAF. Vous pouvez régler par Mobile Money au ${profil?.telephone || '[Votre Numéro]'}. Merci !`;
+    const encoded = encodeURIComponent(message);
+    window.open(`https://wa.me/${cmd.clientContact.replace(/\s/g, '')}?text=${encoded}`, '_blank');
   };
 
   const handleDeconnexion = () => {
@@ -274,9 +283,24 @@ const InterfaceCaissier = () => {
                       type="text" 
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
-                      placeholder="Rechercher une table ou un serveur..."
+                      placeholder="Rechercher une table, un client ou un serveur..."
                       className="w-full h-16 bg-white border border-slate-100 rounded-[1.5rem] pl-16 pr-6 outline-none focus:border-[#1E3A8A] transition-all font-bold text-[#1E3A8A] shadow-sm"
                     />
+                </div>
+
+                <div className="flex gap-4 mt-6">
+                    <button 
+                      onClick={() => setVueActive('actives')}
+                      className={`flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${vueActive === 'actives' ? 'bg-[#1E3A8A] text-white shadow-lg shadow-blue-900/20' : 'bg-white text-slate-400 border border-slate-100 hover:bg-slate-50'}`}
+                    >
+                      Sur Table / Direct ({commandes.filter(c => c.statut !== 'payee' && c.statut !== 'en_arriere').length})
+                    </button>
+                    <button 
+                      onClick={() => setVueActive('arrieres')}
+                      className={`flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${vueActive === 'arrieres' ? 'bg-[#FF7A00] text-white shadow-lg shadow-orange-900/20' : 'bg-white text-slate-400 border border-slate-100 hover:bg-slate-50'}`}
+                    >
+                      Dettes en Arriéré ({commandes.filter(c => c.statut === 'en_arriere').length})
+                    </button>
                 </div>
             </div>
 
@@ -455,11 +479,22 @@ const InterfaceCaissier = () => {
                                 </div>
                              )}
 
-                             {(modePaiement === 'credit' || resteAPayer > 0) && (
+                              {(modePaiement === 'credit' || resteAPayer > 0 || (commandeActive?.statut === 'en_arriere')) && (
                                 <div className="bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 space-y-6">
-                                    <div className="flex items-center gap-3 px-1">
-                                       <UserPlus size={20} className="text-[#FF7A00]" />
-                                       <h4 className="text-[11px] font-black text-[#1E3A8A] uppercase tracking-widest">Compte Client</h4>
+                                    <div className="flex items-center justify-between px-1">
+                                       <div className="flex items-center gap-3">
+                                          <UserPlus size={20} className="text-[#FF7A00]" />
+                                          <h4 className="text-[11px] font-black text-[#1E3A8A] uppercase tracking-widest">Compte Client</h4>
+                                       </div>
+                                       {commandeActive?.clientContact && (
+                                          <button 
+                                            onClick={() => relancerWhatsApp(commandeActive)}
+                                            className="p-3 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-900/20"
+                                            title="Relancer par WhatsApp"
+                                          >
+                                            <Phone size={16} />
+                                          </button>
+                                       )}
                                     </div>
                                     <div className="space-y-4">
                                         <div className="relative">
@@ -480,7 +515,7 @@ const InterfaceCaissier = () => {
                                         </div>
                                     </div>
                                 </div>
-                             )}
+                              )}
                         </div>
                     )}
                 </div>
@@ -501,10 +536,26 @@ const InterfaceCaissier = () => {
                         <button
                             onClick={handleAcompte}
                             disabled={!modePaiement || montantRecu <= 0}
-                            className="h-20 bg-emerald-50 text-emerald-600 rounded-2xl font-black uppercase tracking-widest text-xs border-2 border-emerald-100 hover:bg-emerald-100 disabled:opacity-30 transition-all"
+                            className="h-20 bg-emerald-50 text-emerald-600 rounded-2xl font-black uppercase tracking-widest text-xs border-2 border-emerald-100 hover:bg-emerald-100 disabled:opacity-30 transition-all flex flex-col items-center justify-center leading-tight"
                         >
-                            Enregistrer Acompte
+                            <span>Enregistrer</span>
+                            <span className="text-[9px] opacity-60">Acompte</span>
                         </button>
+                        <button
+                            onClick={() => {
+                              if(window.confirm("Voulez-vous libérer la table ? La commande sera conservée dans la liste des arriérés.")) {
+                                mettreEnArriere(commandeSelectionnee!);
+                                setCommandeSelectionnee(null);
+                              }
+                            }}
+                            disabled={!commandeActive || commandeActive.statut === 'en_arriere' || (commandeActive.montantPaye || 0) === 0}
+                            className="h-20 bg-orange-50 text-orange-600 rounded-2xl font-black uppercase tracking-widest text-xs border-2 border-orange-100 hover:bg-orange-100 disabled:opacity-30 transition-all flex flex-col items-center justify-center leading-tight"
+                        >
+                            <span>Libérer Table</span>
+                            <span className="text-[9px] opacity-60">(Mettre en Arriéré)</span>
+                        </button>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4">
                         <button
                             onClick={finaliserPaiement}
                             disabled={!modePaiement}

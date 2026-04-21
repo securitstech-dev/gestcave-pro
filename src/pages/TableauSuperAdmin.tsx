@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, doc, updateDoc, addDoc, query, orderBy, getDocs, deleteDoc } from 'firebase/firestore';
+import { clearFirestoreCache } from '../lib/firebase';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 type Onglet = 'demandes' | 'messages' | 'paiements' | 'etablissements' | 'comptabilite' | 'maintenance';
@@ -739,12 +740,25 @@ const TableauSuperAdmin = () => {
                      </div>
                   </div>
 
-                  <button 
-                    onClick={viderBase}
-                    className="h-20 bg-rose-600 text-white rounded-2xl px-12 font-black uppercase tracking-[0.2em] text-xs hover:bg-rose-700 transition-all shadow-2xl shadow-rose-900/20 flex items-center gap-4 active:scale-95"
-                  >
-                    <Trash2 size={20} /> Réinitialiser la Plateforme
-                  </button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <button 
+                      onClick={async () => {
+                        if(window.confirm("Cette action va vider le cache local et rafraîchir la page. Cela résout souvent les problèmes de 'moulinage'. Continuer ?")) {
+                          await clearFirestoreCache();
+                        }
+                      }}
+                      className="h-20 bg-[#1E3A8A] text-white rounded-2xl px-12 font-black uppercase tracking-[0.2em] text-xs hover:bg-blue-800 transition-all shadow-2xl shadow-blue-900/20 flex items-center gap-4 active:scale-95"
+                    >
+                      <Zap size={20} /> Réparer la Connectivité (Cache)
+                    </button>
+
+                    <button 
+                      onClick={viderBase}
+                      className="h-20 bg-rose-600 text-white rounded-2xl px-12 font-black uppercase tracking-[0.2em] text-xs hover:bg-rose-700 transition-all shadow-2xl shadow-rose-900/20 flex items-center gap-4 active:scale-95"
+                    >
+                      <Trash2 size={20} /> Réinitialiser la Plateforme
+                    </button>
+                  </div>
                </div>
             </div>
           )}
