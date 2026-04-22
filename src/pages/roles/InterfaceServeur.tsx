@@ -489,29 +489,7 @@ const InterfaceServeur = () => {
                           onClick={async () => {
                               const toastId = toast.loading("Envoi en cuisine...");
                               
-                              if (!isOnline) {
-                                // Check if we have items for Kitchen vs Bar
-                                const produitsCuisine = panierActuel.filter(l => 
-                                  produits.find(p => p.id === l.produitId)?.categorie !== 'Bière' && 
-                                  produits.find(p => p.id === l.produitId)?.categorie !== 'Vin' &&
-                                  produits.find(p => p.id === l.produitId)?.categorie !== 'Boisson'
-                                );
-                                const produitsBar = panierActuel.filter(l => 
-                                  produits.find(p => p.id === l.produitId)?.categorie === 'Bière' || 
-                                  produits.find(p => p.id === l.produitId)?.categorie === 'Vin' ||
-                                  produits.find(p => p.id === l.produitId)?.categorie === 'Boisson'
-                                );
-
-                                if (produitsCuisine.length > 0) {
-                                  imprimerBonPreparation(commandeActive!, produitsCuisine, "CUISINE (HORS-LIGNE)", profil?.etablissement_nom || 'GESTCAVE PRO');
-                                }
-                                if (produitsBar.length > 0) {
-                                  imprimerBonPreparation(commandeActive!, produitsBar, "BAR (HORS-LIGNE)", profil?.etablissement_nom || 'GESTCAVE PRO');
-                                }
-                                toast.success("Bons hors-ligne imprimés !", { id: toastId });
-                              } else {
-                                toast.success("Commande envoyée !", { id: toastId });
-                              }
+                              toast.success("Commande envoyée !", { id: toastId });
 
                               await envoyerCuisine(commandeId!);
                           }}

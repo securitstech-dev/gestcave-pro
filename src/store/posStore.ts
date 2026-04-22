@@ -534,10 +534,11 @@ export const usePOSStore = create<PosState>((set, get) => ({
 
       const data = snap.data();
       const lignesActuelles = (data.lignes || []) as LigneCommande[];
+      const isBoisson = ['Boisson', 'Boissons', 'Bière', 'Bière', 'Vin', 'Vins', 'Jus', 'Champagne', 'Liqueur', 'Soda', 'Eau'].includes(produit.categorie);
       
       const idx = lignesActuelles.findIndex(l => l.produitId === produit.id && l.statut === 'en_attente');
       let nvellesLignes = [...lignesActuelles];
-
+      
       if (idx > -1) {
         const item = nvellesLignes[idx];
         const nveleQte = (Number(item.quantite) || 0) + 1;
@@ -548,7 +549,7 @@ export const usePOSStore = create<PosState>((set, get) => ({
           produitId: produit.id, produitNom: produit.nom,
           quantite: 1, prixUnitaire: Number(produit.prix),
           sousTotal: Number(produit.prix), statut: 'en_attente',
-          destination: produit.destination_production || (produit.categorie === 'Boisson' ? 'bar' : 'cuisine'),
+          destination: produit.destination_production || (isBoisson ? 'bar' : 'cuisine'),
           produitCategorie: produit.categorie
         });
       }
