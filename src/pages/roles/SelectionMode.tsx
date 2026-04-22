@@ -13,7 +13,7 @@ import { toast } from 'react-hot-toast';
 
 const SelectionMode = () => {
   const navigate = useNavigate();
-  const { profil, deconnexion } = useAuthStore();
+  const { profil, deconnexion, etablissementSimuleId } = useAuthStore();
   const [showPinModal, setShowPinModal] = useState(false);
   const [selectedMode, setSelectedMode] = useState<any>(null);
   const [pin, setPin] = useState('');
@@ -85,6 +85,11 @@ const SelectionMode = () => {
   const validerPIN = async (currentPin: string) => {
     if (profil?.role === 'super_admin') {
       toast.success("Accès Stratégique Autorisé");
+      
+      sessionStorage.setItem('poste_employe_id', profil.id);
+      sessionStorage.setItem('poste_employe_nom', profil.prenom || profil.nom || 'Super Admin');
+      sessionStorage.setItem('poste_employe_role', 'admin');
+
       setShowPinModal(false);
       navigate(selectedMode.id === 'admin' ? '/tableau-de-bord' : selectedMode.route);
       return;
@@ -92,7 +97,7 @@ const SelectionMode = () => {
 
     setLoading(true);
     try {
-      const etablissementId = profil?.etablissement_id || 'demo';
+      const etablissementId = etablissementSimuleId || profil?.etablissement_id || 'demo';
       const q = query(
         collection(db, 'employes'), 
         where('etablissement_id', '==', etablissementId),
@@ -107,6 +112,11 @@ const SelectionMode = () => {
 
         if (estAdmin || employe.role === selectedMode.role) {
           toast.success(`Session : ${employe.nom}`);
+          
+          sessionStorage.setItem('poste_employe_id', employe.id);
+          sessionStorage.setItem('poste_employe_nom', employe.nom);
+          sessionStorage.setItem('poste_employe_role', employe.role);
+
           setShowPinModal(false);
           if (estAdmin && selectedMode.id === 'admin') {
             navigate('/tableau-de-bord');
@@ -119,6 +129,11 @@ const SelectionMode = () => {
         }
       } else if (currentPin === '0000') {
         toast.success("Mode Simulation : Actif");
+        
+        sessionStorage.setItem('poste_employe_id', 'demo_simulation');
+        sessionStorage.setItem('poste_employe_nom', 'Mode Simulation');
+        sessionStorage.setItem('poste_employe_role', 'admin');
+
         setShowPinModal(false);
         navigate(selectedMode.id === 'admin' ? '/tableau-de-bord' : selectedMode.route);
       } else {

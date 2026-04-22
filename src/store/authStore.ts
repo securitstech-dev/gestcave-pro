@@ -96,7 +96,29 @@ export const useAuthStore = create<EtatAuth>((set, get) => ({
   connexion: async (email, motDePasse) => {
     set({ chargement: true });
     try {
-      await signInWithEmailAndPassword(auth, email, motDePasse);
+      const userCred = await signInWithEmailAndPassword(auth, email, motDePasse);
+      
+      // Fetch profile immediately to avoid race condition with RoleGuard
+      const profilRef = doc(db, 'utilisateurs', userCred.user.uid);
+      const profilSnap = await getDoc(profilRef);
+      
+      if (profilSnap.exists()) {
+        const profilData = profilSnap.data() as ProfilUtilisateur;
+        let statusEtab = 'actif';
+        
+        if (profilData.etablissement_id) {
+          const etabSnap = await getDoc(doc(db, 'etablissements', profilData.etablissement_id));
+          if (etabSnap.exists()) {
+            statusEtab = etabSnap.data().statut || etabSnap.data().subscription_status || 'actif';
+          }
+        }
+
+        set({ 
+          utilisateur: userCred.user, 
+          profil: { ...profilData, id: profilSnap.id, etablissement_status: statusEtab } as ProfilUtilisateur,
+          initialise: true
+        });
+      }
     } finally {
       set({ chargement: false });
     }
@@ -114,7 +136,8 @@ export const useAuthStore = create<EtatAuth>((set, get) => ({
         nom: etablissementNom,
         proprietaire_id: uid,
         date_creation: new Date().toISOString(),
-        statut: 'en_attente_validation' // Le Super Admin doit valider
+        statut: 'en_attente_validation', // Le Super Admin doit valider
+        modules_actifs: []
       });
 
       // 3. Création du profil utilisateur
@@ -140,7 +163,7 @@ export const useAuthStore = create<EtatAuth>((set, get) => ({
       });
 
       // Mise à jour locale du profil
-      set({ profil: { id: uid, ...profilData } });
+      set({ profil: { id: uid, ...profilData }, utilisateur: userCred.user, initialise: true });
 
     } finally {
       set({ chargement: false });

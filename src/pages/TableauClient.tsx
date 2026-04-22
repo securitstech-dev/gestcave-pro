@@ -48,7 +48,7 @@ const TableauClient = () => {
     if (!etablissementId) return;
     const unsub = onSnapshot(doc(db, 'etablissements', etablissementId), (snap) => {
       const data = snap.data();
-      if (data?.modules_actifs) setModulesActifs(data.modules_actifs);
+      setModulesActifs(data?.modules_actifs || []);
     });
     return () => unsub();
   }, [etablissementId]);
@@ -143,7 +143,7 @@ const TableauClient = () => {
             {hasModule('compta') && <SidebarLink icon={<BookOpen size={18} />} label="Grand Livre" path="/tableau-de-bord/grand-livre" />}
             {hasModule('hr') && <SidebarLink icon={<Users size={18} />} label="Équipe & Personnel" path="/tableau-de-bord/rh" />}
             {hasModule('hr') && <SidebarLink icon={<Wallet size={18} />} label="Paies & Salaires" path="/tableau-de-bord/paie" />}
-            {hasModule('hr') && <SidebarLink icon={<Clock size={18} />} label="Borne de Pointage" path={`/pointage/${profil?.etablissement_id}`} />}
+            {hasModule('hr') && <SidebarLink icon={<Clock size={18} />} label="Borne de Pointage" path={`/pointage/${etablissementId}`} />}
             {hasModule('compta') && <SidebarLink icon={<Scale size={18} />} label="Conformité & Taxes" path="/tableau-de-bord/conformite" />}
             <SidebarLink icon={<Settings size={18} />} label="Paramètres" path="/tableau-de-bord/settings" />
           </div>

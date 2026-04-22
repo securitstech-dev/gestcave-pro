@@ -548,9 +548,9 @@ const TableauSuperAdmin = () => {
                </div>
                <div className="grid grid-cols-1 gap-4">
                   {etabsFiltres.map((etab) => {
-                    const expiration = new Date(etab.subscription_end_date);
-                    const joursRestants = Math.ceil((expiration.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-                    const expire = joursRestants <= 0;
+                    const expiration = etab.subscription_end_date ? new Date(etab.subscription_end_date) : new Date();
+                    const joursRestants = etab.subscription_end_date ? Math.ceil((expiration.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 0;
+                    const expire = etab.subscription_end_date ? joursRestants <= 0 : false;
                     return (
                       <div key={etab.id} className="bg-white rounded-[2rem] border border-slate-50 p-8 flex flex-col md:flex-row items-center justify-between gap-8 hover:border-emerald-100 transition-all group shadow-sm hover:shadow-md">
                         <div className="flex items-center gap-8 flex-1">
@@ -562,7 +562,7 @@ const TableauSuperAdmin = () => {
                             <div className="flex flex-wrap gap-2">
                                 <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-3 py-1.5 rounded-lg tracking-widest uppercase border border-slate-200">{etab.contact_principal}</span>
                                 <span className="text-[10px] font-bold bg-blue-50 text-[#1E3A8A] px-3 py-1.5 rounded-lg tracking-widest uppercase border border-blue-100">{etab.subscription_plan}</span>
-                                <BadgeStatut statut={etab.subscription_status} />
+                                <BadgeStatut statut={etab.subscription_status || etab.statut} />
                             </div>
                           </div>
                         </div>
@@ -574,11 +574,28 @@ const TableauSuperAdmin = () => {
                            </div>
 
                            <div className="flex gap-2">
-                              {etab.subscription_status === 'suspendu' || expire ? (
-                                <button onClick={() => reactiverEtablissement(etab.id)} className="w-16 h-16 bg-blue-50 text-[#1E3A8A] rounded-2xl flex items-center justify-center hover:bg-[#1E3A8A] hover:text-white transition-all shadow-inner" title="Réactiver"><Zap size={24} /></button>
-                              ) : (
-                                <button onClick={() => suspendreEtablissement(etab)} className="w-16 h-16 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all shadow-inner" title="Suspendre"><Ban size={24} /></button>
-                              )}
+                               {etab.statut === 'en_attente_validation' || etab.subscription_status === 'en_attente_validation' ? (
+                                  <button onClick={async () => {
+                                      const toastId = toast.loading('Validation...');
+                                      try {
+                                        await updateDoc(doc(db, 'etablissements', etab.id), {
+                                          statut: 'actif',
+                                          subscription_status: 'actif',
+                                          subscription_end_date: etab.subscription_end_date || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+                                          modules_actifs: etab.modules_actifs?.length ? etab.modules_actifs : ['pos', 'stock', 'hr', 'compta', 'kds', 'analytics']
+                                        });
+                                        toast.success("Établissement validé !", { id: toastId });
+                                      } catch (err: any) {
+                                        toast.error(err.message, { id: toastId });
+                                      }
+                                  }} className="h-16 px-6 bg-emerald-500 text-white rounded-2xl flex items-center justify-center font-bold text-xs uppercase hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-900/20" title="Valider le compte">
+                                    <CheckCircle size={20} className="mr-2" /> Valider
+                                  </button>
+                               ) : etab.subscription_status === 'suspendu' || expire ? (
+                                 <button onClick={() => reactiverEtablissement(etab.id)} className="w-16 h-16 bg-blue-50 text-[#1E3A8A] rounded-2xl flex items-center justify-center hover:bg-[#1E3A8A] hover:text-white transition-all shadow-inner" title="Réactiver"><Zap size={24} /></button>
+                               ) : (
+                                 <button onClick={() => suspendreEtablissement(etab)} className="w-16 h-16 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all shadow-inner" title="Suspendre"><Ban size={24} /></button>
+                               )}
                                <button onClick={() => {
                                   setModalModules(etab);
                                   setModulesActifs(etab.modules_actifs || ['pos', 'stock', 'hr', 'compta']);
@@ -1075,7 +1092,7 @@ L'équipe GestCave Pro`);
 const BadgeStatut = ({ statut }: { statut: string }) => {
   const s = statut?.toLowerCase();
   if (s === 'valide' || s === 'actif' || s === 'essai_actif') return <span className="px-4 py-1.5 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100 shadow-sm">Actif</span>;
-  if (s === 'en_attente') return <span className="px-4 py-1.5 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-100 shadow-sm">En attente</span>;
+  if (s === 'en_attente' || s === 'en_attente_validation') return <span className="px-4 py-1.5 bg-orange-50 text-orange-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-orange-100 shadow-sm animate-pulse">À Valider</span>;
   if (s === 'refuse' || s === 'rejete' || s === 'suspendu') return <span className="px-4 py-1.5 bg-rose-50 text-rose-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-rose-100 shadow-sm">Bloqué</span>;
   if (s === 'essai') return <span className="px-4 py-1.5 bg-orange-50 text-orange-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-orange-100 shadow-sm">Essai</span>;
   return <span className="px-4 py-1.5 bg-slate-50 text-slate-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-slate-100 shadow-sm">{statut}</span>;

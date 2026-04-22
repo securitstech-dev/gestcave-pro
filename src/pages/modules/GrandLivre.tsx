@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { BookOpen, Download, Calendar, TrendingUp, TrendingDown, DollarSign, Users, ShoppingCart, Landmark, FileText, RefreshCcw, ChevronDown, Info } from 'lucide-react';
 import { db } from '../../lib/firebase';
-import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, doc, getDoc } from 'firebase/firestore';
 import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
@@ -27,14 +27,15 @@ const GrandLivre = () => {
       const debut = new Date(annee, mois - 1, 1);
       const fin = new Date(annee, mois, 0, 23, 59, 59);
 
+      const debutIso = debut.toISOString();
+      const finIso = fin.toISOString();
+
       // 1. CA Réel (transactions_pos)
       const qTrans = query(collection(db, 'transactions_pos'),
-        where('etablissement_id', '==', etablissementId),
-        where('date', '>=', debut.toISOString()),
-        where('date', '<=', fin.toISOString())
+        where('etablissement_id', '==', etablissementId)
       );
       const snapTrans = await getDocs(qTrans);
-      const transactions = snapTrans.docs.map(d => d.data());
+      const transactions = snapTrans.docs.map(d => d.data()).filter(t => t.date >= debutIso && t.date <= finIso);
       
       // CA Réel = Uniquement les transactions finales (pour éviter les doublons avec acomptes)
       const transactionsFinales = transactions.filter(t => t.type === 'final');
@@ -47,22 +48,19 @@ const GrandLivre = () => {
 
       // 2. Charges fixes saisies
       const qCharges = query(collection(db, 'charges_fixes'),
-        where('etablissement_id', '==', etablissementId),
-        where('date', '>=', debut.toISOString()),
-        where('date', '<=', fin.toISOString())
+        where('etablissement_id', '==', etablissementId)
       );
       const snapCharges = await getDocs(qCharges);
-      const charges = snapCharges.docs.map(d => d.data());
+      const charges = snapCharges.docs.map(d => d.data()).filter(c => c.date >= debutIso && c.date <= finIso);
       const totalCharges = charges.reduce((s, c) => s + (c.montant || 0), 0);
 
       // 3. Achats fournisseurs
-      const qAchats = query(collection(db, 'achats_fournisseurs'),
-        where('etablissement_id', '==', etablissementId),
-        where('date', '>=', debut.toISOString()),
-        where('date', '<=', fin.toISOString())
+      const qAchats = query(collection(db, 'achats'),
+        where('etablissement_id', '==', etablissementId)
       );
       const snapAchats = await getDocs(qAchats);
-      const totalAchats = snapAchats.docs.reduce((s, d) => s + (d.data().montantTotal || 0), 0);
+      const achatsFiltered = snapAchats.docs.map(d => d.data()).filter(a => a.date >= debutIso && a.date <= finIso);
+      const totalAchats = achatsFiltered.reduce((s, d) => s + (d.total || 0), 0);
 
       // 4. Masse salariale (via pointages + barème)
       const qEmp = query(collection(db, 'employes'), where('etablissement_id', '==', etablissementId));
@@ -70,12 +68,16 @@ const GrandLivre = () => {
       const employes = snapEmp.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
 
       const qSessions = query(collection(db, 'pointage_presence'),
-        where('etablissement_id', '==', etablissementId),
-        where('debut', '>=', Timestamp.fromDate(debut)),
-        where('debut', '<=', Timestamp.fromDate(fin))
+        where('etablissement_id', '==', etablissementId)
       );
       const snapSessions = await getDocs(qSessions);
-      const sessionsPointage = snapSessions.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+      const debutMs = debut.getTime();
+      const finMs = fin.getTime();
+      const sessionsPointage = snapSessions.docs.map(d => ({ id: d.id, ...d.data() })).filter((s: any) => {
+        if (!s.debut) return false;
+        const sMs = s.debut.toMillis ? s.debut.toMillis() : new Date(s.debut).getTime();
+        return sMs >= debutMs && sMs <= finMs;
+      }) as any[];
 
       let masseSalariale = 0;
       employes.forEach(emp => {
@@ -112,8 +114,8 @@ const GrandLivre = () => {
       const resultatNet = resultatBrut - is;
 
       // Établissement nom
-      const qEtab = await getDocs(query(collection(db, 'etablissements'), where('__name__', '==', etablissementId)));
-      if (!qEtab.empty) setEtablissementNom(qEtab.docs[0].data().nom || 'Mon Établissement');
+      const etabDoc = await getDoc(doc(db, 'etablissements', etablissementId));
+      if (etabDoc.exists()) setEtablissementNom(etabDoc.data().nom || 'Mon Établissement');
 
       setRapport({
         caTotal, caEspeces, caMobile, caCarte, caCredit,
@@ -125,8 +127,11 @@ const GrandLivre = () => {
         nbPointages: sessionsPointage.length,
         charges, transactions: transactions.slice(0, 10)
       });
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      console.error("ERREUR GRAND LIVRE:", e);
+      if (e.message?.includes('index')) {
+        console.warn("⚠️ Index manquant détecté. Cliquez sur le lien dans la console Firebase pour le créer.");
+      }
       toast.error('Erreur lors du chargement du rapport');
     } finally {
       setLoading(false);
