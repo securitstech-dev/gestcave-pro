@@ -30,6 +30,7 @@ import GrandLivre from './modules/GrandLivre';
 import IAIntelligence from './modules/IAIntelligence';
 import GestionConformite from './modules/GestionConformite';
 import ModuleDebug from './modules/ModuleDebug';
+import CentreImpression from './modules/CentreImpression';
 import SimulationLab from '../components/SimulationLab';
 
 const TableauClient = () => {
@@ -147,6 +148,7 @@ const TableauClient = () => {
             {hasModule('hr') && <SidebarLink icon={<Wallet size={18} />} label="Paies & Salaires" path="/tableau-de-bord/paie" />}
             {hasModule('hr') && <SidebarLink icon={<Clock size={18} />} label="Borne de Pointage" path={`/pointage/${etablissementId}`} />}
             {hasModule('compta') && <SidebarLink icon={<Scale size={18} />} label="Conformité & Taxes" path="/tableau-de-bord/conformite" />}
+            <SidebarLink icon={<Printer size={18} />} label="Fiches à Imprimer" path="/tableau-de-bord/impression" />
             <SidebarLink icon={<Settings size={18} />} label="Paramètres" path="/tableau-de-bord/settings" />
           </div>
         </div>
@@ -322,6 +324,7 @@ const TableauClient = () => {
               <Route path="/tables" element={<GestionTables />} />
               <Route path="/sessions" element={<GestionSessions />} />
               <Route path="/settings" element={<GestionEtablissement />} />
+              <Route path="/impression" element={<CentreImpression />} />
               <Route path="/debug" element={<ModuleDebug />} />
 
               {/* ── POS ── */}
