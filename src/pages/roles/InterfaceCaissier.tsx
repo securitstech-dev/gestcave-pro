@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Banknote, CreditCard, Smartphone, Receipt, 
   CheckCircle2, Users, Clock, ShoppingBag, Wine,
@@ -14,6 +14,8 @@ import { useAuthStore } from '../../store/authStore';
 import { usePosteSession } from '../../hooks/usePosteSession';
 import { useNavigate } from 'react-router-dom';
 import type { LigneCommande } from '../../store/posStore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 
 const InterfaceCaissier = () => {
   const { profil } = useAuthStore();
@@ -54,6 +56,37 @@ const InterfaceCaissier = () => {
   const [showOuvertureModal, setShowOuvertureModal] = useState(false);
   const [showClotureModal, setShowClotureModal] = useState(false);
   const [fondsSaisi, setFondsSaisi] = useState('0');
+
+  // Stats en temps réel depuis transactions_pos (indépendant du store)
+  const [statsSession, setStatsSession] = useState({ totalEncaisse: 0, totalDettes: 0, nbTransactions: 0 });
+  const unsubStatsRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    const etabId = etablissementId || profil?.etablissement_id;
+    if (!etabId || !sessionActive) {
+      setStatsSession({ totalEncaisse: 0, totalDettes: 0, nbTransactions: 0 });
+      return;
+    }
+    if (unsubStatsRef.current) unsubStatsRef.current();
+    const q = query(
+      collection(db, 'transactions_pos'),
+      where('etablissement_id', '==', etabId),
+      where('date', '>=', sessionActive.dateOuverture)
+    );
+    unsubStatsRef.current = onSnapshot(q, (snap) => {
+      let encaisse = 0, dettes = 0, nb = snap.docs.length;
+      snap.docs.forEach(d => {
+        const t = d.data();
+        if (t.modePaiement === 'credit') {
+          dettes += (t.totalVente || 0) - (t.montant || 0);
+        } else {
+          encaisse += (t.montant || 0);
+        }
+      });
+      setStatsSession({ totalEncaisse: encaisse, totalDettes: dettes, nbTransactions: nb });
+    });
+    return () => { if (unsubStatsRef.current) unsubStatsRef.current(); };
+  }, [sessionActive?.id, etablissementId, profil?.etablissement_id]);
 
   const fondAttendu = useMemo(() => {
     if (!historiqueSessions || historiqueSessions.length === 0) return 0;
@@ -238,7 +271,7 @@ const InterfaceCaissier = () => {
               <div>
                   <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Total Encaissé</p>
                   <p className="text-2xl font-black text-[#1E3A8A] tracking-tighter">
-                    {commandes.filter(c => c.statut === 'payee' || (c.montantPaye || 0) > 0).reduce((acc, c) => acc + (c.montantPaye || 0), 0).toLocaleString()} <span className="text-xs opacity-40">F</span>
+                    {statsSession.totalEncaisse.toLocaleString()} <span className="text-xs opacity-40">F</span>
                   </p>
               </div>
           </div>
@@ -249,7 +282,7 @@ const InterfaceCaissier = () => {
               <div>
                   <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-1">Dettes / Impayés</p>
                   <p className="text-2xl font-black text-[#1E3A8A] tracking-tighter">
-                    {commandes.reduce((acc, c) => acc + (c.montantRestant || 0), 0).toLocaleString()} <span className="text-xs opacity-40">F</span>
+                    {(statsSession.totalDettes + commandes.filter(c => c.statut === 'en_arriere').reduce((acc, c) => acc + (c.montantRestant || 0), 0)).toLocaleString()} <span className="text-xs opacity-40">F</span>
                   </p>
               </div>
           </div>
@@ -260,7 +293,7 @@ const InterfaceCaissier = () => {
               <div>
                   <p className="text-[10px] font-black text-[#1E3A8A] uppercase tracking-widest mb-1">Ventes Latentes</p>
                   <p className="text-2xl font-black text-[#1E3A8A] tracking-tighter">
-                    {commandes.filter(c => c.statut !== 'payee').reduce((acc, c) => acc + (c.total || 0), 0).toLocaleString()} <span className="text-xs opacity-40">F</span>
+                    {commandes.filter(c => c.statut !== 'payee' && c.statut !== 'en_arriere').reduce((acc, c) => acc + (c.total || 0), 0).toLocaleString()} <span className="text-xs opacity-40">F</span>
                   </p>
               </div>
           </div>
@@ -270,7 +303,7 @@ const InterfaceCaissier = () => {
               </div>
               <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Transactions</p>
-                  <p className="text-2xl font-black text-[#1E3A8A] tracking-tighter">{commandes.length} Ops</p>
+                  <p className="text-2xl font-black text-[#1E3A8A] tracking-tighter">{statsSession.nbTransactions} Ops</p>
               </div>
           </div>
       </div>
