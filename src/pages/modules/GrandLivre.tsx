@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { BookOpen, Download, Calendar, TrendingUp, TrendingDown, DollarSign, Users, ShoppingCart, Landmark, FileText, RefreshCcw, ChevronDown, Info } from 'lucide-react';
 import { db } from '../../lib/firebase';
-import { collection, query, where, getDocs, Timestamp, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, doc, getDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
@@ -103,14 +103,29 @@ const GrandLivre = () => {
         }
       });
 
-      // 5. Calculs fiscaux Congo
-      const tva = caTotal * 0.18;
-      const taxeLoisirs = caTotal * 0.05;
-      const taxeTourisme = caTotal * 0.02;
-      const cnss = masseSalariale * 0.165;
+      // 5. Paiements fiscaux manuels (Overwrites)
+      const qPay = query(collection(db, 'paiements_fiscaux'),
+        where('etablissement_id', '==', etablissementId),
+        where('annee', '==', annee),
+        where('mois', '==', mois)
+      );
+      const snapPay = await getDocs(qPay);
+      const paiementsManuels: any = {};
+      snapPay.docs.forEach(d => {
+        const data = d.data();
+        paiementsManuels[data.type_taxe] = data.montant_paye;
+      });
+
+      // 6. Calculs fiscaux Congo (avec overrides manuels si payés/négociés)
+      const tva = paiementsManuels['tva'] !== undefined ? paiementsManuels['tva'] : caTotal * 0.18;
+      const taxeLoisirs = paiementsManuels['taxeLoisirs'] !== undefined ? paiementsManuels['taxeLoisirs'] : caTotal * 0.05;
+      const taxeTourisme = paiementsManuels['taxeTourisme'] !== undefined ? paiementsManuels['taxeTourisme'] : caTotal * 0.02;
+      const cnss = paiementsManuels['cnss'] !== undefined ? paiementsManuels['cnss'] : masseSalariale * 0.165;
+      
       const totalChargesExploit = totalAchats + totalCharges + masseSalariale + cnss + taxeLoisirs + taxeTourisme;
       const resultatBrut = caTotal - totalChargesExploit;
-      const is = resultatBrut > 0 ? resultatBrut * 0.30 : 0;
+      
+      const is = paiementsManuels['is'] !== undefined ? paiementsManuels['is'] : (resultatBrut > 0 ? resultatBrut * 0.30 : 0);
       const resultatNet = resultatBrut - is;
 
       // Établissement nom
@@ -125,7 +140,8 @@ const GrandLivre = () => {
         nbTransactions: transactions.length,
         nbEmployes: employes.length,
         nbPointages: sessionsPointage.length,
-        charges, transactions: transactions.slice(0, 10)
+        charges, transactions: transactions.slice(0, 10),
+        paiementsManuels
       });
     } catch (e: any) {
       console.error("ERREUR GRAND LIVRE:", e);
@@ -230,6 +246,62 @@ const GrandLivre = () => {
 
     doc.save(`GrandLivre_${etablissementNom}_${periodeStr.replace(' ', '_')}.pdf`);
     toast.success('Grand Livre exporté en PDF !');
+  };
+
+  const [editingTax, setEditingTax] = useState<string | null>(null);
+  const [taxAmount, setTaxAmount] = useState<number>(0);
+
+  const enregistrerPaiementFiscal = async (type: string, montant: number) => {
+    try {
+      const q = query(collection(db, 'paiements_fiscaux'),
+        where('etablissement_id', '==', etablissementId),
+        where('annee', '==', annee),
+        where('mois', '==', mois),
+        where('type_taxe', '==', type)
+      );
+      const snap = await getDocs(q);
+      
+      if (snap.empty) {
+        await addDoc(collection(db, 'paiements_fiscaux'), {
+          etablissement_id: etablissementId,
+          annee,
+          mois,
+          type_taxe: type,
+          montant_paye: montant,
+          date_paiement: new Date().toISOString()
+        });
+      } else {
+        const payRef = doc(db, 'paiements_fiscaux', snap.docs[0].id);
+        await updateDoc(payRef, {
+          montant_paye: montant,
+          date_paiement: new Date().toISOString()
+        });
+      }
+      toast.success("Paiement / Montant négocié enregistré");
+      setEditingTax(null);
+      chargerRapport();
+    } catch (e) {
+      toast.error("Erreur de sauvegarde");
+    }
+  };
+
+  const reinitialiserTaxe = async (type: string) => {
+    try {
+      const q = query(collection(db, 'paiements_fiscaux'),
+        where('etablissement_id', '==', etablissementId),
+        where('annee', '==', annee),
+        where('mois', '==', mois),
+        where('type_taxe', '==', type)
+      );
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        await deleteDoc(doc(db, 'paiements_fiscaux', snap.docs[0].id));
+        toast.success("Calcul automatique rétabli");
+        chargerRapport();
+      }
+    } catch (e) {
+      toast.error("Erreur");
+    }
   };
 
   const moisNom = new Date(annee, mois - 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
@@ -389,13 +461,62 @@ const GrandLivre = () => {
                 { label: 'Taxe Tourisme 2%', val: rapport.taxeTourisme, note: 'Sur CA brut' },
                 { label: 'CNSS 16.5%', val: rapport.cnss, note: 'Part patronale' },
                 { label: 'IS 30%', val: rapport.is, note: 'Sur bénéfice net' },
-              ].map((tax, i) => (
-                <div key={i} className="bg-slate-50 p-6 rounded-2xl border border-slate-100 text-center">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">{tax.label}</p>
-                  <p className="text-2xl font-black text-[#FF7A00] tracking-tight mb-2">{Math.round(tax.val).toLocaleString()}</p>
-                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">XAF · {tax.note}</p>
-                </div>
-              ))}
+              ].map((tax, i) => {
+                const types = ['tva', 'taxeLoisirs', 'taxeTourisme', 'cnss', 'is'];
+                const type = types[i];
+                const isManual = rapport.paiementsManuels?.[type] !== undefined;
+
+                return (
+                  <div key={i} className={`bg-slate-50 p-6 rounded-2xl border transition-all ${isManual ? 'border-[#FF7A00] bg-orange-50/30' : 'border-slate-100'} text-center group`}>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center justify-center gap-2">
+                      {tax.label}
+                      {isManual && <span className="w-1.5 h-1.5 bg-[#FF7A00] rounded-full animate-pulse" />}
+                    </p>
+                    
+                    {editingTax === type ? (
+                      <div className="space-y-3">
+                        <input 
+                          type="number"
+                          value={taxAmount}
+                          onChange={e => setTaxAmount(Number(e.target.value))}
+                          className="w-full h-10 bg-white border-2 border-[#1E3A8A] rounded-xl px-3 font-black text-[#1E3A8A] outline-none text-center"
+                          autoFocus
+                          placeholder="Montant négocié"
+                        />
+                        <div className="flex gap-2">
+                          <button onClick={() => enregistrerPaiementFiscal(type, taxAmount)} className="flex-1 py-2 bg-[#1E3A8A] text-white rounded-lg text-[9px] font-bold uppercase tracking-widest">Enregistrer</button>
+                          <button onClick={() => setEditingTax(null)} className="p-2 bg-slate-200 text-slate-500 rounded-lg"><X size={12} /></button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <p className={`text-2xl font-black tracking-tight mb-2 ${isManual ? 'text-[#FF7A00]' : 'text-[#1E3A8A]'}`}>
+                          {Math.round(tax.val).toLocaleString()}
+                        </p>
+                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-4">XAF · {tax.note}</p>
+                        
+                        <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            onClick={() => { setEditingTax(type); setTaxAmount(Math.round(tax.val)); }}
+                            className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[8px] font-black text-[#1E3A8A] uppercase hover:bg-blue-50"
+                          >
+                            {isManual ? 'Modifier' : 'Négocier / Payer'}
+                          </button>
+                          {isManual && (
+                            <button 
+                              onClick={() => reinitialiserTaxe(type)}
+                              className="p-1.5 bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-all"
+                              title="Réinitialiser au calcul automatique"
+                            >
+                              <RefreshCcw size={10} />
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </>
