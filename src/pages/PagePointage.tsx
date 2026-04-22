@@ -139,11 +139,12 @@ const PagePointage = () => {
   const actionPointage = async (type: 'arrivee' | 'pause_debut' | 'pause_fin' | 'depart') => {
     if (!employe) return;
     setLoading(true);
+    let malusCalcule = 0;
+    
     try {
       if (type === 'arrivee') {
         const maintenant = new Date();
         let noteRetard = "";
-        let malusCalcule = 0;
 
         if (configRH?.heureOuvertureStandard) {
           const [h, m] = configRH.heureOuvertureStandard.split(':').map(Number);
@@ -152,7 +153,11 @@ const PagePointage = () => {
 
           if (maintenant > heureLimite) {
             const minutesRetard = Math.floor((maintenant.getTime() - heureLimite.getTime()) / 60000);
-            malusCalcule = minutesRetard * (configRH.malusRetardParMinute || 0);
+            
+            // Sécurité : 100 XAF par min par défaut et plafonné à 5000 XAF pour la démo
+            const malusUnitaire = configRH.malusRetardParMinute || 100;
+            malusCalcule = Math.min(minutesRetard * malusUnitaire, 5000);
+            
             noteRetard = `Retard de ${minutesRetard}min constaté.`;
 
             // Enregistrement simple de la sanction sans recherche de récidive (évite besoin d'index complexe)
