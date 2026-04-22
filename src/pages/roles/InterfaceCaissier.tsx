@@ -74,7 +74,10 @@ const InterfaceCaissier = () => {
 
   const commandesActives = useMemo(() => {
     return commandes
-      .filter(c => vueActive === 'actives' ? c.statut !== 'payee' && c.statut !== 'en_arriere' : c.statut === 'en_arriere')
+      .filter(c => vueActive === 'actives' 
+        ? (c.statut !== 'payee' && c.statut !== 'en_arriere' && (c.total || 0) > 0) 
+        : c.statut === 'en_arriere'
+      )
       .filter(c => 
         (c.tableNom || 'DIRECTE').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (c.serveurNom || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
