@@ -56,6 +56,7 @@ const InterfaceCaissier = () => {
   const [showOuvertureModal, setShowOuvertureModal] = useState(false);
   const [showClotureModal, setShowClotureModal] = useState(false);
   const [fondsSaisi, setFondsSaisi] = useState('0');
+  const [datePromesse, setDatePromesse] = useState('');
 
   // Stats en temps réel depuis transactions_pos (indépendant du store)
   const [statsSession, setStatsSession] = useState({ totalEncaisse: 0, totalDettes: 0, nbTransactions: 0 });
@@ -184,6 +185,7 @@ const InterfaceCaissier = () => {
       setNomClient('');
       setContactClient('');
       setRemise(0);
+      setDatePromesse('');
     } catch (error) {
       toast.error("Erreur lors de l'encaissement", { id: toastId });
     }
@@ -350,44 +352,104 @@ const InterfaceCaissier = () => {
                         <button 
                           key={cmd.id}
                           onClick={() => setCommandeSelectionnee(cmd.id)}
-                          className={`p-8 rounded-[2.5rem] border-2 text-left transition-all relative overflow-hidden flex flex-col justify-between group h-64 ${
-                            commandeSelectionnee === cmd.id 
-                              ? 'bg-[#1E3A8A] border-[#1E3A8A] text-white shadow-2xl shadow-blue-900/20' 
-                              : isDemandeAddition
-                              ? 'bg-rose-50 border-rose-400 text-slate-800 shadow-xl shadow-rose-900/10 animate-pulse'
-                              : 'bg-white border-slate-100 text-slate-400 hover:border-blue-100 shadow-xl shadow-blue-900/5'
+                          className={`p-8 rounded-[2.5rem] border-2 text-left transition-all relative overflow-hidden flex flex-col justify-between group ${
+                            vueActive === 'arrieres'
+                              ? `h-auto min-h-[200px] ${commandeSelectionnee === cmd.id ? 'bg-[#FF7A00] border-[#FF7A00] text-white shadow-2xl' : 'bg-orange-50 border-orange-200 text-slate-800 hover:border-orange-400 shadow-xl shadow-orange-900/10'}`
+                              : `h-64 ${commandeSelectionnee === cmd.id 
+                                  ? 'bg-[#1E3A8A] border-[#1E3A8A] text-white shadow-2xl shadow-blue-900/20' 
+                                  : isDemandeAddition
+                                  ? 'bg-rose-50 border-rose-400 text-slate-800 shadow-xl shadow-rose-900/10 animate-pulse'
+                                  : 'bg-white border-slate-100 text-slate-400 hover:border-blue-100 shadow-xl shadow-blue-900/5'}`
                           }`}
                         >
                             {commandeSelectionnee === cmd.id && (
                                 <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl -mr-12 -mt-12" />
                             )}
-                            <div>
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                                        commandeSelectionnee === cmd.id ? 'bg-white/10 text-white' : 
-                                        isDemandeAddition ? 'bg-rose-500 text-white' : 'bg-slate-50 text-[#1E3A8A]'
-                                    }`}>
-                                        {cmd.tableNom || 'DIRECTE'} {isDemandeAddition ? ' (ADDITION DEMANDÉE)' : ''}
-                                    </div>
-                                    <span className={`text-[10px] font-bold uppercase tracking-widest ${isDemandeAddition && commandeSelectionnee !== cmd.id ? 'text-rose-400' : 'opacity-40'}`}># {cmd.id.slice(-4).toUpperCase()}</span>
-                                </div>
-                                <h3 className={`text-2xl font-black tracking-tighter uppercase leading-tight ${commandeSelectionnee === cmd.id ? 'text-white' : isDemandeAddition ? 'text-rose-600' : 'text-[#1E3A8A]'}`}>
-                                    {cmd.clientNom || 'Client direct'}
-                                </h3>
-                                <p className="text-[10px] font-bold uppercase tracking-widest mt-2 opacity-60">Serveur: {cmd.serveurNom}</p>
-                            </div>
 
-                            <div className="flex justify-between items-end mt-8">
+                            {vueActive === 'arrieres' ? (
+                              /* ── CARTE ARRIÉRÉ ── */
+                              <div className="space-y-4">
+                                <div className="flex justify-between items-start">
+                                  <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${commandeSelectionnee === cmd.id ? 'bg-white/20 text-white' : 'bg-orange-200 text-orange-800'}`}>
+                                    DETTE — {cmd.tableNom || 'DIRECTE'}
+                                  </div>
+                                  <span className="text-[10px] font-bold opacity-40"># {cmd.id.slice(-4).toUpperCase()}</span>
+                                </div>
+                                {/* Nom débiteur */}
                                 <div>
-                                    <p className={`text-xs font-black uppercase tracking-widest mb-1 ${commandeSelectionnee === cmd.id ? 'text-white/40' : 'text-slate-300'}`}>Total à encaisser</p>
-                                    <p className={`text-3xl font-black tracking-tighter ${commandeSelectionnee === cmd.id ? 'text-white' : 'text-[#FF7A00]'}`}>
-                                        {(cmd.total || 0).toLocaleString()} <span className="text-xs font-bold opacity-30">XAF</span>
+                                  <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${commandeSelectionnee === cmd.id ? 'text-white/60' : 'text-orange-400'}`}>Débiteur</p>
+                                  <h3 className={`text-xl font-black tracking-tighter uppercase ${commandeSelectionnee === cmd.id ? 'text-white' : 'text-[#1E3A8A]'}`}>
+                                    {cmd.clientNom || <span className="text-rose-500">⚠ Nom manquant</span>}
+                                  </h3>
+                                </div>
+                                {/* Téléphone */}
+                                <div className={`flex items-center gap-2 ${commandeSelectionnee === cmd.id ? 'text-white/80' : 'text-slate-600'}`}>
+                                  <Phone size={14} className={commandeSelectionnee === cmd.id ? 'text-white/60' : 'text-orange-400'} />
+                                  <span className="text-sm font-bold">{cmd.clientContact || '—'}</span>
+                                </div>
+                                {/* Montant restant */}
+                                <div className={`p-4 rounded-2xl ${commandeSelectionnee === cmd.id ? 'bg-white/20' : 'bg-orange-100'}`}>
+                                  <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${commandeSelectionnee === cmd.id ? 'text-white/60' : 'text-orange-500'}`}>Reste à payer</p>
+                                  <p className={`text-3xl font-black tracking-tighter ${commandeSelectionnee === cmd.id ? 'text-white' : 'text-rose-600'}`}>
+                                    {((cmd.montantRestant ?? (cmd.total - (cmd.montantPaye || 0))) || 0).toLocaleString()} <span className="text-xs font-bold opacity-50">XAF</span>
+                                  </p>
+                                  {(cmd.montantPaye || 0) > 0 && (
+                                    <p className={`text-[10px] font-bold mt-1 ${commandeSelectionnee === cmd.id ? 'text-white/50' : 'text-slate-400'}`}>
+                                      Acompte versé : {(cmd.montantPaye || 0).toLocaleString()} F
                                     </p>
+                                  )}
                                 </div>
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${commandeSelectionnee === cmd.id ? 'bg-[#FF7A00] text-white' : 'bg-slate-50 text-slate-200'}`}>
-                                    <ArrowRight size={24} />
+                                {/* Date promesse */}
+                                {cmd.datePromessePaiement && (
+                                  <div className={`flex items-center gap-2 text-[11px] font-bold ${commandeSelectionnee === cmd.id ? 'text-white/70' : 'text-emerald-700'}`}>
+                                    <Clock size={13} className={commandeSelectionnee === cmd.id ? 'text-white/50' : 'text-emerald-500'} />
+                                    Promis le : {new Date(cmd.datePromessePaiement).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                                  </div>
+                                )}
+                                {!cmd.datePromessePaiement && (
+                                  <div className="flex items-center gap-2 text-[11px] font-bold text-rose-400">
+                                    <AlertCircle size={13} /> Aucune date fixée
+                                  </div>
+                                )}
+                                {/* Date mise en arriéré */}
+                                {cmd.dateMiseEnArriere && (
+                                  <p className={`text-[9px] font-bold uppercase tracking-widest ${commandeSelectionnee === cmd.id ? 'text-white/40' : 'text-slate-400'}`}>
+                                    Enregistré le {new Date(cmd.dateMiseEnArriere).toLocaleDateString('fr-FR')}
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              /* ── CARTE ACTIVE NORMALE ── */
+                              <>
+                                <div>
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                            commandeSelectionnee === cmd.id ? 'bg-white/10 text-white' : 
+                                            isDemandeAddition ? 'bg-rose-500 text-white' : 'bg-slate-50 text-[#1E3A8A]'
+                                        }`}>
+                                            {cmd.tableNom || 'DIRECTE'} {isDemandeAddition ? ' (ADDITION DEMANDÉE)' : ''}
+                                        </div>
+                                        <span className={`text-[10px] font-bold uppercase tracking-widest ${isDemandeAddition && commandeSelectionnee !== cmd.id ? 'text-rose-400' : 'opacity-40'}`}># {cmd.id.slice(-4).toUpperCase()}</span>
+                                    </div>
+                                    <h3 className={`text-2xl font-black tracking-tighter uppercase leading-tight ${commandeSelectionnee === cmd.id ? 'text-white' : isDemandeAddition ? 'text-rose-600' : 'text-[#1E3A8A]'}`}>
+                                        {cmd.clientNom || 'Client direct'}
+                                    </h3>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest mt-2 opacity-60">Serveur: {cmd.serveurNom}</p>
                                 </div>
-                            </div>
+
+                                <div className="flex justify-between items-end mt-8">
+                                    <div>
+                                        <p className={`text-xs font-black uppercase tracking-widest mb-1 ${commandeSelectionnee === cmd.id ? 'text-white/40' : 'text-slate-300'}`}>Total à encaisser</p>
+                                        <p className={`text-3xl font-black tracking-tighter ${commandeSelectionnee === cmd.id ? 'text-white' : 'text-[#FF7A00]'}`}>
+                                            {(cmd.total || 0).toLocaleString()} <span className="text-xs font-bold opacity-30">XAF</span>
+                                        </p>
+                                    </div>
+                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${commandeSelectionnee === cmd.id ? 'bg-[#FF7A00] text-white' : 'bg-slate-50 text-slate-200'}`}>
+                                        <ArrowRight size={24} />
+                                    </div>
+                                </div>
+                              </>
+                            )}
                         </button>
                         );
                     })}
@@ -579,9 +641,14 @@ const InterfaceCaissier = () => {
                         </button>
                         <button
                             onClick={() => {
-                              if(window.confirm("Voulez-vous libérer la table ? La commande sera conservée dans la liste des arriérés.")) {
-                                mettreEnArriere(commandeSelectionnee!);
+                              if (!nomClient || !contactClient) {
+                                toast.error('Identité et contact du client requis pour un arriéré');
+                                return;
+                              }
+                              if(window.confirm(`Libérer la table ? La dette de ${((commandeActive?.total || 0) - (commandeActive?.montantPaye || 0)).toLocaleString()} F sera enregistrée au nom de ${nomClient}.`)) {
+                                mettreEnArriere(commandeSelectionnee!, datePromesse, nomClient, contactClient);
                                 setCommandeSelectionnee(null);
+                                setDatePromesse('');
                               }
                             }}
                             disabled={!commandeActive || commandeActive.statut === 'en_arriere' || (commandeActive.montantPaye || 0) === 0}

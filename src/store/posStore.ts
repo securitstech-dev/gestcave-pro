@@ -210,6 +210,8 @@ export interface Commande {
   montantRestant?: number;
   remise?: number;
   totalFinal?: number;
+  datePromessePaiement?: string;
+  dateMiseEnArriere?: string;
 }
 
 export interface TablePlan {
@@ -288,7 +290,7 @@ interface PosState {
   demanderAddition: (commandeId: string, tableId: string) => Promise<void>;
   enregistrerAcompte: (commandeId: string, montant: number, mode: string) => Promise<void>;
   forcerLiberationTable: (tableId: string) => Promise<void>;
-  mettreEnArriere: (commandeId: string) => Promise<void>;
+  mettreEnArriere: (commandeId: string, datePromesse?: string, clientNom?: string, clientContact?: string) => Promise<void>;
 }
 
 export const usePOSStore = create<PosState>((set, get) => ({
@@ -900,17 +902,21 @@ export const usePOSStore = create<PosState>((set, get) => ({
     await get().refreshCommande(commandeId);
   },
 
-  mettreEnArriere: async (commandeId) => {
+  mettreEnArriere: async (commandeId, datePromesse?, clientNom?, clientContact?) => {
     const cmd = get().commandes.find(c => c.id === commandeId);
     if (!cmd) return;
 
     const batch = writeBatch(db);
     const commandeRef = doc(db, 'commandes', commandeId);
 
-    // On marque la commande comme étant en arriéré
+    // On marque la commande comme étant en arriéré avec infos débiteur
     batch.update(commandeRef, { 
       statut: 'en_arriere',
-      dateMiseEnArriere: new Date().toISOString()
+      dateMiseEnArriere: new Date().toISOString(),
+      ...(datePromesse ? { datePromessePaiement: datePromesse } : {}),
+      ...(clientNom ? { clientNom } : {}),
+      ...(clientContact ? { clientContact } : {}),
+      montantRestant: (cmd.total || 0) - (cmd.montantPaye || 0)
     });
 
     // On libère la table pour d'autres clients
