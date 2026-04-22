@@ -40,6 +40,7 @@ const TableauClient = () => {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [modulesActifs, setModulesActifs] = useState<string[] | null>(null);
+  const [statusEtab, setStatusEtab] = useState<string | null>(null);
 
   const etablissementId = etablissementSimuleId || profil?.etablissement_id;
 
@@ -49,6 +50,7 @@ const TableauClient = () => {
     const unsub = onSnapshot(doc(db, 'etablissements', etablissementId), (snap) => {
       const data = snap.data();
       setModulesActifs(data?.modules_actifs || []);
+      setStatusEtab(data?.subscription_status || data?.statut || null);
     });
     return () => unsub();
   }, [etablissementId]);
@@ -248,7 +250,7 @@ const TableauClient = () => {
 
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
       {/* Alerte Validation */}
-      {profil?.etablissement_status === 'en_attente_validation' && (
+      {(statusEtab === 'en_attente_validation' || (!statusEtab && profil?.etablissement_status === 'en_attente_validation')) && statusEtab !== 'actif' && (
         <div className="mb-10 bg-orange-50 border-2 border-orange-200 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center gap-8 animate-in slide-in-from-top duration-700 shadow-xl shadow-orange-900/5">
           <div className="w-20 h-20 bg-[#FF7A00] rounded-[1.5rem] flex items-center justify-center text-white shadow-lg shadow-orange-200 shrink-0">
              <ShieldAlert size={40} />
