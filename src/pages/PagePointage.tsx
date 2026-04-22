@@ -20,6 +20,7 @@ const PagePointage = () => {
   const [sessionActuelle, setSessionActuelle] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [configRH, setConfigRH] = useState<any>(null);
+  const [successData, setSuccessData] = useState<any>(null);
 
   // 1. Chargement de la configuration (une seule fois à l'initialisation ou si l'ID change)
   useEffect(() => {
@@ -202,7 +203,18 @@ const PagePointage = () => {
         await updateDoc(ref, { statut: 'present', pauses });
         toast.success("Fin de pause");
       }
-      reinitialiser();
+      setSuccessData({
+        type: type === 'arrivee' ? 'BIENVENUE' : (type === 'depart' ? 'AU REVOIR' : 'CONFIRMÉ'),
+        nom: employe.nom,
+        malus: malusCalcule,
+        message: type === 'arrivee' ? 'Bon service !' : (type === 'depart' ? 'À bientôt !' : 'Action enregistrée')
+      });
+
+      // On attend 5 secondes avant de réinitialiser pour que l'employé voit le message
+      setTimeout(() => {
+        setSuccessData(null);
+        reinitialiser();
+      }, 5000);
     } catch (error: any) {
       console.error("Erreur détaillée pointage:", error);
       toast.error(`Erreur : ${error.message || "Problème de connexion au serveur"}`);
@@ -394,6 +406,36 @@ const PagePointage = () => {
       <div className="absolute bottom-8 left-0 w-full text-center">
          <p className="text-white/20 text-[10px] font-bold uppercase tracking-[0.5em]">GestCave Pro Security Framework — v4.0.1</p>
       </div>
+      {/* Overlay de Succès Explicite */}
+      {successData && (
+        <div className="absolute inset-0 z-[100] bg-[#1E3A8A] flex flex-col items-center justify-center text-center p-8 animate-in fade-in zoom-in duration-300">
+            <div className="w-32 h-32 bg-white/10 rounded-full flex items-center justify-center mb-8 animate-bounce">
+                <CheckCircle2 size={64} className="text-[#FF7A00]" />
+            </div>
+            
+            <h2 className="text-4xl font-black text-white uppercase tracking-tighter mb-2">
+                {successData.type}, {successData.nom} !
+            </h2>
+            <p className="text-blue-200 text-xl font-bold mb-12">{successData.message}</p>
+
+            {successData.malus > 0 && (
+                <div className="bg-rose-500/20 border-2 border-rose-500/50 p-8 rounded-[2.5rem] max-w-md w-full backdrop-blur-md">
+                    <div className="flex items-center justify-center gap-3 text-rose-200 mb-2">
+                        <ShieldAlert size={24} />
+                        <span className="text-xs font-black uppercase tracking-widest">Alerte Retard</span>
+                    </div>
+                    <div className="text-4xl font-black text-white mb-2">
+                        -{successData.malus.toLocaleString()} XAF
+                    </div>
+                    <p className="text-[10px] text-rose-300 font-bold uppercase tracking-widest">Malus déduit automatiquement de la prime</p>
+                </div>
+            )}
+
+            <div className="absolute bottom-12 text-blue-300/50 text-[10px] font-black uppercase tracking-[0.3em]">
+                Retour automatique à l'accueil dans quelques secondes...
+            </div>
+        </div>
+      )}
     </div>
   );
 };
