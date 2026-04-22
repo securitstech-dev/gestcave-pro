@@ -5,7 +5,7 @@ import {
   Layout, LayoutDashboard, Zap, Activity, ShieldCheck, Shield, ShieldAlert,
   Calendar, ArrowUpRight, ArrowDownRight, MoreVertical, DollarSign,
   Bell, Search, Menu, X, PlusCircle, Globe, History, ArrowRight, ArrowLeft, Receipt, Clock, Terminal,
-  ChefHat, Flame, Timer, Wallet, Bot, Monitor, BookOpen, Loader2, Scale
+  ChefHat, Flame, Timer, Wallet, Bot, Monitor, BookOpen, Loader2, Scale, Printer
 } from 'lucide-react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
