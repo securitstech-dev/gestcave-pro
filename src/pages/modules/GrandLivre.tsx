@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { BookOpen, Download, Calendar, TrendingUp, TrendingDown, DollarSign, Users, ShoppingCart, Landmark, FileText, RefreshCcw, ChevronDown, Info } from 'lucide-react';
+import { BookOpen, Download, Calendar, TrendingUp, TrendingDown, DollarSign, Users, ShoppingCart, Landmark, FileText, RefreshCcw, ChevronDown, Info, X } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { collection, query, where, getDocs, Timestamp, doc, getDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { useAuthStore } from '../../store/authStore';
