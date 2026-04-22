@@ -309,10 +309,16 @@ export const usePOSStore = create<PosState>((set, get) => ({
     
     const unsubs = [];
 
-    // CONNECTION STATUS
-    unsubs.push(onSnapshot(doc(db, '.info/connected'), (snap) => {
-      set({ isOnline: !!snap.data() });
-    }));
+    // CONNECTION STATUS (Correction: Firestore n'a pas de .info/connected)
+    const updateOnlineStatus = () => set({ isOnline: window.navigator.onLine });
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    updateOnlineStatus();
+    
+    unsubs.push(() => {
+      window.removeEventListener('online', updateOnlineStatus);
+      window.removeEventListener('offline', updateOnlineStatus);
+    });
 
     // TABLES
     unsubs.push(onSnapshot(
