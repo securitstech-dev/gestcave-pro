@@ -152,27 +152,9 @@ const PagePointage = () => {
           if (maintenant > heureLimite) {
             const minutesRetard = Math.floor((maintenant.getTime() - heureLimite.getTime()) / 60000);
             malusCalcule = minutesRetard * (configRH.malusRetardParMinute || 0);
-            
-            // Vérification récidive (30 derniers jours)
-            const debutMois = new Date();
-            debutMois.setDate(1);
-            const qRetards = query(
-              collection(db, 'discipline'),
-              where('employe_id', '==', employe.id),
-              where('type', '==', 'retard'),
-              where('date', '>=', debutMois.toISOString())
-            );
-            const snapRetards = await getDocs(qRetards);
-            const nbRetards = snapRetards.size + 1;
+            noteRetard = `Retard de ${minutesRetard}min constaté.`;
 
-            if (nbRetards >= (configRH.seuilRetardRepetitif || 3)) {
-              malusCalcule *= (configRH.multiplicateurMalusRepetitif || 2);
-              noteRetard = `Retard de ${minutesRetard}min. RÉCIDIVE détectée (${nbRetards}e retard du mois). Malus doublé.`;
-            } else {
-              noteRetard = `Retard de ${minutesRetard}min constaté.`;
-            }
-
-            // Enregistrement de la sanction
+            // Enregistrement simple de la sanction sans recherche de récidive (évite besoin d'index complexe)
             await addDoc(collection(db, 'discipline'), {
               employe_id: employe.id,
               employe_nom: employe.nom,
@@ -221,8 +203,9 @@ const PagePointage = () => {
         toast.success("Fin de pause");
       }
       reinitialiser();
-    } catch (error) {
-      toast.error("Erreur lors de l'enregistrement");
+    } catch (error: any) {
+      console.error("Erreur détaillée pointage:", error);
+      toast.error(`Erreur : ${error.message || "Problème de connexion au serveur"}`);
     } finally {
       setLoading(false);
     }
