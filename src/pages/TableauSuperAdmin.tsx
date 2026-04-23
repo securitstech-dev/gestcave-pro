@@ -15,13 +15,15 @@ import { clearFirestoreCache } from '../lib/firebase';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import SimulateurTablette from './modules/SimulateurTablette';
 
-type Onglet = 'demandes' | 'messages' | 'paiements' | 'etablissements' | 'comptabilite' | 'maintenance' | 'laboratoire';
+type Onglet = 'demandes' | 'messages' | 'paiements' | 'etablissements' | 'comptabilite' | 'maintenance' | 'laboratoire' | 'rh_interne' | 'finance_interne' | 'support';
 
 const TableauSuperAdmin = () => {
   const [demandes, setDemandes] = useState<any[]>([]);
   const [etablissements, setEtablissements] = useState<any[]>([]);
   const [paiements, setPaiements] = useState<any[]>([]);
   const [messagesContact, setMessagesContact] = useState<any[]>([]);
+  const [equipeInterne, setEquipeInterne] = useState<any[]>([]);
+  const [ticketsSupport, setTicketsSupport] = useState<any[]>([]);
   const [chargement, setChargement] = useState(true);
   const [onglet, setOnglet] = useState<Onglet>('demandes');
   const [recherche, setRecherche] = useState('');
@@ -67,12 +69,24 @@ const TableauSuperAdmin = () => {
       (snapshot) => setMessagesContact(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
     );
 
+    const unsubEquipe = onSnapshot(
+      query(collection(db, 'employes'), where('etablissement_id', '==', 'securits-tech')),
+      (snap) => setEquipeInterne(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    );
+
+    const unsubTickets = onSnapshot(
+      query(collection(db, 'tickets_support'), orderBy('date_creation', 'desc')),
+      (snap) => setTicketsSupport(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    );
+
     setChargement(false);
     return () => {
       unsubDemandes();
       unsubEtabs();
       unsubPaiements();
       unsubMessages();
+      unsubEquipe();
+      unsubTickets();
     };
   }, []);
 
@@ -324,10 +338,138 @@ const TableauSuperAdmin = () => {
     { key: 'messages', icon: <MessageSquare size={20} />, label: "Messages", badge: messagesContact.filter(m => m.statut === 'nouveau').length },
     { key: 'etablissements', icon: <Building2 size={20} />, label: "Établissements", badge: etablissements.length },
     { key: 'paiements', icon: <CreditCard size={20} />, label: "Paiements & Abonnements", badge: paiements.filter(p => p.statut === 'en_attente').length },
-    { key: 'comptabilite', icon: <TrendingUp size={20} />, label: "Comptabilité Globale" },
+    { key: 'comptabilite', icon: <TrendingUp size={20} />, label: "Comptabilité Clients" },
+    { key: 'separateur1', type: 'separator', label: 'Securits Tech' },
+    { key: 'rh_interne', icon: <Users size={20} />, label: "Équipe Securits" },
+    { key: 'finance_interne', icon: <Landmark size={20} />, label: "Finance Interne" },
+    { key: 'support', icon: <AlertCircle size={20} />, label: "Tickets & Bugs" },
+    { key: 'separateur2', type: 'separator', label: 'Système' },
     { key: 'laboratoire', icon: <Tablet size={20} />, label: "Lab de Simulation (Tablette)" },
     { key: 'maintenance', icon: <Database size={20} />, label: "Maintenance", danger: true },
   ];
+
+  const renderVueRHInterne = () => (
+    <div className="p-10 md:p-16 space-y-12 animate-in fade-in duration-700">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-black text-[#1E3A8A] uppercase tracking-tighter">Équipe Securits Tech</h2>
+          <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">Gestion interne du personnel</p>
+        </div>
+        <button className="h-14 bg-[#1E3A8A] text-white px-8 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-blue-900/20 hover:bg-blue-800 transition-all flex items-center gap-3">
+          <Users size={16} /> Ajouter un collaborateur
+        </button>
+      </div>
+
+      <div className="bg-white rounded-[3rem] border border-slate-100 shadow-xl shadow-blue-900/5 overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-slate-50/50 border-b border-slate-100">
+            <tr>
+              <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Collaborateur</th>
+              <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Rôle</th>
+              <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Statut</th>
+              <th className="px-10 py-6 text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-50">
+            {equipeInterne.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="px-10 py-20 text-center text-slate-300 font-bold uppercase tracking-widest text-xs">Aucun collaborateur enregistré</td>
+              </tr>
+            ) : (
+              equipeInterne.map(emp => (
+                <tr key={emp.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-10 py-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-[#1E3A8A] font-black">{emp.prenom?.[0] || emp.nom?.[0]}</div>
+                      <div>
+                        <p className="font-black text-slate-700 uppercase text-xs">{emp.nom} {emp.prenom}</p>
+                        <p className="text-[10px] font-bold text-slate-400">{emp.email}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-10 py-6 text-xs font-black text-[#1E3A8A] uppercase">{emp.poste || emp.role}</td>
+                  <td className="px-10 py-6">
+                    <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest">Actif</span>
+                  </td>
+                  <td className="px-10 py-6 text-right">
+                    <button className="p-2 text-slate-400 hover:text-[#1E3A8A] transition-colors"><Settings size={18} /></button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  const renderVueFinanceInterne = () => (
+    <div className="p-10 md:p-16 space-y-12 animate-in fade-in duration-700">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-black text-[#1E3A8A] uppercase tracking-tighter">Finance Securits Tech</h2>
+          <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">Chiffre d'affaires et santé financière</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl shadow-blue-900/5">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Chiffre d'Affaires Global</p>
+          <p className="text-4xl font-black text-[#1E3A8A] tracking-tighter">{paiements.filter(p => p.statut === 'valide').reduce((acc, p) => acc + (p.montant || 0), 0).toLocaleString()} <span className="text-sm opacity-30">XAF</span></p>
+        </div>
+        <div className="bg-[#1E3A8A] p-10 rounded-[3rem] text-white shadow-2xl shadow-blue-900/20">
+          <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-2">MRR (Revenu Récurrent)</p>
+          <p className="text-4xl font-black text-[#FF7A00] tracking-tighter">{mrrReel.toLocaleString()} <span className="text-sm opacity-30">XAF</span></p>
+        </div>
+        <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl shadow-blue-900/5">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Clients Payants</p>
+          <p className="text-4xl font-black text-slate-700 tracking-tighter">{etablissements.filter(e => e.subscription_status === 'actif').length}</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderVueSupport = () => (
+    <div className="p-10 md:p-16 space-y-12 animate-in fade-in duration-700">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-black text-[#1E3A8A] uppercase tracking-tighter">Tickets & Bugs</h2>
+          <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">Centre d'intervention client</p>
+        </div>
+        <div className="flex gap-4">
+          <div className="bg-rose-50 text-rose-600 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3">
+             <AlertTriangle size={16} /> 0 Urgences
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-6">
+        {ticketsSupport.length === 0 ? (
+          <div className="bg-white p-20 rounded-[3rem] text-center border-2 border-dashed border-slate-100">
+            <p className="text-slate-400 font-black uppercase tracking-widest">Aucun ticket ouvert</p>
+          </div>
+        ) : (
+          ticketsSupport.map(ticket => (
+            <div key={ticket.id} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:border-blue-200 transition-all">
+               <div className="flex justify-between items-center">
+                 <div className="flex items-center gap-4">
+                    <div className={`w-3 h-3 rounded-full ${ticket.priorite === 'critique' ? 'bg-rose-500 animate-pulse' : 'bg-blue-500'}`} />
+                    <div>
+                      <p className="font-bold text-slate-700">{ticket.sujet}</p>
+                      <p className="text-xs text-slate-400">{ticket.client_nom}</p>
+                    </div>
+                 </div>
+                 <div className="text-right">
+                   <p className="text-xs font-bold text-slate-500 capitalize">{ticket.statut || 'En attente'}</p>
+                   <p className="text-[10px] text-slate-400">{ticket.date_creation?.toDate().toLocaleDateString()}</p>
+                 </div>
+               </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex min-h-screen bg-slate-50/50 font-['Inter',sans-serif] text-slate-800">
@@ -350,26 +492,34 @@ const TableauSuperAdmin = () => {
         </div>
 
         <nav className="flex-1 px-6 space-y-2 no-scrollbar overflow-y-auto">
-          <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Administration</p>
-          {navItems.map((item) => (
-            <button key={item.key} onClick={() => setOnglet(item.key as Onglet)}
-              className={`w-full flex items-center justify-between px-5 py-4 rounded-[1.5rem] transition-all font-bold text-sm ${
-                onglet === item.key
-                  ? (item.danger ? 'bg-rose-50 text-rose-600 shadow-sm' : 'bg-blue-50 text-[#1E3A8A] shadow-sm shadow-blue-900/5')
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-              }`}
-            >
-              <div className="flex items-center gap-4">
-                <span className={`${onglet === item.key ? (item.danger ? 'text-rose-600' : 'text-[#1E3A8A]') : 'text-slate-400'}`}>{item.icon}</span>
-                <span>{item.label}</span>
-              </div>
-              {item.badge != null && item.badge > 0 && (
-                <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-black ${
-                  onglet === item.key ? 'bg-blue-200/50 text-[#1E3A8A]' : 'bg-slate-100 text-slate-400'
-                }`}>{item.badge}</span>
-              )}
-            </button>
-          ))}
+          {navItems.map((item) => {
+            if (item.type === 'separator') {
+              return (
+                <div key={item.key} className="pt-6 pb-2">
+                  <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.label}</p>
+                </div>
+              );
+            }
+            return (
+              <button key={item.key} onClick={() => setOnglet(item.key as Onglet)}
+                className={`w-full flex items-center justify-between px-5 py-4 rounded-[1.5rem] transition-all font-bold text-sm ${
+                  onglet === item.key
+                    ? (item.danger ? 'bg-rose-50 text-rose-600 shadow-sm' : 'bg-blue-50 text-[#1E3A8A] shadow-sm shadow-blue-900/5')
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  <span className={`${onglet === item.key ? (item.danger ? 'text-rose-600' : 'text-[#1E3A8A]') : 'text-slate-400'}`}>{item.icon}</span>
+                  <span>{item.label}</span>
+                </div>
+                {item.badge != null && item.badge > 0 && (
+                  <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-black ${
+                    onglet === item.key ? 'bg-blue-200/50 text-[#1E3A8A]' : 'bg-slate-100 text-slate-400'
+                  }`}>{item.badge}</span>
+                )}
+              </button>
+            );
+          })}
         </nav>
 
         <div className="p-8 border-t border-slate-50">
@@ -784,6 +934,9 @@ const TableauSuperAdmin = () => {
           )}
 
           {onglet === 'laboratoire' && <SimulateurTablette />}
+          {onglet === 'rh_interne' && renderVueRHInterne()}
+          {onglet === 'finance_interne' && renderVueFinanceInterne()}
+          {onglet === 'support' && renderVueSupport()}
         </div>
       </main>
 
