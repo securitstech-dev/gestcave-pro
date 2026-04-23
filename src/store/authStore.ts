@@ -29,6 +29,7 @@ interface EtatAuth {
   profil: ProfilUtilisateur | null;
   chargement: boolean;
   initialise: boolean;
+  activationEnCours: boolean;
   etablissementSimuleId: string | null;
   setEtablissementSimule: (id: string | null) => void;
   connexion: (email: string, motDePasse: string) => Promise<void>;
@@ -37,6 +38,7 @@ interface EtatAuth {
   reinitialiserMotDePasse: (email: string) => Promise<void>;
   initialiser: () => void;
   finaliserActivation: (invitation: any, motDePasse: string) => Promise<void>;
+  setActivationEnCours: (val: boolean) => void;
 }
 
 export const useAuthStore = create<EtatAuth>((set, get) => ({
@@ -60,15 +62,19 @@ export const useAuthStore = create<EtatAuth>((set, get) => ({
   initialiser: () => {
     onAuthStateChanged(auth, async (utilisateurFirebase) => {
       if (utilisateurFirebase) {
+        // Si une activation est en cours, on laisse la méthode finaliserActivation gérer l'état
+        if (get().activationEnCours) return;
+
         try {
           const profilRef = doc(db, 'utilisateurs', utilisateurFirebase.uid);
           let profilSnap = await getDoc(profilRef);
           
-          // Si le profil n'existe pas encore, on attend un court instant (propagation Firestore)
-          // Utile lors de la création de compte ultra-rapide
-          if (!profilSnap.exists()) {
+          // Retries multiples pour laisser le temps à Firestore
+          let retries = 0;
+          while (!profilSnap.exists() && retries < 3) {
             await new Promise(resolve => setTimeout(resolve, 1000));
             profilSnap = await getDoc(profilRef);
+            retries++;
           }
 
           if (profilSnap.exists()) {
@@ -88,7 +94,7 @@ export const useAuthStore = create<EtatAuth>((set, get) => ({
               initialise: true 
             });
           } else {
-            // Si toujours pas de profil après délai, on considère qu'il n'existe pas (cas exceptionnel)
+            // Si vraiment pas de profil après retries, on initialise à null
             set({ utilisateur: utilisateurFirebase, profil: null, initialise: true });
           }
         } catch (error) {
@@ -183,8 +189,11 @@ export const useAuthStore = create<EtatAuth>((set, get) => ({
     set({ utilisateur: null, profil: null });
   },
 
+  activationEnCours: false,
+  setActivationEnCours: (val) => set({ activationEnCours: val }),
+
   finaliserActivation: async (invitation, motDePasse) => {
-    set({ chargement: true });
+    set({ chargement: true, activationEnCours: true });
     try {
       // 1. Création du compte Firebase Auth
       const userCred = await createUserWithEmailAndPassword(auth, invitation.email, motDePasse);
@@ -220,13 +229,24 @@ export const useAuthStore = create<EtatAuth>((set, get) => ({
       // 4. Supprimer l'invitation
       await deleteDoc(doc(db, 'invitations', invitation.id));
 
-      // Mise à jour locale immédiate de l'état
+      // 5. Récupérer le statut de l'établissement pour l'état local
+      let statusEtab = 'actif';
+      const etabSnap = await getDoc(doc(db, 'etablissements', invitation.etablissement_id));
+      if (etabSnap.exists()) {
+        statusEtab = etabSnap.data().statut || etabSnap.data().subscription_status || 'actif';
+      }
+
+      // Mise à jour locale immédiate de l'état (avant de libérer le listener)
       set({ 
         utilisateur: userCred.user, 
-        profil: profilData, 
-        initialise: true 
+        profil: { ...profilData, etablissement_status: statusEtab } as ProfilUtilisateur, 
+        initialise: true,
+        activationEnCours: false
       });
 
+    } catch (error) {
+      set({ activationEnCours: false });
+      throw error;
     } finally {
       set({ chargement: false });
     }
