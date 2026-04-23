@@ -11,6 +11,7 @@ const PageActivation = () => {
     const navigate = useNavigate();
     const token = searchParams.get('token');
 
+    const { finaliserActivation: activerCompte } = useAuthStore();
     const [chargement, setChargement] = useState(true);
     const [invitation, setInvitation] = useState<any>(null);
     const [motDePasse, setMotDePasse] = useState('');
@@ -55,41 +56,15 @@ const PageActivation = () => {
 
         setChargement(true);
         try {
-            // 1. Création du compte Firebase Auth
-            const userCred = await createUserWithEmailAndPassword(auth, invitation.email, motDePasse);
-
-            // 2. Création du profil Firestore
-            await setDoc(doc(db, 'utilisateurs', userCred.user.uid), {
-                id: userCred.user.uid,
-                email: invitation.email,
-                nom: invitation.nom,
-                prenom: 'Patron',
-                role: 'client_admin',
-                etablissement_id: invitation.etablissement_id,
-                date_creation: new Date().toISOString()
-            });
-
-            // 2.bis Création du profil Employé Maître (pour le PIN)
-            await setDoc(doc(db, 'employes', userCred.user.uid), {
-                id: userCred.user.uid,
-                nom: invitation.nom,
-                prenom: 'Patron',
-                email: invitation.email,
-                role: 'admin',
-                pin: '0000',
-                etablissement_id: invitation.etablissement_id,
-                actif: true
-            });
-
-            // 3. Supprimer l'invitation usagée
-            await deleteDoc(doc(db, 'invitations', invitation.id));
+            // Utilisation de la méthode du store pour une activation propre
+            await activerCompte(invitation, motDePasse);
 
             setEtape('succes');
-            toast.success("Compte activé avec succès !");
+            toast.success("Compte activé avec succès ! Bienvenue.");
             
             setTimeout(() => {
-                navigate('/connexion');
-            }, 4000);
+                navigate('/tableau-de-bord');
+            }, 3000);
 
         } catch (err: any) {
             if (err.code === 'auth/email-already-in-use') {

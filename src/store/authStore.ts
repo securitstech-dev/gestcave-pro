@@ -36,6 +36,7 @@ interface EtatAuth {
   deconnexion: () => Promise<void>;
   reinitialiserMotDePasse: (email: string) => Promise<void>;
   initialiser: () => void;
+  finaliserActivation: (invitation: any, motDePasse: string) => Promise<void>;
 }
 
 export const useAuthStore = create<EtatAuth>((set, get) => ({
@@ -61,13 +62,19 @@ export const useAuthStore = create<EtatAuth>((set, get) => ({
       if (utilisateurFirebase) {
         try {
           const profilRef = doc(db, 'utilisateurs', utilisateurFirebase.uid);
-          const profilSnap = await getDoc(profilRef);
+          let profilSnap = await getDoc(profilRef);
           
+          // Si le profil n'existe pas encore, on attend un court instant (propagation Firestore)
+          // Utile lors de la création de compte ultra-rapide
+          if (!profilSnap.exists()) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            profilSnap = await getDoc(profilRef);
+          }
+
           if (profilSnap.exists()) {
             const profilData = profilSnap.data() as ProfilUtilisateur;
             let statusEtab = 'actif';
             
-            // On vérifie le statut de l'établissement
             if (profilData.etablissement_id) {
               const etabSnap = await getDoc(doc(db, 'etablissements', profilData.etablissement_id));
               if (etabSnap.exists()) {
@@ -81,6 +88,7 @@ export const useAuthStore = create<EtatAuth>((set, get) => ({
               initialise: true 
             });
           } else {
+            // Si toujours pas de profil après délai, on considère qu'il n'existe pas (cas exceptionnel)
             set({ utilisateur: utilisateurFirebase, profil: null, initialise: true });
           }
         } catch (error) {
@@ -173,5 +181,54 @@ export const useAuthStore = create<EtatAuth>((set, get) => ({
   deconnexion: async () => {
     await signOut(auth);
     set({ utilisateur: null, profil: null });
+  },
+
+  finaliserActivation: async (invitation, motDePasse) => {
+    set({ chargement: true });
+    try {
+      // 1. Création du compte Firebase Auth
+      const userCred = await createUserWithEmailAndPassword(auth, invitation.email, motDePasse);
+      const uid = userCred.user.uid;
+
+      // 2. Création du profil Firestore
+      const profilData: ProfilUtilisateur = {
+        id: uid,
+        email: invitation.email,
+        nom: invitation.nom,
+        prenom: 'Patron',
+        role: 'client_admin',
+        etablissement_id: invitation.etablissement_id,
+      };
+      
+      await setDoc(doc(db, 'utilisateurs', uid), {
+        ...profilData,
+        date_creation: new Date().toISOString()
+      });
+
+      // 3. Création du profil Employé Maître
+      await setDoc(doc(db, 'employes', uid), {
+        id: uid,
+        nom: invitation.nom,
+        prenom: 'Patron',
+        email: invitation.email,
+        role: 'admin',
+        pin: '0000',
+        etablissement_id: invitation.etablissement_id,
+        actif: true
+      });
+
+      // 4. Supprimer l'invitation
+      await deleteDoc(doc(db, 'invitations', invitation.id));
+
+      // Mise à jour locale immédiate de l'état
+      set({ 
+        utilisateur: userCred.user, 
+        profil: profilData, 
+        initialise: true 
+      });
+
+    } finally {
+      set({ chargement: false });
+    }
   },
 }));
