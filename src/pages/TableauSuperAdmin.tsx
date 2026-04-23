@@ -10,7 +10,7 @@ import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { db } from '../lib/firebase';
-import { collection, onSnapshot, doc, updateDoc, addDoc, query, orderBy, getDocs, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, addDoc, query, where, orderBy, getDocs, deleteDoc } from 'firebase/firestore';
 import { clearFirestoreCache } from '../lib/firebase';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import SimulateurTablette from './modules/SimulateurTablette';
