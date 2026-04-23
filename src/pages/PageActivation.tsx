@@ -68,12 +68,17 @@ const PageActivation = () => {
             }, 3000);
 
         } catch (err: any) {
+            console.error("Erreur d'activation détaillée:", err);
             if (err.code === 'auth/email-already-in-use') {
-                toast.error("Compte déjà actif — Redirection...");
+                toast.error("Ce compte est déjà actif. Veuillez vous connecter.");
                 setTimeout(() => navigate('/connexion'), 2000);
                 return;
             }
-            toast.error("Échec de l'activation");
+            if (err.code === 'permission-denied') {
+                toast.error("Erreur de droits : Impossible d'écrire votre profil. Contactez le support.");
+            } else {
+                toast.error(`Échec de l'activation : ${err.message || "Erreur inconnue"}`);
+            }
         } finally {
             setChargement(false);
         }

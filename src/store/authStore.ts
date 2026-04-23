@@ -226,20 +226,31 @@ export const useAuthStore = create<EtatAuth>((set, get) => ({
         actif: true
       });
 
-      // 4. Supprimer l'invitation
-      await deleteDoc(doc(db, 'invitations', invitation.id));
+      // 4. Supprimer l'invitation (Optionnel - ne doit pas bloquer l'activation si échec de permission)
+      try {
+        await deleteDoc(doc(db, 'invitations', invitation.id));
+      } catch (e) {
+        console.warn("Impossible de supprimer l'invitation:", e);
+      }
 
-      // 5. Récupérer le statut de l'établissement pour l'état local
+      // 5. Récupérer les infos de l'établissement pour l'état local
       let statusEtab = 'actif';
+      let nomEtab = 'Mon Établissement';
       const etabSnap = await getDoc(doc(db, 'etablissements', invitation.etablissement_id));
       if (etabSnap.exists()) {
-        statusEtab = etabSnap.data().statut || etabSnap.data().subscription_status || 'actif';
+        const etabData = etabSnap.data();
+        statusEtab = etabData.statut || etabData.subscription_status || 'actif';
+        nomEtab = etabData.nom || 'Mon Établissement';
       }
 
       // Mise à jour locale immédiate de l'état (avant de libérer le listener)
       set({ 
         utilisateur: userCred.user, 
-        profil: { ...profilData, etablissement_status: statusEtab } as ProfilUtilisateur, 
+        profil: { 
+          ...profilData, 
+          etablissement_nom: nomEtab, 
+          etablissement_status: statusEtab 
+        } as ProfilUtilisateur, 
         initialise: true,
         activationEnCours: false
       });
