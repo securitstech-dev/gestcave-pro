@@ -7,7 +7,7 @@ import {
   createUserWithEmailAndPassword,
   type User as FirebaseUser
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, addDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, addDoc, deleteDoc } from 'firebase/firestore';
 
 export interface ProfilUtilisateur {
   id: string;

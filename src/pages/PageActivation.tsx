@@ -5,6 +5,7 @@ import { db, auth } from '../lib/firebase';
 import { collection, query, where, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { toast } from 'react-hot-toast';
+import { useAuthStore } from '../store/authStore';
 
 const PageActivation = () => {
     const [searchParams] = useSearchParams();
