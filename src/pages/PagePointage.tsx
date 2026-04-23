@@ -122,8 +122,12 @@ const PagePointage = () => {
            toast.error("Oubli de départ détecté ! Votre session précédente a été fermée d'office. Veuillez badger à nouveau votre arrivée.", {
              duration: 6000, style: { background: '#ef4444', color: '#fff', fontWeight: 'bold' }
            });
-           // On ne définit pas la session, pour l'obliger à badger son arrivée du jour
+           // On réinitialise complètement pour forcer une nouvelle saisie du PIN claire
+           setPin('');
+           setEmploye(null);
            setSessionActuelle(null);
+           setLoading(false);
+           return;
         } else {
            setSessionActuelle({ id: sessionId, ...sessionData });
         }
@@ -161,15 +165,19 @@ const PagePointage = () => {
             noteRetard = `Retard de ${minutesRetard}min constaté.`;
 
             // Enregistrement simple de la sanction sans recherche de récidive (évite besoin d'index complexe)
-            await addDoc(collection(db, 'discipline'), {
-              employe_id: employe.id,
-              employe_nom: employe.nom,
-              type: 'retard',
-              montant: malusCalcule,
-              date: maintenant.toISOString(),
-              etablissement_id: etablissementId,
-              note: noteRetard
-            });
+            try {
+              await addDoc(collection(db, 'discipline'), {
+                employe_id: employe.id,
+                employe_nom: employe.nom,
+                type: 'retard',
+                montant: malusCalcule,
+                date: maintenant.toISOString(),
+                etablissement_id: etablissementId,
+                note: noteRetard
+              });
+            } catch (disciplineError) {
+              console.error("Erreur enregistrement discipline (permissions probables):", disciplineError);
+            }
           }
         }
 

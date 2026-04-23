@@ -75,16 +75,12 @@ const InterfaceCaissier = () => {
       where('date', '>=', sessionActive.dateOuverture)
     );
     unsubStatsRef.current = onSnapshot(q, (snap) => {
-      let encaisse = 0, dettes = 0, nb = snap.docs.length;
+      let encaisse = 0, nb = snap.docs.length;
       snap.docs.forEach(d => {
         const t = d.data();
-        if (t.modePaiement === 'credit') {
-          dettes += (t.totalVente || 0) - (t.montant || 0);
-        } else {
-          encaisse += (t.montant || 0);
-        }
+        encaisse += (t.montant || 0);
       });
-      setStatsSession({ totalEncaisse: encaisse, totalDettes: dettes, nbTransactions: nb });
+      setStatsSession({ totalEncaisse: encaisse, totalDettes: 0, nbTransactions: nb });
     });
     return () => { if (unsubStatsRef.current) unsubStatsRef.current(); };
   }, [sessionActive?.id, etablissementId, profil?.etablissement_id]);
@@ -284,7 +280,7 @@ const InterfaceCaissier = () => {
               <div>
                   <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-1">Dettes / Impayés</p>
                   <p className="text-2xl font-black text-[#1E3A8A] tracking-tighter">
-                    {(statsSession.totalDettes + commandes.filter(c => c.statut === 'en_arriere').reduce((acc, c) => acc + (c.montantRestant || 0), 0)).toLocaleString()} <span className="text-xs opacity-40">F</span>
+                    {commandes.filter(c => c.statut === 'en_arriere').reduce((acc, c) => acc + (c.montantRestant || (c.total - (c.montantPaye || 0))), 0).toLocaleString()} <span className="text-xs opacity-40">F</span>
                   </p>
               </div>
           </div>
@@ -295,7 +291,7 @@ const InterfaceCaissier = () => {
               <div>
                   <p className="text-[10px] font-black text-[#1E3A8A] uppercase tracking-widest mb-1">Ventes Latentes</p>
                   <p className="text-2xl font-black text-[#1E3A8A] tracking-tighter">
-                    {commandes.filter(c => c.statut !== 'payee' && c.statut !== 'en_arriere').reduce((acc, c) => acc + (c.total || 0), 0).toLocaleString()} <span className="text-xs opacity-40">F</span>
+                    {commandes.filter(c => c.statut !== 'payee' && c.statut !== 'en_arriere').reduce((acc, c) => acc + ((c.total || 0) - (c.montantPaye || 0)), 0).toLocaleString()} <span className="text-xs opacity-40">F</span>
                   </p>
               </div>
           </div>
@@ -651,7 +647,7 @@ const InterfaceCaissier = () => {
                                 setDatePromesse('');
                               }
                             }}
-                            disabled={!commandeActive || commandeActive.statut === 'en_arriere' || (commandeActive.montantPaye || 0) === 0}
+                            disabled={!commandeActive || commandeActive.statut === 'en_arriere'}
                             className="h-20 bg-orange-50 text-orange-600 rounded-2xl font-black uppercase tracking-widest text-xs border-2 border-orange-100 hover:bg-orange-100 disabled:opacity-30 transition-all flex flex-col items-center justify-center leading-tight"
                         >
                             <span>Libérer Table</span>

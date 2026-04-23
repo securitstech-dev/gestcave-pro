@@ -763,19 +763,22 @@ export const usePOSStore = create<PosState>((set, get) => ({
     // pour nettoyer le KDS
     const nvellesLignes = (cmd.lignes || []).map(l => ({ ...l, statut: 'servi' as const }));
     
-    const totalFinal = Math.max(0, cmd.total - remise);
-    const restant = Math.max(0, totalFinal - paye);
+    const totalFinal = Math.max(0, cmd.total - (remise || 0));
+    const montantPayeTotal = paye || totalFinal;
+    const restant = Math.max(0, totalFinal - montantPayeTotal);
+    const nouveauStatut = restant > 0 ? 'en_arriere' : 'payee';
 
     batch.update(commandeRef, { 
-      statut: 'payee', 
+      statut: nouveauStatut, 
       lignes: nvellesLignes,
       methodePaiement: mode, 
       clientNom: client || null, 
       clientContact: contact || null,
-      montantPaye: paye || totalFinal, 
+      montantPaye: montantPayeTotal, 
       montantRestant: restant, 
-      remise, 
-      totalFinal
+      remise: remise || 0, 
+      totalFinal,
+      ...(restant > 0 ? { dateMiseEnArriere: new Date().toISOString() } : {})
     });
 
     if (cmd.tableId) {
