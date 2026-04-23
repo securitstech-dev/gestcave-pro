@@ -195,14 +195,21 @@ export const useAuthStore = create<EtatAuth>((set, get) => ({
   finaliserActivation: async (invitation, motDePasse) => {
     set({ chargement: true, activationEnCours: true });
     try {
-      // 1. Création du compte Firebase Auth
-      const userCred = await createUserWithEmailAndPassword(auth, invitation.email, motDePasse);
+      // 1. Récupération de l'email (gestion de la flexibilité des noms de champs)
+      const email = invitation.email || invitation.email_contact;
+      
+      if (!email) {
+        throw new Error("L'adresse email est manquante dans l'invitation. Veuillez générer un nouveau lien.");
+      }
+
+      // 2. Création du compte Firebase Auth
+      const userCred = await createUserWithEmailAndPassword(auth, email, motDePasse);
       const uid = userCred.user.uid;
 
-      // 2. Création du profil Firestore
+      // 3. Création du profil Firestore
       const profilData: ProfilUtilisateur = {
         id: uid,
-        email: invitation.email,
+        email: email,
         nom: invitation.nom,
         prenom: 'Patron',
         role: 'client_admin',

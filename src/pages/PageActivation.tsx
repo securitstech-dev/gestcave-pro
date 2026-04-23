@@ -57,6 +57,13 @@ const PageActivation = () => {
 
         setChargement(true);
         try {
+            // 1. Récupération de l'email (gestion de la flexibilité des noms de champs)
+            const email = invitation.email || invitation.email_contact;
+            
+            if (!email) {
+                throw new Error("L'adresse email est manquante dans l'invitation. Veuillez générer un nouveau lien.");
+            }
+
             // Utilisation de la méthode du store pour une activation propre
             await activerCompte(invitation, motDePasse);
 
@@ -113,6 +120,13 @@ const PageActivation = () => {
                             Activation de <br/>
                             <span className="text-[#FF7A00]">votre accès.</span>
                         </h2>
+                        {invitation && (
+                            <p className="text-blue-100/60 leading-relaxed font-medium">
+                                Activation du compte pour <span className="text-white font-black">{invitation.email || invitation.email_contact || "E-mail inconnu"}</span>. 
+                                <br />
+                                Établissement : <span className="font-bold text-white">{invitation.nom_etablissement || "Chargement..."}</span>
+                            </p>
+                        )}
                         <p className="text-blue-100/60 leading-relaxed font-medium">
                             Sécurisez votre espace administrateur en configurant votre clé de sécurité personnelle.
                         </p>
