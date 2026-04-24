@@ -21,27 +21,40 @@ const PageActivation = () => {
 
     useEffect(() => {
         const verifierToken = async () => {
-            if (!token) {
-                toast.error("Lien d'activation invalide");
+            const cleanToken = token?.trim();
+            if (!cleanToken) {
+                toast.error("Lien d'activation manquant ou invalide");
                 navigate('/');
                 return;
             }
 
             try {
-                const q = query(collection(db, 'invitations'), where('token', '==', token));
+                console.log("Vérification du token d'activation:", cleanToken);
+                const q = query(collection(db, 'invitations'), where('token', '==', cleanToken));
                 const snap = await getDocs(q);
 
                 if (snap.empty) {
-                    toast.error("Lien expiré ou déjà utilisé");
+                    console.warn("Token non trouvé dans la collection 'invitations':", cleanToken);
+                    toast.error("Ce lien d'activation est invalide ou a déjà été utilisé.");
                     navigate('/');
                     return;
                 }
 
-                const data = snap.docs[0].data();
-                setInvitation({ id: snap.docs[0].id, ...data });
+                const docSnap = snap.docs[0];
+                const data = docSnap.data();
+
+                // Vérification de l'expiration
+                if (data.expire && Date.now() > data.expire) {
+                    toast.error("Ce lien d'activation a expiré. Veuillez demander un nouveau lien.");
+                    navigate('/');
+                    return;
+                }
+
+                setInvitation({ id: docSnap.id, ...data });
                 setEtape('formulaire');
             } catch (err: any) {
-                toast.error("Erreur de connexion au registre");
+                console.error("Erreur lors de la vérification du token:", err);
+                toast.error("Erreur de connexion au serveur d'activation");
             } finally {
                 setChargement(false);
             }

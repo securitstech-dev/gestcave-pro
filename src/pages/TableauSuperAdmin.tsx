@@ -28,7 +28,7 @@ const TableauSuperAdmin = () => {
   const [onglet, setOnglet] = useState<Onglet>('demandes');
   const [recherche, setRecherche] = useState('');
   const navigate = useNavigate();
-  const { deconnexion } = useAuthStore();
+  const { deconnexion, reinitialiserMotDePasse } = useAuthStore();
 
   const [modalRefus, setModalRefus] = useState<{ id: string; nom: string } | null>(null);
   const [motifRefus, setMotifRefus] = useState('');
@@ -265,15 +265,26 @@ const TableauSuperAdmin = () => {
 
   const resetPasswordAction = async () => {
     if (!modalResetPassword) return;
-    const toastId = toast.loading('Génération du lien...');
+    const email = modalResetPassword.email_contact;
+    
+    if (!email) {
+      return toast.error("Adresse email de contact manquante pour cet établissement.");
+    }
+
+    const toastId = toast.loading('Envoi du lien de réinitialisation...');
     try {
-      // Pour une vraie procédure, on enverrait un email de reset.
-      // Ici on va simuler en générant un nouveau token d'invitation/activation
-      // ou simplement informer que l'email a été envoyé.
-      toast.success(`Un email de réinitialisation a été envoyé à ${modalResetPassword.email_contact}`, { id: toastId });
+      // Utilisation de la fonction du store qui appelle Firebase sendPasswordResetEmail
+      await reinitialiserMotDePasse(email);
+      
+      toast.success(`Un lien de réinitialisation sécurisé a été envoyé à : ${email}`, { id: toastId });
       setModalResetPassword(null);
     } catch (err: any) {
-      toast.error(err.message, { id: toastId });
+      console.error("Erreur reset password:", err);
+      if (err.code === 'auth/user-not-found') {
+        toast.error("Aucun compte actif trouvé pour cet email. Le client doit d'abord activer son accès via le lien d'invitation.", { id: toastId });
+      } else {
+        toast.error(`Échec de l'envoi : ${err.message}`, { id: toastId });
+      }
     }
   };
 
@@ -298,6 +309,28 @@ const TableauSuperAdmin = () => {
       await updateDoc(doc(db, 'etablissements', etab.id), { subscription_status: 'suspendu', subscription_end_date: new Date().toISOString() });
       toast.dismiss(toastId); toast.success(`${etab.nom} a été suspendu.`);
     } catch (err: any) { toast.dismiss(toastId); toast.error(`Erreur: ${err.message}`); }
+  };
+
+  const supprimerEtablissement = async (etab: any) => {
+    if (!window.confirm(`⚠️ ATTENTION : Supprimer définitivement ${etab.nom} ? Cette action est irréversible.`)) return;
+    const toastId = toast.loading('Suppression de l\'établissement...');
+    try {
+      await deleteDoc(doc(db, 'etablissements', etab.id));
+      toast.success(`${etab.nom} a été supprimé définitivement.`, { id: toastId });
+    } catch (err: any) {
+      toast.error(`Erreur: ${err.message}`, { id: toastId });
+    }
+  };
+
+  const supprimerPaiement = async (id: string) => {
+    if (!window.confirm("Supprimer cet historique de paiement ?")) return;
+    const toastId = toast.loading('Suppression...');
+    try {
+      await deleteDoc(doc(db, 'paiements', id));
+      toast.success("Paiement supprimé", { id: toastId });
+    } catch (err: any) {
+      toast.error(`Erreur: ${err.message}`, { id: toastId });
+    }
   };
 
   const viderBase = async () => {
@@ -669,6 +702,13 @@ const TableauSuperAdmin = () => {
                                             <ExternalLink size={24} />
                                           </a>
                                         )}
+                                        <button 
+                                          onClick={() => supprimerPaiement(p.id)} 
+                                          className="w-16 h-16 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all shadow-inner"
+                                          title="Supprimer le paiement"
+                                        >
+                                          <Trash2 size={24} />
+                                        </button>
                                     </div>
                                 )}
                             </div>
@@ -752,6 +792,13 @@ const TableauSuperAdmin = () => {
                                }} className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all shadow-inner" title="Gérer les Modules"><LayoutDashboard size={24} /></button>
                                <button onClick={() => setModalResetPassword(etab)} className="w-16 h-16 bg-blue-50 text-[#1E3A8A] rounded-2xl flex items-center justify-center hover:bg-[#1E3A8A] hover:text-white transition-all shadow-inner" title="Réinitialiser Mot de Passe"><Key size={24} /></button>
                               <button onClick={() => setModalExtendSub(etab)} className="w-16 h-16 bg-orange-50 text-[#FF7A00] rounded-2xl flex items-center justify-center hover:bg-[#FF7A00] hover:text-white transition-all shadow-inner" title="Prolonger Abonnement"><Calendar size={24} /></button>
+                               <button 
+                                  onClick={() => supprimerEtablissement(etab)} 
+                                  className="w-16 h-16 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all shadow-inner"
+                                  title="Supprimer définitivement l'établissement"
+                                >
+                                  <Trash2 size={24} />
+                               </button>
                            </div>
                         </div>
                       </div>
