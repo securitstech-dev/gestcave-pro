@@ -218,48 +218,8 @@ const PageAccueil = () => {
           <div className="relative">
              <div className="absolute -inset-20 bg-blue-100/50 rounded-full blur-3xl" />
              <div className="relative bg-[#1E3A8A] rounded-[2.5rem] p-4 shadow-2xl shadow-blue-900/20 transform md:rotate-2 hover:rotate-0 transition-transform duration-500">
-                <div className="bg-slate-50 rounded-[2rem] overflow-hidden aspect-[4/3] flex flex-col border border-white/20">
-                   {/* CSS Dashboard Mockup */}
-                   <div className="h-12 bg-white border-b border-slate-100 flex items-center px-6 gap-4">
-                      <div className="flex gap-1.5">
-                        <div className="w-3 h-3 rounded-full bg-rose-400" />
-                        <div className="w-3 h-3 rounded-full bg-amber-400" />
-                        <div className="w-3 h-3 rounded-full bg-emerald-400" />
-                      </div>
-                      <div className="flex-1 h-6 bg-slate-100 rounded-full mx-8" />
-                   </div>
-                   <div className="flex-1 p-6 grid grid-cols-3 gap-6">
-                      <div className="col-span-2 space-y-6">
-                         <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                               <div className="w-8 h-8 rounded-lg bg-blue-50 mb-3" />
-                               <div className="h-4 w-24 bg-slate-100 rounded-full mb-2" />
-                               <div className="h-6 w-32 bg-slate-200 rounded-full" />
-                            </div>
-                            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                               <div className="w-8 h-8 rounded-lg bg-orange-50 mb-3" />
-                               <div className="h-4 w-24 bg-slate-100 rounded-full mb-2" />
-                               <div className="h-6 w-32 bg-[#FF7A00]/20 rounded-full" />
-                            </div>
-                         </div>
-                         <div className="bg-white flex-1 h-40 rounded-2xl border border-slate-100 shadow-sm p-4 flex items-end gap-2">
-                            {[40, 70, 45, 90, 65, 85, 100].map((h, i) => (
-                              <div key={i} className="flex-1 bg-[#1E3A8A]/10 rounded-t-md" style={{ height: `${h}%` }} />
-                            ))}
-                         </div>
-                      </div>
-                      <div className="col-span-1 space-y-4">
-                         {[1,2,3,4].map(i => (
-                           <div key={i} className="bg-white p-3 rounded-xl border border-slate-100 flex items-center gap-3 shadow-sm">
-                             <div className="w-10 h-10 rounded-full bg-slate-100" />
-                             <div className="space-y-2 flex-1">
-                               <div className="h-3 w-full bg-slate-200 rounded-full" />
-                               <div className="h-3 w-1/2 bg-slate-100 rounded-full" />
-                             </div>
-                           </div>
-                         ))}
-                      </div>
-                   </div>
+                <div className="bg-slate-50 rounded-[2rem] overflow-hidden aspect-[4/5] flex flex-col border border-white/20 relative group">
+                   <img src="/images/flyer-gestcave.jpg" alt="Aperçu GestCave Pro" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                 </div>
              </div>
           </div>
@@ -449,7 +409,12 @@ const PageAccueil = () => {
 
       {/* Offre de Lancement Details */}
       <section className="py-24 bg-white relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-6 space-y-12">
+          
+          <div className="rounded-[3rem] overflow-hidden shadow-2xl shadow-blue-900/20 border-8 border-slate-50 relative group cursor-pointer hover:shadow-orange-500/20 transition-all duration-500" onClick={() => document.getElementById('abonnements')?.scrollIntoView({ behavior: 'smooth' })}>
+            <img src="/images/promo-lancement.jpg" alt="Offre de Lancement GestCave Pro - 3 Mois à 25 000 XAF/MOIS" className="w-full object-cover group-hover:scale-[1.02] transition-transform duration-700" />
+          </div>
+
           <div className="bg-gradient-to-br from-[#1E3A8A] to-blue-900 rounded-[4rem] p-12 md:p-20 text-white relative overflow-hidden shadow-2xl shadow-blue-900/30">
             <div className="absolute top-0 right-0 w-96 h-96 bg-[#FF7A00]/10 rounded-full blur-[100px] -mr-48 -mt-48" />
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-400/10 rounded-full blur-[80px] -ml-32 -mb-32" />
