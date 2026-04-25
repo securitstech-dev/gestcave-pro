@@ -116,21 +116,30 @@ const GrandLivre = () => {
         paiementsManuels[data.type_taxe] = data.montant_paye;
       });
 
-      // 6. Calculs fiscaux Congo (avec overrides manuels si payés/négociés)
-      const tva = paiementsManuels['tva'] !== undefined ? paiementsManuels['tva'] : caTotal * 0.18;
-      const taxeLoisirs = paiementsManuels['taxeLoisirs'] !== undefined ? paiementsManuels['taxeLoisirs'] : caTotal * 0.05;
-      const taxeTourisme = paiementsManuels['taxeTourisme'] !== undefined ? paiementsManuels['taxeTourisme'] : caTotal * 0.02;
-      const cnss = paiementsManuels['cnss'] !== undefined ? paiementsManuels['cnss'] : masseSalariale * 0.165;
+      // 6. Calculs fiscaux (avec taux configurables)
+      const etabDoc = await getDoc(doc(db, 'etablissements', etablissementId));
+      const etabData = etabDoc.exists() ? etabDoc.data() : {};
+      const config = {
+        tva_taux: etabData.tva_taux ?? 18,
+        taxe_loisirs_taux: etabData.taxe_loisirs_taux ?? 5,
+        taxe_tourisme_taux: etabData.taxe_tourisme_taux ?? 2,
+        cnss_taux: etabData.cnss_taux ?? 16.5,
+        is_taux: etabData.is_taux ?? 30,
+        type: etabData.type_etablissement || 'bar_restaurant'
+      };
+
+      const tva = paiementsManuels['tva'] !== undefined ? paiementsManuels['tva'] : caTotal * (config.tva_taux / 100);
+      const taxeLoisirs = paiementsManuels['taxeLoisirs'] !== undefined ? paiementsManuels['taxeLoisirs'] : (config.type === 'boutique' ? 0 : caTotal * (config.taxe_loisirs_taux / 100));
+      const taxeTourisme = paiementsManuels['taxeTourisme'] !== undefined ? paiementsManuels['taxeTourisme'] : (config.type === 'boutique' ? 0 : caTotal * (config.taxe_tourisme_taux / 100));
+      const cnss = paiementsManuels['cnss'] !== undefined ? paiementsManuels['cnss'] : masseSalariale * (config.cnss_taux / 100);
       
       const totalChargesExploit = totalAchats + totalCharges + masseSalariale + cnss + taxeLoisirs + taxeTourisme;
       const resultatBrut = caTotal - totalChargesExploit;
       
-      const is = paiementsManuels['is'] !== undefined ? paiementsManuels['is'] : (resultatBrut > 0 ? resultatBrut * 0.30 : 0);
+      const is = paiementsManuels['is'] !== undefined ? paiementsManuels['is'] : (resultatBrut > 0 ? resultatBrut * (config.is_taux / 100) : 0);
       const resultatNet = resultatBrut - is;
 
-      // Établissement nom
-      const etabDoc = await getDoc(doc(db, 'etablissements', etablissementId));
-      if (etabDoc.exists()) setEtablissementNom(etabDoc.data().nom || 'Mon Établissement');
+      setEtablissementNom(etabData.nom || 'Mon Établissement');
 
       setRapport({
         caTotal, caEspeces, caMobile, caCarte, caCredit,
@@ -141,7 +150,8 @@ const GrandLivre = () => {
         nbEmployes: employes.length,
         nbPointages: sessionsPointage.length,
         charges, transactions: transactions.slice(0, 10),
-        paiementsManuels
+        paiementsManuels,
+        config
       });
     } catch (e: any) {
       console.error("ERREUR GRAND LIVRE:", e);
@@ -209,9 +219,9 @@ const GrandLivre = () => {
         ['Achats Fournisseurs / Approvisionnements', rapport.totalAchats.toLocaleString()],
         ['Charges Fixes (Loyer, Eau, Élec...)', rapport.totalCharges.toLocaleString()],
         ['Masse Salariale Brute', rapport.masseSalariale.toLocaleString()],
-        ['CNSS Patronale (16.5%)', rapport.cnss.toLocaleString()],
-        ['Taxe Loisirs (5% CA)', rapport.taxeLoisirs.toLocaleString()],
-        ['Taxe Tourisme (2% CA)', rapport.taxeTourisme.toLocaleString()],
+        ['CNSS Patronale (' + rapport.config.cnss_taux + '%)', rapport.cnss.toLocaleString()],
+        ['Taxe Loisirs (' + rapport.config.taxe_loisirs_taux + '% CA)', rapport.taxeLoisirs.toLocaleString()],
+        ['Taxe Tourisme (' + rapport.config.taxe_tourisme_taux + '% CA)', rapport.taxeTourisme.toLocaleString()],
         ['TOTAL CHARGES', rapport.totalChargesExploit.toLocaleString()],
       ],
       headStyles: { fillColor: [239, 68, 68], fontSize: 8 },
@@ -226,7 +236,7 @@ const GrandLivre = () => {
         ['CA Total', rapport.caTotal.toLocaleString()],
         ['(-) Total Charges d\'Exploitation', `- ${rapport.totalChargesExploit.toLocaleString()}`],
         ['= Résultat Brut', rapport.resultatBrut.toLocaleString()],
-        ['(-) Impôt sur les Bénéfices IS (30%)', `- ${rapport.is.toLocaleString()}`],
+        ['(-) Impôt sur les Bénéfices IS (' + rapport.config.is_taux + '%)', `- ${rapport.is.toLocaleString()}`],
         ['= RÉSULTAT NET', rapport.resultatNet.toLocaleString()],
       ],
       headStyles: { fillColor: [5, 150, 105], fontSize: 8 },
@@ -242,7 +252,7 @@ const GrandLivre = () => {
     doc.text(`BÉNÉFICE NET DU MOIS : ${rapport.resultatNet.toLocaleString()} XAF`, 105, fy + 13, { align: 'center' });
 
     doc.setFontSize(7); doc.setTextColor(150, 150, 150); doc.setFont('helvetica', 'normal');
-    doc.text('Document généré par GestCave Pro — Fiscalité République du Congo (TVA 18%, IS 30%, CNSS 16.5%)', 105, fy + 30, { align: 'center' });
+    doc.text(`Document généré par GestCave Pro — Taux appliqués : TVA ${rapport.config.tva_taux}%, IS ${rapport.config.is_taux}%, CNSS ${rapport.config.cnss_taux}%`, 105, fy + 30, { align: 'center' });
 
     doc.save(`GrandLivre_${etablissementNom}_${periodeStr.replace(' ', '_')}.pdf`);
     toast.success('Grand Livre exporté en PDF !');
@@ -428,7 +438,7 @@ const GrandLivre = () => {
                   { label: 'Charges Fixes', val: rapport.totalCharges, plus: false },
                   { label: 'Masse Salariale + CNSS', val: rapport.masseSalariale + rapport.cnss, plus: false },
                   { label: 'Taxes Loisirs + Tourisme', val: rapport.taxeLoisirs + rapport.taxeTourisme, plus: false },
-                  { label: 'Impôt Société IS (30%)', val: rapport.is, plus: false },
+                  { label: `Impôt Société IS (${rapport.config.is_taux}%)`, val: rapport.is, plus: false },
                 ].map((row, i) => (
                   <div key={i} className="flex justify-between items-center py-2 border-b border-white/10">
                     <span className="text-white/60 text-sm font-medium">{row.label}</span>
@@ -456,11 +466,11 @@ const GrandLivre = () => {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               {[
-                { label: 'TVA 18%', val: rapport.tva, note: 'À reverser à la DGI' },
-                { label: 'Taxe Loisirs 5%', val: rapport.taxeLoisirs, note: 'Sur CA brut' },
-                { label: 'Taxe Tourisme 2%', val: rapport.taxeTourisme, note: 'Sur CA brut' },
-                { label: 'CNSS 16.5%', val: rapport.cnss, note: 'Part patronale' },
-                { label: 'IS 30%', val: rapport.is, note: 'Sur bénéfice net' },
+                { label: `TVA ${rapport.config.tva_taux}%`, val: rapport.tva, note: 'À reverser à la DGI' },
+                { label: `Taxe Loisirs ${rapport.config.taxe_loisirs_taux}%`, val: rapport.taxeLoisirs, note: 'Sur CA brut' },
+                { label: `Taxe Tourisme ${rapport.config.taxe_tourisme_taux}%`, val: rapport.taxeTourisme, note: 'Sur CA brut' },
+                { label: `CNSS ${rapport.config.cnss_taux}%`, val: rapport.cnss, note: 'Part patronale' },
+                { label: `IS ${rapport.config.is_taux}%`, val: rapport.is, note: 'Sur bénéfice net' },
               ].map((tax, i) => {
                 const types = ['tva', 'taxeLoisirs', 'taxeTourisme', 'cnss', 'is'];
                 const type = types[i];

@@ -42,16 +42,18 @@ const TableauClient = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [modulesActifs, setModulesActifs] = useState<string[] | null>(null);
   const [statusEtab, setStatusEtab] = useState<string | null>(null);
+  const [typeEtab, setTypeEtab] = useState<string | null>(null);
 
   const etablissementId = etablissementSimuleId || profil?.etablissement_id;
 
-  // Listen to modules_actifs from Firestore in real-time
+  // Listen to modules_actifs and type from Firestore in real-time
   useEffect(() => {
     if (!etablissementId) return;
     const unsub = onSnapshot(doc(db, 'etablissements', etablissementId), (snap) => {
       const data = snap.data();
       setModulesActifs(data?.modules_actifs || []);
       setStatusEtab(data?.subscription_status || data?.statut || null);
+      setTypeEtab(data?.type_etablissement || 'bar_restaurant');
     });
     return () => unsub();
   }, [etablissementId]);
@@ -121,8 +123,12 @@ const TableauClient = () => {
           <div className="space-y-1">
             <SidebarLink icon={<LayoutDashboard size={18} />} label="Vue d'ensemble" path="/tableau-de-bord" />
             <SidebarLink icon={<Clock size={18} />} label="Sessions de travail" path="/tableau-de-bord/sessions" />
-            <SidebarLink icon={<Layout size={18} />} label="Plan des salles" path="/tableau-de-bord/plan-salles" />
-            <SidebarLink icon={<PlusCircle size={18} />} label="Gestion des tables" path="/tableau-de-bord/tables" />
+            {typeEtab !== 'boutique' && (
+              <>
+                <SidebarLink icon={<Layout size={18} />} label="Plan des salles" path="/tableau-de-bord/plan-salles" />
+                <SidebarLink icon={<PlusCircle size={18} />} label="Gestion des tables" path="/tableau-de-bord/tables" />
+              </>
+            )}
           </div>
         </div>
 
@@ -131,8 +137,8 @@ const TableauClient = () => {
           <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Postes de travail</p>
           <div className="space-y-1">
             <SidebarLink icon={<Monitor size={18} />} label="Console Déploiement" path="/terminaux" />
-            {hasModule('pos') && <SidebarLink icon={<ShoppingCart size={18} />} label="Point de Vente (Caisse)" path="/tableau-de-bord/caisse" />}
-            {hasModule('kds') && <SidebarLink icon={<Zap size={18} />} label="Écran Cuisine" path="/tableau-de-bord/cuisine" />}
+            {hasModule('pos') && <SidebarLink icon={typeEtab === 'boutique' ? <Package size={18} /> : <ShoppingCart size={18} />} label={typeEtab === 'boutique' ? "Caisse Boutique" : "Caisse Bar/Resto"} path="/tableau-de-bord/caisse" />}
+            {hasModule('kds') && typeEtab !== 'boutique' && <SidebarLink icon={<Zap size={18} />} label="Écran Cuisine" path="/tableau-de-bord/cuisine" />}
           </div>
         </div>
         )}

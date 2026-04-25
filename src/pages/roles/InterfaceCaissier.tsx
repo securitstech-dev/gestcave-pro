@@ -228,11 +228,11 @@ const InterfaceCaissier = () => {
           <div className="flex items-center gap-8">
               <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-[#1E3A8A] shadow-lg shadow-blue-900/20">
-                      <Wallet size={28} />
+                      {profil?.type_etablissement === 'boutique' ? <ShoppingBag size={28} /> : <Wallet size={28} />}
                   </div>
                   <div>
                       <h1 className="text-white font-black text-xl tracking-tight uppercase leading-none">
-                        Bienvenue, <span className="text-[#FF7A00]">{nomEmploye?.split(' ')[0]}</span> !
+                        {profil?.type_etablissement === 'boutique' ? 'Caisse Boutique' : 'Caisse Bar/Resto'} • <span className="text-[#FF7A00]">{nomEmploye?.split(' ')[0]}</span>
                       </h1>
                       <div className="flex items-center gap-2 mt-2">
                         <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
@@ -245,7 +245,7 @@ const InterfaceCaissier = () => {
               <div className="h-8 w-[1px] bg-white/10" />
               <div className="flex gap-4">
                   <button onClick={() => ouvrirVenteEmporter(idEmploye || 'inconnu', nomEmploye || 'Caissier')} className="h-12 px-6 bg-[#FF7A00] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-orange-600 transition-all shadow-lg shadow-orange-900/20 flex items-center gap-2">
-                    <Plus size={16} /> Vente Directe
+                    <Plus size={16} /> {profil?.type_etablissement === 'boutique' ? 'Nouvelle Vente' : 'Vente Directe'}
                   </button>
                   <button onClick={() => setShowClotureModal(true)} className="h-12 px-6 bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/20 transition-all border border-white/10 flex items-center gap-2">
                     <Lock size={16} /> Fermer Caisse
@@ -327,13 +327,13 @@ const InterfaceCaissier = () => {
                       onClick={() => setVueActive('actives')}
                       className={`flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${vueActive === 'actives' ? 'bg-[#1E3A8A] text-white shadow-lg shadow-blue-900/20' : 'bg-white text-slate-400 border border-slate-100 hover:bg-slate-50'}`}
                     >
-                      Sur Table / Direct ({commandes.filter(c => c.statut !== 'payee' && c.statut !== 'en_arriere').length})
+                      {profil?.type_etablissement === 'boutique' ? 'Ventes en cours' : 'Sur Table / Direct'} ({commandes.filter(c => c.statut !== 'payee' && c.statut !== 'en_arriere').length})
                     </button>
                     <button 
                       onClick={() => setVueActive('arrieres')}
                       className={`flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${vueActive === 'arrieres' ? 'bg-[#FF7A00] text-white shadow-lg shadow-orange-900/20' : 'bg-white text-slate-400 border border-slate-100 hover:bg-slate-50'}`}
                     >
-                      Dettes en Arriéré ({commandes.filter(c => c.statut === 'en_arriere').length})
+                      Dettes / Crédits ({commandes.filter(c => c.statut === 'en_arriere').length})
                     </button>
                 </div>
             </div>

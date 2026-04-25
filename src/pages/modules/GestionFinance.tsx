@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { 
-  collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc 
+  collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc, getDoc 
 } from 'firebase/firestore';
 import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
@@ -51,6 +51,16 @@ const GestionFinance = () => {
   const [nouveauMotifCharge, setNouveauMotifCharge] = useState('');
   const [clientRecherche, setClientRecherche] = useState('');
   const [showFiscalModal, setShowFiscalModal] = useState(false);
+  const [configEtab, setConfigEtab] = useState<any>(null);
+
+  useEffect(() => {
+    if (!etablissementId) return;
+    const fetchConfig = async () => {
+      const snap = await getDoc(doc(db, 'etablissements', etablissementId));
+      if (snap.exists()) setConfigEtab(snap.data());
+    };
+    fetchConfig();
+  }, [etablissementId]);
 
   useEffect(() => {
     if (!etablissementId) {
@@ -668,6 +678,7 @@ const GestionFinance = () => {
         isOpen={showFiscalModal} 
         onClose={() => setShowFiscalModal(false)} 
         defaultCA={totalEncaisse} 
+        configEtab={configEtab}
       />
 
       <style>{`

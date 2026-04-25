@@ -16,28 +16,45 @@ interface FiscalData {
   patenteMunicipale: number;
 }
 
-const ModalRapportFiscal = ({ isOpen, onClose, defaultCA = 1850000 }: { isOpen: boolean, onClose: () => void, defaultCA?: number }) => {
+const ModalRapportFiscal = ({ 
+  isOpen, 
+  onClose, 
+  defaultCA = 1850000,
+  configEtab = {
+    type_etablissement: 'bar_restaurant',
+    tva_taux: 18,
+    taxe_loisirs_taux: 5,
+    taxe_tourisme_taux: 2,
+    cnss_taux: 16.5,
+    is_taux: 30
+  }
+}: { 
+  isOpen: boolean, 
+  onClose: () => void, 
+  defaultCA?: number,
+  configEtab?: any
+}) => {
   const [data, setData] = useState<FiscalData>({
     caMensuel: defaultCA,
     masseSalarialeBrute: 450000,
     loyer: 80000,
     electriciteEau: 35000,
     approvisionnements: 620000,
-    licenceAlcool: 10000, // Mensuel (120k / 12)
-    forfaitBCDA: 15000,
+    licenceAlcool: configEtab.type_etablissement === 'boutique' ? 0 : 10000, // Mensuel (120k / 12)
+    forfaitBCDA: configEtab.type_etablissement === 'boutique' ? 0 : 15000,
     patenteMunicipale: 5000 // Estimé mensuel
   });
 
   const calculerFiscalite = () => {
-    const tva = data.caMensuel * 0.18;
-    const taxeLoisirs = data.caMensuel * 0.05;
-    const taxeTourisme = data.caMensuel * 0.02;
-    const cnssEmployeur = data.masseSalarialeBrute * 0.165;
+    const tva = data.caMensuel * (configEtab.tva_taux / 100);
+    const taxeLoisirs = configEtab.type_etablissement === 'boutique' ? 0 : data.caMensuel * (configEtab.taxe_loisirs_taux / 100);
+    const taxeTourisme = configEtab.type_etablissement === 'boutique' ? 0 : data.caMensuel * (configEtab.taxe_tourisme_taux / 100);
+    const cnssEmployeur = data.masseSalarialeBrute * (configEtab.cnss_taux / 100);
     
     // Bénéfice avant IS (simplifié)
     const chargesTotales = data.masseSalarialeBrute + data.loyer + data.electriciteEau + data.approvisionnements + data.licenceAlcool + data.forfaitBCDA + data.patenteMunicipale + cnssEmployeur + taxeLoisirs + taxeTourisme;
     const beneficeBrut = data.caMensuel - chargesTotales;
-    const is = beneficeBrut > 0 ? beneficeBrut * 0.30 : 0;
+    const is = beneficeBrut > 0 ? beneficeBrut * (configEtab.is_taux / 100) : 0;
     
     const resultatNet = beneficeBrut - is;
 
@@ -76,11 +93,11 @@ const ModalRapportFiscal = ({ isOpen, onClose, defaultCA = 1850000 }: { isOpen: 
         ['Forfait BCDA', data.forfaitBCDA.toLocaleString()],
         ['Patente Municipale', data.patenteMunicipale.toLocaleString()],
         ['--- TAXES & COTISATIONS ---', ''],
-        ['TVA (18%)', res.tva.toLocaleString()],
-        ['Taxe Loisirs (5%)', res.taxeLoisirs.toLocaleString()],
-        ['Taxe Tourisme (2%)', res.taxeTourisme.toLocaleString()],
-        ['CNSS Employeur (16.5%)', res.cnssEmployeur.toLocaleString()],
-        ['Impôt sur les Bénéfices (IS 30%)', res.is.toLocaleString()],
+        ['TVA (' + configEtab.tva_taux + '%)', res.tva.toLocaleString()],
+        ['Taxe Loisirs (' + configEtab.taxe_loisirs_taux + '%)', res.taxeLoisirs.toLocaleString()],
+        ['Taxe Tourisme (' + configEtab.taxe_tourisme_taux + '%)', res.taxeTourisme.toLocaleString()],
+        ['CNSS Employeur (' + configEtab.cnss_taux + '%)', res.cnssEmployeur.toLocaleString()],
+        ['Impôt sur les Bénéfices (IS ' + configEtab.is_taux + '%)', res.is.toLocaleString()],
       ],
       headStyles: { fillColor: [15, 23, 42] },
       alternateRowStyles: { fillColor: [248, 250, 252] }
@@ -153,11 +170,11 @@ const ModalRapportFiscal = ({ isOpen, onClose, defaultCA = 1850000 }: { isOpen: 
         <div className="bg-slate-900 rounded-[2rem] p-8 text-white mb-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div className="text-center">
-              <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">TVA (18%)</p>
+              <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">TVA ({configEtab.tva_taux}%)</p>
               <p className="text-xl font-black">{calculerFiscalite().tva.toLocaleString()} F</p>
             </div>
             <div className="text-center">
-              <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">IS (30%)</p>
+              <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">IS ({configEtab.is_taux}%)</p>
               <p className="text-xl font-black">{calculerFiscalite().is.toLocaleString()} F</p>
             </div>
             <div className="text-center">

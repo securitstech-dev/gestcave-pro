@@ -28,7 +28,13 @@ const GestionEtablissement = () => {
     toleranceRetard: 5,
     malusRetardParMinute: 100,
     seuilRetardRepetitif: 3,
-    multiplicateurMalusRepetitif: 2
+    multiplicateurMalusRepetitif: 2,
+    type_etablissement: 'bar_restaurant', // boutique, bar_restaurant, mixte
+    tva_taux: 18,
+    taxe_loisirs_taux: 5,
+    taxe_tourisme_taux: 2,
+    cnss_taux: 16.5,
+    is_taux: 30
   });
 
   useEffect(() => {
@@ -197,6 +203,61 @@ const GestionEtablissement = () => {
                         <input type="number" step="0.5" value={formData.multiplicateurMalusRepetitif} onChange={e => setFormData({...formData, multiplicateurMalusRepetitif: Number(e.target.value)})}
                           className="w-full h-16 bg-slate-50 border border-slate-100 rounded-2xl px-8 outline-none focus:ring-4 focus:ring-blue-100 transition-all font-bold text-[#1E3A8A] text-sm shadow-sm" />
                     </div>
+                </div>
+            </div>
+
+            {/* Establishment Type & Tax Config */}
+            <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl shadow-blue-900/5 space-y-10">
+                <div className="flex items-center gap-6">
+                    <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500 shadow-inner">
+                        <Landmark size={24} />
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-extrabold text-[#1E3A8A] uppercase tracking-tight">Configuration Fiscale & Type</h3>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Adaptez l'application à votre activité</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div>
+                        <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-4 px-1">Nature de l'Établissement</label>
+                        <select 
+                            value={formData.type_etablissement} 
+                            onChange={e => setFormData({...formData, type_etablissement: e.target.value})}
+                            className="w-full h-16 bg-slate-50 border border-slate-100 rounded-2xl px-8 outline-none focus:ring-4 focus:ring-blue-100 transition-all font-bold text-[#1E3A8A] text-sm uppercase tracking-widest shadow-sm"
+                        >
+                            <option value="bar_restaurant">🍹 Bar / Restaurant</option>
+                            <option value="boutique">🛍️ Boutique / Divers</option>
+                            <option value="mixte">🏪 Mixte (Boutique + Bar)</option>
+                        </select>
+                    </div>
+                    <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100">
+                        <p className="text-[10px] font-bold text-[#1E3A8A] uppercase leading-relaxed">
+                            {formData.type_etablissement === 'boutique' 
+                                ? "💡 Mode Boutique : L'interface caissier sera simplifiée pour les ventes directes sans gestion de tables."
+                                : "💡 Mode Bar/Resto : Active la gestion des tables, du plan de salle et du KDS."}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+                    {[
+                        { label: 'TVA (%)', key: 'tva_taux' },
+                        { label: 'Loisirs (%)', key: 'taxe_loisirs_taux' },
+                        { label: 'Tourisme (%)', key: 'taxe_tourisme_taux' },
+                        { label: 'CNSS (%)', key: 'cnss_taux' },
+                        { label: 'IS (%)', key: 'is_taux' },
+                    ].map((taxe) => (
+                        <div key={taxe.key}>
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">{taxe.label}</label>
+                            <input 
+                                type="number" 
+                                value={(formData as any)[taxe.key]} 
+                                onChange={e => setFormData({...formData, [taxe.key]: Number(e.target.value)})}
+                                className="w-full h-12 bg-slate-50 border border-slate-100 rounded-xl px-4 font-black text-[#1E3A8A] text-xs shadow-sm" 
+                            />
+                        </div>
+                    ))}
                 </div>
             </div>
 
