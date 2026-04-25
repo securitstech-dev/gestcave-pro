@@ -123,8 +123,8 @@ const PageActivation = () => {
         } catch (err: any) {
             console.error("Erreur d'activation détaillée:", err);
             if (err.code === 'auth/email-already-in-use') {
-                toast.error("Ce compte est déjà actif. Veuillez vous connecter.");
-                setTimeout(() => navigate('/connexion'), 2000);
+                toast.error("Un compte existe déjà avec cet email. Veuillez utiliser votre mot de passe habituel pour vous connecter.");
+                setTimeout(() => navigate('/connexion'), 3000);
                 return;
             }
             if (err.code === 'permission-denied') {

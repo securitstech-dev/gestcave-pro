@@ -146,17 +146,37 @@ const TableauSuperAdmin = () => {
     if (planApprobation === 'business_annuel') { jours = 365; typePlan = 'business'; statut = 'actif'; }
 
     try {
-      const etabRef = await addDoc(collection(db, 'etablissements'), {
-        nom: demande.nom_etablissement, adresse: demande.adresse_etablissement || 'N/A',
-        telephone: demande.telephone_contact || 'N/A', contact_principal: demande.nom_contact,
-        email_contact: demande.email_contact, subscription_plan: typePlan,
-        subscription_status: statut, subscription_start_date: new Date().toISOString(),
-        subscription_end_date: new Date(Date.now() + jours * 24 * 60 * 60 * 1000).toISOString(),
-        modules_actifs: MODULES_PAR_PLAN[typePlan] || MODULES_PAR_PLAN['essai_gratuit']
-      });
-      await updateDoc(doc(db, 'demandes_acces', demandeId), { statut: 'valide', etablissement_id: etabRef.id });
+      // Vérifier si un établissement existe déjà avec cet email
+      const q = query(collection(db, 'etablissements'), where('email_contact', '==', demande.email_contact));
+      const qSnap = await getDocs(q);
+      
+      let etabId = '';
+      if (!qSnap.empty) {
+        // Déjà existant (probablement via PageInscription)
+        etabId = qSnap.docs[0].id;
+        await updateDoc(doc(db, 'etablissements', etabId), {
+          subscription_plan: typePlan,
+          subscription_status: statut,
+          subscription_start_date: new Date().toISOString(),
+          subscription_end_date: new Date(Date.now() + jours * 24 * 60 * 60 * 1000).toISOString(),
+          modules_actifs: MODULES_PAR_PLAN[typePlan] || MODULES_PAR_PLAN['essai_gratuit']
+        });
+      } else {
+        // Nouveau
+        const etabRef = await addDoc(collection(db, 'etablissements'), {
+          nom: demande.nom_etablissement, adresse: demande.adresse_etablissement || 'N/A',
+          telephone: demande.telephone_contact || 'N/A', contact_principal: demande.nom_contact,
+          email_contact: demande.email_contact, subscription_plan: typePlan,
+          subscription_status: statut, subscription_start_date: new Date().toISOString(),
+          subscription_end_date: new Date(Date.now() + jours * 24 * 60 * 60 * 1000).toISOString(),
+          modules_actifs: MODULES_PAR_PLAN[typePlan] || MODULES_PAR_PLAN['essai_gratuit']
+        });
+        etabId = etabRef.id;
+      }
+
+      await updateDoc(doc(db, 'demandes_acces', demandeId), { statut: 'valide', etablissement_id: etabId });
       const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      await addDoc(collection(db, 'invitations'), { token: invitationToken, email: demande.email_contact, nom: demande.nom_contact, etablissement_id: etabRef.id, role: 'client_admin', date_creation: new Date().toISOString(), expire: Date.now() + (72 * 60 * 60 * 1000) });
+      await addDoc(collection(db, 'invitations'), { token: invitationToken, email: demande.email_contact, nom: demande.nom_contact, etablissement_id: etabId, role: 'client_admin', date_creation: new Date().toISOString(), expire: Date.now() + (72 * 60 * 60 * 1000) });
       const urlComplete = `${window.location.origin}/activation?token=${invitationToken}`;
       setLienActivation({ 
         url: urlComplete, 
