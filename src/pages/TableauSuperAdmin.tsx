@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { 
   Users, CheckCircle, XCircle, LogOut, 
   Search, Building2, CreditCard, TrendingUp, Shield,
   ArrowUpRight, AlertTriangle, Loader2, ExternalLink, X, Ban, Activity,
   Trash2, Database, AlertCircle, Info, Copy, Key, ArrowRight, ShieldCheck,
-  Globe, Landmark, Cpu, Sparkles, BarChart3, Settings, ZapOff, Zap, Calendar, Mail, MessageSquare, LayoutDashboard, Tablet
+  Globe, Landmark, Cpu, Sparkles, BarChart3, Settings, ZapOff, Zap, Calendar, Mail, MessageSquare, LayoutDashboard, Tablet, Target, Award, DollarSign, Printer, Receipt
 } from 'lucide-react';
+import jsPDF from 'jspdf';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -15,7 +16,7 @@ import { clearFirestoreCache } from '../lib/firebase';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import SimulateurTablette from './modules/SimulateurTablette';
 
-type Onglet = 'demandes' | 'messages' | 'paiements' | 'etablissements' | 'comptabilite' | 'maintenance' | 'laboratoire' | 'rh_interne' | 'finance_interne' | 'support' | 'caisse';
+type Onglet = 'demandes' | 'messages' | 'paiements' | 'etablissements' | 'comptabilite' | 'maintenance' | 'laboratoire' | 'rh_interne' | 'finance_interne' | 'support' | 'caisse' | 'commerciaux';
 
 const TableauSuperAdmin = () => {
   const [demandes, setDemandes] = useState<any[]>([]);
@@ -57,6 +58,14 @@ const TableauSuperAdmin = () => {
   const [motifCaisse, setMotifCaisse] = useState('Renouvellement Abonnement');
   const [dureeCaisse, setDureeCaisse] = useState(30);
   const [sendingCaisse, setSendingCaisse] = useState(false);
+  const [recuVisible, setRecuVisible] = useState<any | null>(null);
+  const [nomClientManuel, setNomClientManuel] = useState('');
+  const [modePaiementCaisse, setModePaiementCaisse] = useState('Espèces');
+
+  // States for Commerciaux
+  const [commerciaux, setCommerciaux] = useState<any[]>([]);
+  const [modalAddCommercial, setModalAddCommercial] = useState(false);
+  const [newCommercial, setNewCommercial] = useState({ nom: '', telephone: '', objectif_mensuel: 150000, salaire_base: 80000, taux_prime: 10 });
 
   useEffect(() => {
     setChargement(true);
@@ -86,6 +95,11 @@ const TableauSuperAdmin = () => {
       (snap) => setTicketsSupport(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     );
 
+    const unsubCommerciaux = onSnapshot(
+      query(collection(db, 'commerciaux'), orderBy('nom', 'asc')),
+      (snap) => setCommerciaux(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    );
+
     setChargement(false);
     return () => {
       unsubDemandes();
@@ -94,6 +108,7 @@ const TableauSuperAdmin = () => {
       unsubMessages();
       unsubEquipe();
       unsubTickets();
+      unsubCommerciaux();
     };
   }, []);
 
@@ -416,7 +431,8 @@ const TableauSuperAdmin = () => {
     { key: 'rh_interne', icon: <Users size={20} />, label: "Équipe Securits" },
     { key: 'finance_interne', icon: <Landmark size={20} />, label: "Finance Interne" },
     { key: 'support', icon: <AlertCircle size={20} />, label: "Tickets & Bugs" },
-    { key: 'caisse', icon: <Landmark size={20} />, label: "Caisse Physique (Bureau)" },
+    { key: 'caisse', icon: <Receipt size={20} />, label: "Caisse Physique (Bureau)" },
+    { key: 'commerciaux', icon: <Target size={20} />, label: "Commerciaux & Primes" },
     { key: 'separateur2', type: 'separator', label: 'Système' },
     { key: 'laboratoire', icon: <Tablet size={20} />, label: "Lab de Simulation (Tablette)" },
     { key: 'maintenance', icon: <Database size={20} />, label: "Maintenance", danger: true },
@@ -545,87 +561,346 @@ const TableauSuperAdmin = () => {
     </div>
   );
 
+  const genererRecuPDF = (recu: any) => {
+    const pdf = new jsPDF({ unit: 'mm', format: 'a5' });
+    const w = 148;
+    // Header background
+    pdf.setFillColor(30, 58, 138);
+    pdf.rect(0, 0, w, 40, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(16); pdf.setFont('helvetica', 'bold');
+    pdf.text('SECURITS TECH', w / 2, 14, { align: 'center' });
+    pdf.setFontSize(8); pdf.setFont('helvetica', 'normal');
+    pdf.text('Système de Gestion Intelligent pour Bars & Restaurants', w / 2, 20, { align: 'center' });
+    pdf.text('Email: securitstech@gmail.com', w / 2, 26, { align: 'center' });
+    pdf.text('Tél: +242 05 302 8383  /  06 881 7104', w / 2, 32, { align: 'center' });
+
+    // Orange accent
+    pdf.setFillColor(255, 122, 0);
+    pdf.rect(0, 40, w, 4, 'F');
+
+    // REÇU title
+    pdf.setTextColor(30, 58, 138);
+    pdf.setFontSize(14); pdf.setFont('helvetica', 'bold');
+    pdf.text('REÇU DE PAIEMENT', w / 2, 53, { align: 'center' });
+
+    // Recu Number & Date
+    pdf.setFontSize(8); pdf.setFont('helvetica', 'normal'); pdf.setTextColor(100, 100, 100);
+    pdf.text(`N° ${recu.numero}`, 10, 62);
+    pdf.text(`Date: ${new Date(recu.date).toLocaleString('fr-FR')}`, w - 10, 62, { align: 'right' });
+
+    // Divider
+    pdf.setDrawColor(200, 200, 200); pdf.line(10, 65, w - 10, 65);
+
+    // Client info
+    pdf.setTextColor(50, 50, 50); pdf.setFontSize(9); pdf.setFont('helvetica', 'bold');
+    pdf.text('INFORMATIONS CLIENT', 10, 73);
+    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9);
+    pdf.text(`Établissement : ${recu.nom_etablissement}`, 10, 80);
+    if (recu.nom_client) pdf.text(`Contact : ${recu.nom_client}`, 10, 86);
+    pdf.text(`Plan : ${recu.plan || 'Premium'}`, 10, 92);
+
+    // Divider
+    pdf.line(10, 97, w - 10, 97);
+
+    // Payment details
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9);
+    pdf.text('DÉTAIL DU PAIEMENT', 10, 104);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Motif : ${recu.motif}`, 10, 111);
+    pdf.text(`Durée accordée : ${recu.duree} jours`, 10, 117);
+    pdf.text(`Mode de paiement : ${recu.mode_paiement}`, 10, 123);
+    pdf.text(`Nouvelle expiration : ${recu.nouvelle_expiration}`, 10, 129);
+
+    // Amount box
+    pdf.setFillColor(255, 122, 0);
+    pdf.roundedRect(10, 136, w - 20, 22, 3, 3, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(11); pdf.setFont('helvetica', 'bold');
+    pdf.text('MONTANT REÇU', w / 2, 145, { align: 'center' });
+    pdf.setFontSize(18);
+    pdf.text(`${recu.montant.toLocaleString()} XAF`, w / 2, 154, { align: 'center' });
+
+    // Footer
+    pdf.setTextColor(100, 100, 100); pdf.setFontSize(7); pdf.setFont('helvetica', 'italic');
+    pdf.line(10, 165, w - 10, 165);
+    pdf.text('Ce reçu est un document officiel émis par Securits Tech.', w / 2, 170, { align: 'center' });
+    pdf.text('Conservez-le précieusement. Merci pour votre confiance.', w / 2, 175, { align: 'center' });
+
+    pdf.save(`recu-${recu.numero}.pdf`);
+  };
+
   const renderVueCaisse = () => {
     const enregistrerEncaissement = async () => {
       if (!selectedEtabCaisse || montantCaisse <= 0) return toast.error("Sélectionnez un établissement et un montant valide");
       setSendingCaisse(true);
       try {
+        const numero = `ST-${Date.now().toString().slice(-8)}`;
+        const expirationActuelle = selectedEtabCaisse.subscription_end_date ? new Date(selectedEtabCaisse.subscription_end_date).getTime() : Date.now();
+        const nouvelleExp = new Date(Math.max(expirationActuelle, Date.now()) + dureeCaisse * 24 * 60 * 60 * 1000);
+
         await addDoc(collection(db, 'paiements'), {
           etablissement_id: selectedEtabCaisse.id,
           nom_etablissement: selectedEtabCaisse.nom,
+          nom_client: nomClientManuel || selectedEtabCaisse.contact_principal || '',
           montant: montantCaisse,
           date: new Date().toISOString(),
           date_validation: new Date().toISOString(),
           statut: 'valide',
           methode: 'especes_bureau',
+          mode_paiement: modePaiementCaisse,
           motif: motifCaisse,
           plan_id: selectedEtabCaisse.subscription_plan || 'premium',
-          source: 'super_admin_caisse'
+          source: 'super_admin_caisse',
+          numero_recu: numero
         });
 
-        const expirationActuelle = selectedEtabCaisse.subscription_end_date ? new Date(selectedEtabCaisse.subscription_end_date).getTime() : Date.now();
-        const nouvelleExpiration = new Date(Math.max(expirationActuelle, Date.now()) + dureeCaisse * 24 * 60 * 60 * 1000).toISOString();
-        
         await updateDoc(doc(db, 'etablissements', selectedEtabCaisse.id), {
-          subscription_end_date: nouvelleExpiration,
+          subscription_end_date: nouvelleExp.toISOString(),
           subscription_status: 'actif'
         });
 
-        toast.success(`Encaissement de ${montantCaisse} XAF enregistré`);
-        setMontantCaisse(0); setSelectedEtabCaisse(null);
+        const recuData = {
+          numero,
+          date: new Date().toISOString(),
+          nom_etablissement: selectedEtabCaisse.nom,
+          nom_client: nomClientManuel || selectedEtabCaisse.contact_principal || '',
+          plan: selectedEtabCaisse.subscription_plan,
+          motif: motifCaisse,
+          duree: dureeCaisse,
+          mode_paiement: modePaiementCaisse,
+          nouvelle_expiration: nouvelleExp.toLocaleDateString('fr-FR'),
+          montant: montantCaisse,
+        };
+
+        setRecuVisible(recuData);
+        genererRecuPDF(recuData);
+        toast.success(`✅ Encaissement de ${montantCaisse.toLocaleString()} XAF enregistré — Reçu généré !`);
+        setMontantCaisse(0); setSelectedEtabCaisse(null); setNomClientManuel('');
       } catch (err: any) { toast.error(err.message); }
       finally { setSendingCaisse(false); }
     };
 
+    const inputCls = "w-full h-14 px-5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-200 font-bold text-sm transition-all";
+
     return (
-      <div className="p-10 md:p-16 space-y-12 animate-in fade-in duration-700">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-3xl font-black text-[#1E3A8A] uppercase tracking-tighter">Caisse Bureau</h2>
-            <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">Encaissement manuel</p>
-          </div>
+      <div className="p-8 md:p-12 space-y-10 animate-in fade-in duration-700">
+        <div>
+          <h2 className="text-3xl font-black text-[#1E3A8A] uppercase tracking-tighter">Caisse Physique</h2>
+          <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">Encaissement en bureau — Reçu automatique Securits Tech</p>
         </div>
-        <div className="grid lg:grid-cols-2 gap-12">
-          <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl shadow-blue-900/5 space-y-8">
-            <div className="space-y-4">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Établissement</label>
-              <select value={selectedEtabCaisse?.id || ''} onChange={(e) => setSelectedEtabCaisse(etablissements.find(et => et.id === e.target.value))} className="w-full h-16 px-6 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-bold text-sm">
-                <option value="">Sélectionner...</option>
-                {etablissements.map(e => <option key={e.id} value={e.id}>{e.nom}</option>)}
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Montant (XAF)</label>
-                <input type="number" value={montantCaisse} onChange={e => setMontantCaisse(Number(e.target.value))} className="w-full h-16 px-6 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-black text-[#FF7A00] text-xl" />
-              </div>
-              <div className="space-y-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Durée (Jours)</label>
-                <select value={dureeCaisse} onChange={e => setDureeCaisse(Number(e.target.value))} className="w-full h-16 px-6 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-bold text-sm">
-                  <option value={30}>30 Jours</option>
-                  <option value={90}>90 Jours</option>
-                  <option value={365}>1 An</option>
+
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Left form */}
+          <div className="lg:col-span-2 bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-blue-900/5 p-8 space-y-6">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Informations du paiement</p>
+
+            <div className="grid md:grid-cols-2 gap-5">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Établissement *</label>
+                <select value={selectedEtabCaisse?.id || ''} onChange={(e) => setSelectedEtabCaisse(etablissements.find(et => et.id === e.target.value) || null)} className={inputCls}>
+                  <option value="">Sélectionner...</option>
+                  {etablissements.map(e => <option key={e.id} value={e.id}>{e.nom}</option>)}
                 </select>
               </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Nom du Client / Contact</label>
+                <input type="text" value={nomClientManuel} onChange={e => setNomClientManuel(e.target.value)} placeholder={selectedEtabCaisse?.contact_principal || 'Nom du gerant...'} className={inputCls} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Montant (XAF) *</label>
+                <input type="number" value={montantCaisse || ''} onChange={e => setMontantCaisse(Number(e.target.value))} placeholder="Ex: 25000" className={`${inputCls} font-black text-[#FF7A00] text-xl`} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Mode de Paiement</label>
+                <select value={modePaiementCaisse} onChange={e => setModePaiementCaisse(e.target.value)} className={inputCls}>
+                  {['Espèces','Mobile Money','Virement','Chèque'].map(m => <option key={m}>{m}</option>)}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Durée d'abonnement</label>
+                <select value={dureeCaisse} onChange={e => setDureeCaisse(Number(e.target.value))} className={inputCls}>
+                  <option value={30}>1 Mois (30 jours)</option>
+                  <option value={60}>2 Mois (60 jours)</option>
+                  <option value={90}>3 Mois (90 jours)</option>
+                  <option value={180}>6 Mois (180 jours)</option>
+                  <option value={365}>1 An (365 jours)</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Motif</label>
+                <input type="text" value={motifCaisse} onChange={e => setMotifCaisse(e.target.value)} className={inputCls} />
+              </div>
             </div>
-            <button onClick={enregistrerEncaissement} disabled={sendingCaisse || !selectedEtabCaisse || montantCaisse <= 0} className="w-full h-20 bg-[#1E3A8A] text-white rounded-[2rem] font-black uppercase tracking-widest shadow-xl shadow-blue-900/20 hover:bg-blue-800 transition-all disabled:opacity-40 flex items-center justify-center gap-4">
-              {sendingCaisse ? <Loader2 className="animate-spin" /> : <Landmark size={24} />} Valider l'encaissement
+
+            <button onClick={enregistrerEncaissement} disabled={sendingCaisse || !selectedEtabCaisse || montantCaisse <= 0}
+              className="w-full h-16 bg-[#1E3A8A] text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-900/20 hover:bg-blue-800 transition-all disabled:opacity-40 flex items-center justify-center gap-3 text-sm">
+              {sendingCaisse ? <Loader2 className="animate-spin" size={20} /> : <Receipt size={20} />}
+              Valider & Générer le Reçu PDF
             </button>
           </div>
-          <div className="bg-[#FF7A00] p-10 rounded-[3rem] text-white shadow-2xl shadow-orange-900/20 h-fit">
-            <h4 className="font-black uppercase tracking-widest text-xs mb-4 opacity-60">Détails de l'abonnement</h4>
+
+          {/* Right panel */}
+          <div className="space-y-6">
             {selectedEtabCaisse ? (
-              <div className="space-y-4">
+              <div className="bg-gradient-to-br from-[#1E3A8A] to-blue-900 rounded-[2.5rem] p-8 text-white space-y-4">
+                <p className="text-[10px] font-black uppercase tracking-widest opacity-50">Aperçu Abonnement</p>
                 <p className="text-2xl font-black">{selectedEtabCaisse.nom}</p>
-                <p className="text-sm font-bold opacity-80">Expire le : {selectedEtabCaisse.subscription_end_date ? new Date(selectedEtabCaisse.subscription_end_date).toLocaleDateString() : 'Jamais'}</p>
-                <div className="pt-4 border-t border-white/10">
-                  <p className="text-xs font-bold opacity-60 uppercase">Nouvelle Expiration</p>
-                  <p className="text-2xl font-black">{new Date(Math.max(selectedEtabCaisse.subscription_end_date ? new Date(selectedEtabCaisse.subscription_end_date).getTime() : Date.now(), Date.now()) + dureeCaisse * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between"><span className="opacity-60">Plan actuel</span><span className="font-bold">{selectedEtabCaisse.subscription_plan || 'N/A'}</span></div>
+                  <div className="flex justify-between"><span className="opacity-60">Expiration</span><span className="font-bold">{selectedEtabCaisse.subscription_end_date ? new Date(selectedEtabCaisse.subscription_end_date).toLocaleDateString('fr-FR') : '—'}</span></div>
+                  <div className="flex justify-between border-t border-white/20 pt-2 mt-2"><span className="opacity-60">Nouvelle exp.</span><span className="font-black text-[#FF7A00]">{new Date(Math.max(selectedEtabCaisse.subscription_end_date ? new Date(selectedEtabCaisse.subscription_end_date).getTime() : Date.now(), Date.now()) + dureeCaisse * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR')}</span></div>
                 </div>
               </div>
-            ) : <p className="font-bold italic opacity-60 text-sm">Sélectionnez un établissement.</p>}
+            ) : (
+              <div className="bg-slate-50 rounded-[2.5rem] p-8 text-center border-2 border-dashed border-slate-200">
+                <Receipt size={40} className="mx-auto text-slate-300 mb-3" />
+                <p className="text-slate-400 font-bold text-sm">Sélectionnez un établissement pour voir son aperçu</p>
+              </div>
+            )}
+
+            {/* Recent receipts */}
+            <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow p-6 space-y-3">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Derniers encaissements</p>
+              {paiements.filter(p => p.source === 'super_admin_caisse').slice(0, 5).map((p: any) => (
+                <div key={p.id} className="flex justify-between items-center py-2 border-b border-slate-50 last:border-0">
+                  <div>
+                    <p className="font-bold text-sm text-slate-700">{p.nom_etablissement}</p>
+                    <p className="text-[10px] text-slate-400">{new Date(p.date).toLocaleDateString('fr-FR')} · {p.motif}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-[#FF7A00] text-sm">{(p.montant||0).toLocaleString()} XAF</span>
+                    {p.numero_recu && <button onClick={() => genererRecuPDF({...p, numero: p.numero_recu, mode_paiement: p.mode_paiement||'Espèces', duree: p.duree||30, nouvelle_expiration:'—'})} className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center hover:bg-blue-100 transition-all"><Printer size={14} className="text-blue-600"/></button>}
+                  </div>
+                </div>
+              ))}
+              {paiements.filter(p => p.source === 'super_admin_caisse').length === 0 && <p className="text-slate-400 text-xs italic text-center py-4">Aucun encaissement enregistré</p>}
+            </div>
           </div>
         </div>
+      </div>
+    );
+  };
+
+  const renderVueCommerciaux = () => {
+    const moisActuel = new Date().getMonth();
+    const anneeActuelle = new Date().getFullYear();
+
+    const ventesParCommercial = (commercialId: string) => {
+      return paiements.filter(p => {
+        const d = new Date(p.date_validation || p.date || '');
+        return p.commercial_id === commercialId && d.getMonth() === moisActuel && d.getFullYear() === anneeActuelle && p.statut === 'valide';
+      }).reduce((acc, p) => acc + (p.montant || 0), 0);
+    };
+
+    const calculerPrime = (commercial: any) => {
+      const ventes = ventesParCommercial(commercial.id);
+      const taux = commercial.taux_prime || 10;
+      const objectif = commercial.objectif_mensuel || 150000;
+      if (ventes >= objectif) return Math.round(ventes * (taux / 100));
+      if (ventes >= objectif * 0.75) return Math.round(ventes * (taux / 100) * 0.5);
+      return 0;
+    };
+
+    const ajouterCommercial = async () => {
+      if (!newCommercial.nom) return toast.error('Nom obligatoire');
+      try {
+        await addDoc(collection(db, 'commerciaux'), { ...newCommercial, date_creation: new Date().toISOString(), actif: true });
+        toast.success('Commercial ajouté !');
+        setModalAddCommercial(false);
+        setNewCommercial({ nom: '', telephone: '', objectif_mensuel: 150000, salaire_base: 80000, taux_prime: 10 });
+      } catch (e: any) { toast.error(e.message); }
+    };
+
+    const inputCls = "w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-sm focus:ring-2 focus:ring-blue-200 transition-all";
+
+    return (
+      <div className="p-8 md:p-12 space-y-10 animate-in fade-in duration-700">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-3xl font-black text-[#1E3A8A] uppercase tracking-tighter">Commerciaux & Primes</h2>
+            <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">Objectifs de vente, primes et salaires</p>
+          </div>
+          <button onClick={() => setModalAddCommercial(true)} className="h-12 px-6 bg-[#1E3A8A] text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-lg hover:bg-blue-800 transition-all">
+            <Users size={16}/> Ajouter un Agent
+          </button>
+        </div>
+
+        {/* Summary cards */}
+        <div className="grid grid-cols-3 gap-6">
+          {[
+            { label: 'Agents actifs', val: commerciaux.filter(c=>c.actif).length, color: 'text-blue-600', bg: 'bg-blue-50' },
+            { label: 'Total ventes (mois)', val: `${commerciaux.reduce((acc,c) => acc + ventesParCommercial(c.id), 0).toLocaleString()} XAF`, color: 'text-orange-500', bg: 'bg-orange-50' },
+            { label: 'Total primes dues', val: `${commerciaux.reduce((acc,c) => acc + calculerPrime(c), 0).toLocaleString()} XAF`, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          ].map((s,i) => (
+            <div key={i} className={`${s.bg} rounded-[2rem] p-6`}>
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">{s.label}</p>
+              <p className={`text-2xl font-black ${s.color}`}>{s.val}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Agents table */}
+        {commerciaux.length === 0 ? (
+          <div className="bg-white rounded-[2.5rem] p-16 text-center border-2 border-dashed border-slate-100">
+            <Target size={48} className="mx-auto text-slate-300 mb-4"/>
+            <p className="text-slate-400 font-black uppercase tracking-widest text-sm">Aucun commercial enregistré</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden">
+            <div className="grid grid-cols-7 gap-4 px-8 py-4 border-b border-slate-100 bg-slate-50">
+              {['Nom', 'Téléphone', 'Objectif (XAF)', 'Ventes (mois)', 'Taux Prime', 'Prime Calculée', 'Salaire Total'].map(h => (
+                <p key={h} className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{h}</p>
+              ))}
+            </div>
+            {commerciaux.map(c => {
+              const ventes = ventesParCommercial(c.id);
+              const prime = calculerPrime(c);
+              const salaireTot = (c.salaire_base || 0) + prime;
+              const pct = c.objectif_mensuel ? Math.min((ventes / c.objectif_mensuel) * 100, 100) : 0;
+              return (
+                <div key={c.id} className="grid grid-cols-7 gap-4 px-8 py-5 border-b border-slate-50 last:border-0 items-center hover:bg-slate-50/50 transition-all">
+                  <div>
+                    <p className="font-black text-slate-800 text-sm">{c.nom}</p>
+                    <div className="mt-1 h-1.5 w-24 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-[#FF7A00] rounded-full transition-all" style={{width:`${pct}%`}}/></div>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{pct.toFixed(0)}% objectif</p>
+                  </div>
+                  <p className="text-sm text-slate-600 font-bold">{c.telephone || '—'}</p>
+                  <p className="text-sm font-black text-[#1E3A8A]">{(c.objectif_mensuel||0).toLocaleString()}</p>
+                  <p className={`text-sm font-black ${ventes >= (c.objectif_mensuel||0) ? 'text-emerald-600' : 'text-orange-500'}`}>{ventes.toLocaleString()}</p>
+                  <p className="text-sm font-bold text-slate-600">{c.taux_prime || 10}%</p>
+                  <p className={`text-sm font-black ${prime > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>{prime.toLocaleString()} XAF</p>
+                  <div>
+                    <p className="text-sm font-black text-[#1E3A8A]">{salaireTot.toLocaleString()} XAF</p>
+                    <p className="text-[10px] text-slate-400">Base: {(c.salaire_base||0).toLocaleString()}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Modal Add Commercial */}
+        {modalAddCommercial && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-[3rem] p-10 w-full max-w-md shadow-2xl space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-black text-[#1E3A8A] uppercase">Nouvel Agent Commercial</h3>
+                <button onClick={() => setModalAddCommercial(false)}><X size={24} className="text-slate-400"/></button>
+              </div>
+              <div className="space-y-4">
+                <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 block mb-1">Nom Complet *</label><input className={inputCls} value={newCommercial.nom} onChange={e=>setNewCommercial({...newCommercial, nom: e.target.value})} placeholder="Ex: Jean Mpemba"/></div>
+                <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 block mb-1">Téléphone</label><input className={inputCls} value={newCommercial.telephone} onChange={e=>setNewCommercial({...newCommercial, telephone: e.target.value})} placeholder="+242 06..."/></div>
+                <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 block mb-1">Objectif Mensuel (XAF)</label><input type="number" className={inputCls} value={newCommercial.objectif_mensuel} onChange={e=>setNewCommercial({...newCommercial, objectif_mensuel: Number(e.target.value)})}/></div>
+                <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 block mb-1">Salaire de Base (XAF)</label><input type="number" className={inputCls} value={newCommercial.salaire_base} onChange={e=>setNewCommercial({...newCommercial, salaire_base: Number(e.target.value)})}/></div>
+                <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 block mb-1">Taux de Prime (%)</label><input type="number" className={inputCls} value={newCommercial.taux_prime} onChange={e=>setNewCommercial({...newCommercial, taux_prime: Number(e.target.value)})}/></div>
+              </div>
+              <button onClick={ajouterCommercial} className="w-full h-14 bg-[#1E3A8A] text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-800 transition-all flex items-center justify-center gap-2">
+                <Award size={18}/> Enregistrer l'agent
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -711,6 +986,7 @@ const TableauSuperAdmin = () => {
               {onglet === 'maintenance' && 'Maintenance du Système'}
               {onglet === 'laboratoire' && 'Laboratoire de Simulation'}
               {onglet === 'caisse' && 'Caisse Physique (Bureau)'}
+              {onglet === 'commerciaux' && 'Commerciaux & Primes'}
              </h1>
           </div>
           <div className="relative w-full lg:w-96">
@@ -745,6 +1021,7 @@ const TableauSuperAdmin = () => {
 
         <div className="bg-white rounded-[3.5rem] shadow-xl shadow-blue-900/5 border border-slate-100 overflow-hidden min-h-[600px] animate-in fade-in duration-500">
           {onglet === 'caisse' && renderVueCaisse()}
+          {onglet === 'commerciaux' && renderVueCommerciaux()}
           {/* ── DEMANDES ── */}
           {onglet === 'demandes' && (
             <div className="p-10 space-y-6">
