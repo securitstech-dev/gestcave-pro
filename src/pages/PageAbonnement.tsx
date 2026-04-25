@@ -101,6 +101,7 @@ const PageAbonnement = () => {
         preuve_url: urlPreuve,
         methode: methodePaiement,
         periode: annuel ? 'annuel' : 'mensuel',
+        email: profil?.email || '',
         message: message,
         date: new Date().toISOString()
       });

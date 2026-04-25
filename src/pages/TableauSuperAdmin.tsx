@@ -41,7 +41,7 @@ const TableauSuperAdmin = () => {
   const [modalPaiement, setModalPaiement] = useState<any | null>(null);
   const [planPaiement, setPlanPaiement] = useState<'mensuel' | 'premium' | 'business'>('mensuel');
   
-  const [lienActivation, setLienActivation] = useState<{ url: string; nom: string; email?: string; plan?: string; nomGerant?: string } | null>(null);
+  const [lienActivation, setLienActivation] = useState<{ url: string; nom: string; email?: string; plan?: string; nomGerant?: string; telephone?: string } | null>(null);
   const [modalAjoutEtab, setModalAjoutEtab] = useState(false);
   const [nouvelEtab, setNouvelEtab] = useState({ nom: '', contact: '', email: '', plan: 'premium' });
   
@@ -125,6 +125,12 @@ const TableauSuperAdmin = () => {
   const validerApprobation = async () => {
     if (!modalApprobation) return;
     const { demandeId, demande } = modalApprobation;
+
+    if (!demande.email_contact) {
+      toast.error("Impossible d'approuver : l'email de contact est manquant.");
+      return;
+    }
+
     const toastId = toast.loading('Création du compte...');
     
     let jours = 14;
@@ -152,7 +158,14 @@ const TableauSuperAdmin = () => {
       const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       await addDoc(collection(db, 'invitations'), { token: invitationToken, email: demande.email_contact, nom: demande.nom_contact, etablissement_id: etabRef.id, role: 'client_admin', date_creation: new Date().toISOString(), expire: Date.now() + (72 * 60 * 60 * 1000) });
       const urlComplete = `${window.location.origin}/activation?token=${invitationToken}`;
-      setLienActivation({ url: urlComplete, nom: demande.nom_etablissement, email: demande.email_contact, plan: typePlan, nomGerant: demande.nom_contact });
+      setLienActivation({ 
+        url: urlComplete, 
+        nom: demande.nom_etablissement, 
+        email: demande.email_contact, 
+        plan: typePlan, 
+        nomGerant: demande.nom_contact,
+        telephone: demande.telephone_contact 
+      });
       setModalApprobation(null);
       toast.dismiss(toastId); toast.success(`Accès accordé pour ${demande.nom_etablissement}`);
     } catch (err: any) { toast.dismiss(toastId); toast.error(`Erreur: ${err.message}`); }
@@ -678,7 +691,10 @@ const TableauSuperAdmin = () => {
                                     {p.methode?.slice(0, 4) || 'VIRE'}
                                 </div>
                                 <div>
-                                    <h4 className="text-2xl font-black text-[#1E3A8A] tracking-tight uppercase leading-none mb-3">{nomEtab(p.etablissement_id)}</h4>
+                                    <h4 className="text-2xl font-black text-[#1E3A8A] tracking-tight uppercase leading-none mb-1">
+                                      {p.etablissement_id ? nomEtab(p.etablissement_id) : 'Souscription Directe'}
+                                    </h4>
+                                    <p className="text-[10px] font-bold text-[#FF7A00] mb-3 uppercase tracking-widest">{p.email}</p>
                                     <div className="flex flex-wrap gap-2">
                                         <span className="text-[10px] font-bold bg-orange-50 text-[#FF7A00] px-3 py-1.5 rounded-lg tracking-widest uppercase border border-orange-100">{p.plan_id || 'PREMIUM'}</span>
                                         <span className="text-[10px] font-bold bg-slate-100 text-slate-400 px-3 py-1.5 rounded-lg tracking-widest uppercase border border-slate-200">{new Date(p.date).toLocaleDateString()}</span>
@@ -750,7 +766,19 @@ const TableauSuperAdmin = () => {
                           <div>
                             <h3 className="text-2xl font-black text-[#1E3A8A] tracking-tight uppercase leading-none mb-3">{etab.nom}</h3>
                             <div className="flex flex-wrap gap-2">
-                                <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-3 py-1.5 rounded-lg tracking-widest uppercase border border-slate-200">{etab.contact_principal}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-3 py-1.5 rounded-lg tracking-widest uppercase border border-slate-200">{etab.contact_principal}</span>
+                                  {etab.contact_principal && (
+                                    <a 
+                                      href={`https://wa.me/${etab.contact_principal.replace(/\s/g, '').replace(/\+/g, '')}`} 
+                                      target="_blank" 
+                                      className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-all"
+                                      title="Contacter via WhatsApp"
+                                    >
+                                      <MessageSquare size={12} />
+                                    </a>
+                                  )}
+                                </div>
                                 <span className="text-[10px] font-bold bg-blue-50 text-[#1E3A8A] px-3 py-1.5 rounded-lg tracking-widest uppercase border border-blue-100">{etab.subscription_plan}</span>
                                 <BadgeStatut statut={etab.subscription_status || etab.statut} />
                             </div>
@@ -1000,6 +1028,7 @@ const TableauSuperAdmin = () => {
                   </div>
                   <h3 className="text-4xl font-extrabold text-[#1E3A8A] tracking-tight uppercase leading-none">Approuver l'accès</h3>
                   <p className="text-lg font-medium text-slate-500 mt-4">{modalApprobation.demande.nom_etablissement}</p>
+                  <p className="text-sm font-bold text-blue-400 mt-1 uppercase tracking-widest">{modalApprobation.demande.email_contact || "⚠️ Email manquant"}</p>
                </div>
 
                <div className="space-y-10">
@@ -1277,14 +1306,22 @@ Pour toute question : support@gestcave.pro
 
 L'équipe GestCave Pro`);
                       window.open(`mailto:${lienActivation.email}?subject=${sujet}&body=${corps}`, '_blank');
-                    }} className="flex-1 h-16 bg-emerald-600 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-emerald-900/10 hover:bg-emerald-700 flex items-center justify-center gap-3 transition-all active:scale-95">
-                      <Mail size={18} /> Envoyer l'email
+                    }} className="flex-1 h-16 bg-slate-100 text-[#1E3A8A] rounded-2xl font-bold uppercase tracking-widest text-[10px] hover:bg-blue-50 flex items-center justify-center gap-3 transition-all active:scale-95">
+                      <Mail size={18} /> Email
                     </button>
                   )}
-               </div>
-            </div>
-         </div>
-      )}
+                  {lienActivation.telephone && (
+                    <button onClick={() => {
+                      const text = encodeURIComponent(`*GESTCAVE PRO — ACTIVATION*%0A%0ABonjour ${lienActivation.nomGerant || ''},%0A%0AVotre compte pour *${lienActivation.nom}* est prêt.%0A%0ACliquez ici pour activer votre accès :%0A${lienActivation.url}%0A%0A_L'équipe Securits Tech_`);
+                      window.open(`https://wa.me/${lienActivation.telephone.replace(/\s/g, '').replace(/\+/g, '')}?text=${text}`, '_blank');
+                    }} className="flex-1 h-16 bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-emerald-900/10 hover:bg-emerald-700 flex items-center justify-center gap-3 transition-all active:scale-95">
+                      <MessageSquare size={18} /> WhatsApp
+                    </button>
+                  )}
+                </div>
+             </div>
+          </div>
+       )}
     </div>
   );
 };

@@ -26,9 +26,14 @@ const PageAccueil = () => {
   const [contactForm, setContactForm] = useState({ nom: '', contact: '', message: '' });
   const [contactLoading, setContactLoading] = useState(false);
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+  const [emailPaiement, setEmailPaiement] = useState('');
   const [uploadProgress, setUploadProgress] = useState(false);
 
   const handlePaiementMobile = async () => {
+    if (!emailPaiement.trim()) {
+      toast.error("Veuillez renseigner votre email pour l'activation.");
+      return;
+    }
     if (!justificatif.trim() && !screenshotFile) {
       toast.error("Veuillez fournir une justification ou une capture d'écran.");
       return;
@@ -47,6 +52,7 @@ const PageAccueil = () => {
       await addDoc(collection(db, 'paiements'), {
         plan: modalPaiement?.plan,
         montant: modalPaiement?.prix,
+        email: emailPaiement,
         operateur: operateur,
         justification: justificatif,
         screenshot: screenshotUrl,
@@ -59,6 +65,7 @@ const PageAccueil = () => {
       setModalPaiement(null);
       setEtapePaiement('choix');
       setJustificatif('');
+      setEmailPaiement('');
       setScreenshotFile(null);
     } catch (error) {
       console.error("Erreur paiement:", error);
@@ -498,17 +505,31 @@ const PageAccueil = () => {
             )}
 
             {etapePaiement === 'mobile' && (
-               <div className="space-y-8">
-                  <div className={`p-8 rounded-[2.5rem] text-center ${operateur === 'airtel' ? 'bg-rose-50' : 'bg-amber-50'}`}>
-                     <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Transfert Mobile</p>
-                     <p className="text-2xl font-black text-[#1E3A8A] mb-2">Envoyez votre paiement au :</p>
-                     <p className="text-4xl font-black text-[#FF7A00] tracking-tighter">
-                        {operateur === 'airtel' ? '05 302 83 83' : '06 902 44 44'}
-                     </p>
+               <div className="space-y-6">
+                  <div className={`p-6 rounded-[2rem] text-center ${operateur === 'airtel' ? 'bg-rose-50' : 'bg-amber-50'}`}>
+                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Transfert Mobile</p>
+                     <p className="text-xl font-black text-[#1E3A8A]">Envoyez au : <span className="text-[#FF7A00]">{operateur === 'airtel' ? '05 302 83 83' : '06 902 44 44'}</span></p>
                   </div>
 
-                  <div className="space-y-4">
-                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Message de justification (ID Transaction / Nom)</label>
+                  <div className="space-y-3">
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Votre Email (pour l'activation)</label>
+                     <div className="relative group">
+                        <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#1E3A8A]">
+                           <Mail size={18} />
+                        </div>
+                        <input 
+                           required
+                           type="email" 
+                           value={emailPaiement}
+                           onChange={(e) => setEmailPaiement(e.target.value)}
+                           placeholder="votre@email.com"
+                           className="w-full h-14 pl-14 pr-6 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-[#1E3A8A] transition-all font-bold text-sm"
+                        />
+                     </div>
+                  </div>
+
+                  <div className="space-y-3">
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Justification (ID Transaction / Nom)</label>
                      <textarea 
                         value={justificatif}
                         onChange={(e) => setJustificatif(e.target.value)}
@@ -882,6 +903,22 @@ const InscriptionDirecte = () => {
         <label className="text-xs font-bold text-slate-400 uppercase ml-1">Téléphone</label>
         <input required type="tel" placeholder="+242 0x xxx xx xx" value={formData.telephone_contact} onChange={e => setFormData({...formData, telephone_contact: e.target.value})}
           className="w-full bg-slate-50 border border-slate-200 rounded-2xl h-14 px-6 outline-none focus:border-[#1E3A8A] transition-colors font-medium" />
+      </div>
+      <div className="md:col-span-2 space-y-2">
+        <label className="text-xs font-bold text-slate-400 uppercase ml-1">Email Professionnel (Activation & Mot de passe)</label>
+        <div className="relative group">
+          <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#1E3A8A] transition-all">
+            <Mail size={18} />
+          </div>
+          <input 
+            required 
+            type="email" 
+            placeholder="votre@email.com" 
+            value={formData.email_contact} 
+            onChange={e => setFormData({...formData, email_contact: e.target.value})}
+            className="w-full bg-slate-50 border border-slate-200 rounded-2xl h-14 pl-14 pr-6 outline-none focus:border-[#1E3A8A] transition-colors font-medium" 
+          />
+        </div>
       </div>
       <div className="md:col-span-2 space-y-4 pt-4">
         <label className="flex items-start gap-4 cursor-pointer group">

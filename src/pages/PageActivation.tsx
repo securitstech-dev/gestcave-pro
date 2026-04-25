@@ -50,7 +50,22 @@ const PageActivation = () => {
                     return;
                 }
 
-                setInvitation({ id: docSnap.id, ...data });
+                let finalData = { id: docSnap.id, ...data };
+
+                // Fallback email dès le chargement pour l'affichage UI
+                if (!finalData.email && !finalData.email_contact && finalData.etablissement_id) {
+                    try {
+                        const etabSnap = await getDocs(query(collection(db, 'etablissements'), where('__name__', '==', finalData.etablissement_id)));
+                        if (!etabSnap.empty) {
+                            const etabData = etabSnap.docs[0].data();
+                            finalData.email = etabData.email_contact || etabData.email;
+                        }
+                    } catch (e) {
+                        console.warn("Erreur chargement fallback email UI:", e);
+                    }
+                }
+
+                setInvitation(finalData);
                 setEtape('formulaire');
             } catch (err: any) {
                 console.error("Erreur lors de la vérification du token:", err);
@@ -71,14 +86,32 @@ const PageActivation = () => {
         setChargement(true);
         try {
             // 1. Récupération de l'email (gestion de la flexibilité des noms de champs)
-            const email = invitation.email || invitation.email_contact;
+            let email = invitation.email || invitation.email_contact;
             
+            // Fallback: Si l'email est manquant dans l'invitation, on peut essayer de le récupérer via l'établissement
+            if (!email && invitation.etablissement_id) {
+                console.log("Email manquant dans l'invitation, tentative de récupération via l'établissement...");
+                try {
+                    const etabSnap = await getDocs(query(collection(db, 'etablissements'), where('__name__', '==', invitation.etablissement_id)));
+                    if (!etabSnap.empty) {
+                        const etabData = etabSnap.docs[0].data();
+                        email = etabData.email_contact || etabData.email;
+                        console.log("Email récupéré via l'établissement:", email);
+                    }
+                } catch (fallbackErr) {
+                    console.error("Erreur lors du fallback email:", fallbackErr);
+                }
+            }
+
             if (!email) {
                 throw new Error("L'adresse email est manquante dans l'invitation. Veuillez générer un nouveau lien.");
             }
 
+            // Mettre à jour l'objet invitation avec l'email trouvé pour le store
+            const invitationComplete = { ...invitation, email };
+
             // Utilisation de la méthode du store pour une activation propre
-            await activerCompte(invitation, motDePasse);
+            await activerCompte(invitationComplete, motDePasse);
 
             setEtape('succes');
             toast.success("Compte activé avec succès ! Bienvenue.");
