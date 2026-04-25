@@ -50,7 +50,7 @@ const PageActivation = () => {
                     return;
                 }
 
-                let finalData = { id: docSnap.id, ...data };
+                let finalData: any = { id: docSnap.id, ...data };
 
                 // Fallback email dès le chargement pour l'affichage UI
                 if (!finalData.email && !finalData.email_contact && finalData.etablissement_id) {
