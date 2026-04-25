@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { db, storage } from '../lib/firebase';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, onSnapshot } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import toast from 'react-hot-toast';
 import { Upload, ImageIcon, FileCheck } from 'lucide-react';
@@ -104,8 +104,41 @@ const PageAccueil = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const [activeSpots, setActiveSpots] = useState(0);
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'etablissements'), (snap) => {
+      // On compte les établissements actifs (spot occupés)
+      setActiveSpots(snap.size);
+    });
+    return () => unsub();
+  }, []);
+
+  const spotsRestants = Math.max(0, 10 - activeSpots);
+
   return (
     <div className="min-h-screen bg-white font-['Inter',sans-serif] text-slate-700 overflow-x-hidden">
+      {/* Banner Promotionnelle */}
+      <div className="bg-[#1E3A8A] text-white py-3 px-6 relative z-[110] text-center overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-[#FF7A00]/20 via-transparent to-[#FF7A00]/20 animate-pulse" />
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-4 relative z-10">
+          <div className="flex items-center gap-2">
+            <Flame size={16} className="text-[#FF7A00]" />
+            <span className="text-[10px] sm:text-xs font-black uppercase tracking-[0.2em]">Offre de Lancement : -50% pour les 10 premiers</span>
+          </div>
+          <div className="h-6 w-px bg-white/20 hidden sm:block" />
+          <div className="flex items-center gap-3">
+             <span className="text-[10px] font-bold uppercase text-blue-200">Places restantes :</span>
+             <div className="flex gap-1">
+                {Array.from({length: 10}).map((_, i) => (
+                  <div key={i} className={`w-3 h-5 rounded-sm flex items-center justify-center font-black text-[10px] ${i < activeSpots ? 'bg-orange-500 text-white' : 'bg-white/10 text-white/40'}`}>
+                    {i < activeSpots ? 'X' : i + 1}
+                  </div>
+                ))}
+             </div>
+             <span className="text-xs font-black text-[#FF7A00] ml-2">{spotsRestants} DISPONIBLES</span>
+          </div>
+        </div>
+      </div>
       {/* Navigation */}
       <nav className={`fixed top-0 left-0 w-full z-[100] transition-all duration-300 ${
         scrolled ? 'bg-white/90 backdrop-blur-md shadow-sm py-4' : 'bg-transparent py-6'
@@ -414,6 +447,71 @@ const PageAccueil = () => {
         </div>
       </section>
 
+      {/* Offre de Lancement Details */}
+      <section className="py-24 bg-white relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="bg-gradient-to-br from-[#1E3A8A] to-blue-900 rounded-[4rem] p-12 md:p-20 text-white relative overflow-hidden shadow-2xl shadow-blue-900/30">
+            <div className="absolute top-0 right-0 w-96 h-96 bg-[#FF7A00]/10 rounded-full blur-[100px] -mr-48 -mt-48" />
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-400/10 rounded-full blur-[80px] -ml-32 -mb-32" />
+            
+            <div className="grid lg:grid-cols-2 gap-16 items-center relative z-10">
+              <div className="space-y-8">
+                <div className="inline-flex items-center gap-3 px-5 py-2 bg-white/10 backdrop-blur-md rounded-full text-[#FF7A00] text-sm font-black uppercase tracking-widest border border-white/10">
+                  <Sparkles size={18} /> Offre Spéciale de Lancement
+                </div>
+                <h2 className="text-4xl md:text-6xl font-black leading-tight uppercase tracking-tighter">
+                  Soyez parmi les <br/>
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF7A00] to-orange-300">10 Pionniers.</span>
+                </h2>
+                <div className="space-y-6">
+                  <div className="flex gap-6 items-start">
+                    <div className="w-12 h-12 bg-[#FF7A00] rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-orange-500/20">
+                      <Clock size={24} className="text-white" />
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold uppercase mb-2">3 Mois de Privilèges</h4>
+                      <p className="text-blue-100/70 leading-relaxed">Les 10 premiers abonnés bénéficient d'un tarif préférentiel garanti pendant les 3 premiers mois de leur activité.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-6 items-start">
+                    <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center shrink-0 border border-white/10">
+                      <Zap size={24} className="text-[#FF7A00]" />
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold uppercase mb-2">Accès Prioritaire</h4>
+                      <p className="text-blue-100/70 leading-relaxed">Support technique VIP et intégration personnalisée de vos menus et stocks par nos experts à Pointe-Noire.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-12 rounded-[3rem] text-center space-y-8">
+                <div className="space-y-2">
+                  <p className="text-[#FF7A00] font-black text-xs uppercase tracking-[0.3em]">Places Disponibles</p>
+                  <p className="text-7xl font-black tracking-tighter">{spotsRestants} / 10</p>
+                </div>
+                
+                <div className="h-4 bg-white/10 rounded-full overflow-hidden p-1">
+                  <div className="h-full bg-gradient-to-r from-[#FF7A00] to-orange-300 rounded-full transition-all duration-1000" style={{ width: `${(activeSpots / 10) * 100}%` }} />
+                </div>
+
+                <div className="pt-8 border-t border-white/10">
+                  <button 
+                    onClick={() => document.getElementById('abonnements')?.scrollIntoView({ behavior: 'smooth' })}
+                    className="w-full py-6 bg-[#FF7A00] text-white rounded-2xl font-black uppercase tracking-widest hover:scale-105 transition-transform shadow-xl shadow-orange-500/20"
+                  >
+                    Saisir l'opportunité
+                  </button>
+                  <p className="mt-6 text-[10px] font-bold text-blue-200/50 uppercase tracking-widest italic">
+                    * Offre soumise à validation par la direction commerciale.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Pricing Section */}
       <section id="abonnements" className="py-32 bg-slate-50">
         <div className="max-w-7xl mx-auto px-6">
@@ -437,6 +535,7 @@ const PageAccueil = () => {
               duration={billingCycle === 'monthly' ? "MOIS" : "AN"}
               features={['1 Établissement', 'Gestion Stocks de base', '100 Commandes/jour', 'Support Email']}
               onClick={() => setModalPaiement({ ouvert: true, plan: 'Starter', prix: billingCycle === 'monthly' ? "30.000" : "300.000" })}
+              promo={spotsRestants > 0}
             />
             <PriceCard 
               name="Premium" 
@@ -445,6 +544,7 @@ const PageAccueil = () => {
               isRecommended 
               features={['3 Établissements', 'Stocks avancés + Ingrédients', 'Commandes illimitées', 'Rapports PDF exports', 'Support 24/7']}
               onClick={() => setModalPaiement({ ouvert: true, plan: 'Premium', prix: billingCycle === 'monthly' ? "55.000" : "550.000" })}
+              promo={spotsRestants > 0}
             />
             <PriceCard 
               name="Business" 
@@ -452,6 +552,7 @@ const PageAccueil = () => {
               duration={billingCycle === 'monthly' ? "MOIS" : "AN"}
               features={['Établissements illimités', 'Gestion Multi-niveaux', 'Salaires & RH auto', 'Audit complet', 'Support Prioritaire']}
               onClick={() => setModalPaiement({ ouvert: true, plan: 'Business', prix: billingCycle === 'monthly' ? "95.000" : "950.000" })}
+              promo={spotsRestants > 0}
             />
           </div>
         </div>
@@ -816,9 +917,14 @@ const TechItem = ({ icon, title, desc }: any) => (
   </div>
 );
 
-const PriceCard = ({ name, price, duration = 'MOIS', features, onClick, isRecommended = false }: any) => (
+const PriceCard = ({ name, price, duration = 'MOIS', features, onClick, isRecommended = false, promo = false }: any) => (
   <div className={`p-10 rounded-[2.5rem] relative flex flex-col transition-all ${isRecommended ? 'bg-white shadow-2xl z-10 scale-105 border-2 border-[#1E3A8A]' : 'bg-white border border-slate-100 hover:border-blue-100'}`}>
     {isRecommended && <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#FF7A00] text-white px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg">Le Plus Populaire</div>}
+    {promo && (
+      <div className="absolute -top-4 right-8 bg-[#FF7A00] text-white px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg animate-bounce">
+        Offre Pionnier
+      </div>
+    )}
     <h4 className="font-bold text-[#1E3A8A] text-lg mb-8">{name}</h4>
     <div className="mb-10 text-center">
         <span className="text-5xl font-black text-[#1E3A8A] tracking-tighter">{price}</span>

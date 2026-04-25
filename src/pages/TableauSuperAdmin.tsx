@@ -15,7 +15,7 @@ import { clearFirestoreCache } from '../lib/firebase';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import SimulateurTablette from './modules/SimulateurTablette';
 
-type Onglet = 'demandes' | 'messages' | 'paiements' | 'etablissements' | 'comptabilite' | 'maintenance' | 'laboratoire' | 'rh_interne' | 'finance_interne' | 'support';
+type Onglet = 'demandes' | 'messages' | 'paiements' | 'etablissements' | 'comptabilite' | 'maintenance' | 'laboratoire' | 'rh_interne' | 'finance_interne' | 'support' | 'caisse';
 
 const TableauSuperAdmin = () => {
   const [demandes, setDemandes] = useState<any[]>([]);
@@ -409,6 +409,7 @@ const TableauSuperAdmin = () => {
     { key: 'rh_interne', icon: <Users size={20} />, label: "Équipe Securits" },
     { key: 'finance_interne', icon: <Landmark size={20} />, label: "Finance Interne" },
     { key: 'support', icon: <AlertCircle size={20} />, label: "Tickets & Bugs" },
+    { key: 'caisse', icon: <Landmark size={20} />, label: "Caisse Physique (Bureau)" },
     { key: 'separateur2', type: 'separator', label: 'Système' },
     { key: 'laboratoire', icon: <Tablet size={20} />, label: "Lab de Simulation (Tablette)" },
     { key: 'maintenance', icon: <Database size={20} />, label: "Maintenance", danger: true },
@@ -531,11 +532,99 @@ const TableauSuperAdmin = () => {
                  </div>
                </div>
             </div>
-          ))
-        )}
-      </div>
     </div>
   );
+
+  const renderVueCaisse = () => {
+    const [selectedEtab, setSelectedEtab] = useState<any | null>(null);
+    const [montant, setMontant] = useState<number>(0);
+    const [motif, setMotif] = useState('Renouvellement Abonnement');
+    const [duree, setDuree] = useState(30);
+    const [sending, setSending] = useState(false);
+
+    const enregistrerEncaissement = async () => {
+      if (!selectedEtab || montant <= 0) return toast.error("Sélectionnez un établissement et un montant valide");
+      setSending(true);
+      try {
+        await addDoc(collection(db, 'paiements'), {
+          etablissement_id: selectedEtab.id,
+          nom_etablissement: selectedEtab.nom,
+          montant: montant,
+          date: new Date().toISOString(),
+          date_validation: new Date().toISOString(),
+          statut: 'valide',
+          methode: 'especes_bureau',
+          motif: motif,
+          plan_id: selectedEtab.subscription_plan || 'premium',
+          source: 'super_admin_caisse'
+        });
+
+        const expirationActuelle = selectedEtab.subscription_end_date ? new Date(selectedEtab.subscription_end_date).getTime() : Date.now();
+        const nouvelleExpiration = new Date(Math.max(expirationActuelle, Date.now()) + duree * 24 * 60 * 60 * 1000).toISOString();
+        
+        await updateDoc(doc(db, 'etablissements', selectedEtab.id), {
+          subscription_end_date: nouvelleExpiration,
+          subscription_status: 'actif'
+        });
+
+        toast.success(`Encaissement de ${montant} XAF enregistré`);
+        setMontant(0); setSelectedEtab(null);
+      } catch (err: any) { toast.error(err.message); }
+      finally { setSending(false); }
+    };
+
+    return (
+      <div className="p-10 md:p-16 space-y-12 animate-in fade-in duration-700">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-3xl font-black text-[#1E3A8A] uppercase tracking-tighter">Caisse Bureau</h2>
+            <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">Encaissement manuel</p>
+          </div>
+        </div>
+        <div className="grid lg:grid-cols-2 gap-12">
+          <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl shadow-blue-900/5 space-y-8">
+            <div className="space-y-4">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Établissement</label>
+              <select value={selectedEtab?.id || ''} onChange={(e) => setSelectedEtab(etablissements.find(et => et.id === e.target.value))} className="w-full h-16 px-6 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-bold text-sm">
+                <option value="">Sélectionner...</option>
+                {etablissements.map(e => <option key={e.id} value={e.id}>{e.nom}</option>)}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Montant (XAF)</label>
+                <input type="number" value={montant} onChange={e => setMontant(Number(e.target.value))} className="w-full h-16 px-6 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-black text-[#FF7A00] text-xl" />
+              </div>
+              <div className="space-y-4">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Durée (Jours)</label>
+                <select value={duree} onChange={e => setDuree(Number(e.target.value))} className="w-full h-16 px-6 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-bold text-sm">
+                  <option value={30}>30 Jours</option>
+                  <option value={90}>90 Jours</option>
+                  <option value={365}>1 An</option>
+                </select>
+              </div>
+            </div>
+            <button onClick={enregistrerEncaissement} disabled={sending || !selectedEtab || montant <= 0} className="w-full h-20 bg-[#1E3A8A] text-white rounded-[2rem] font-black uppercase tracking-widest shadow-xl shadow-blue-900/20 hover:bg-blue-800 transition-all disabled:opacity-40 flex items-center justify-center gap-4">
+              {sending ? <Loader2 className="animate-spin" /> : <Landmark size={24} />} Valider l'encaissement
+            </button>
+          </div>
+          <div className="bg-[#FF7A00] p-10 rounded-[3rem] text-white shadow-2xl shadow-orange-900/20 h-fit">
+            <h4 className="font-black uppercase tracking-widest text-xs mb-4 opacity-60">Détails de l'abonnement</h4>
+            {selectedEtab ? (
+              <div className="space-y-4">
+                <p className="text-2xl font-black">{selectedEtab.nom}</p>
+                <p className="text-sm font-bold opacity-80">Expire le : {selectedEtab.subscription_end_date ? new Date(selectedEtab.subscription_end_date).toLocaleDateString() : 'Jamais'}</p>
+                <div className="pt-4 border-t border-white/10">
+                  <p className="text-xs font-bold opacity-60 uppercase">Nouvelle Expiration</p>
+                  <p className="text-2xl font-black">{new Date(Math.max(selectedEtab.subscription_end_date ? new Date(selectedEtab.subscription_end_date).getTime() : Date.now(), Date.now()) + duree * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
+                </div>
+              </div>
+            ) : <p className="font-bold italic opacity-60 text-sm">Sélectionnez un établissement.</p>}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="flex min-h-screen bg-slate-50/50 font-['Inter',sans-serif] text-slate-800">
@@ -617,6 +706,7 @@ const TableauSuperAdmin = () => {
               {onglet === 'etablissements' && 'Gestion des Établissements'}
               {onglet === 'maintenance' && 'Maintenance du Système'}
               {onglet === 'laboratoire' && 'Laboratoire de Simulation'}
+              {onglet === 'caisse' && 'Caisse Physique (Bureau)'}
              </h1>
           </div>
           <div className="relative w-full lg:w-96">
@@ -650,6 +740,7 @@ const TableauSuperAdmin = () => {
         </div>
 
         <div className="bg-white rounded-[3.5rem] shadow-xl shadow-blue-900/5 border border-slate-100 overflow-hidden min-h-[600px] animate-in fade-in duration-500">
+          {onglet === 'caisse' && renderVueCaisse()}
           {/* ── DEMANDES ── */}
           {onglet === 'demandes' && (
             <div className="p-10 space-y-6">
