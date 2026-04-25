@@ -54,7 +54,7 @@ const GestionConformite = () => {
   const [taxes, setTaxes] = useState<Taxe[]>([]);
   const [departement, setDepartement] = useState(profil?.departement || 'Pointe-Noire');
   const [nbChaises, setNbChaises] = useState(profil?.nb_chaises || 0);
-  const [typeEtablissement, setTypeEtablissement] = useState<'restaurant' | 'bar' | 'mixte'>(profil?.type_etablissement || 'mixte');
+  const [typeEtablissement, setTypeEtablissement] = useState<'restaurant' | 'bar' | 'mixte' | 'boutique'>(profil?.type_etablissement || 'mixte');
   const [editingTaxId, setEditingTaxId] = useState<string | null>(null);
   const [editingMontant, setEditingMontant] = useState<number>(0);
   const [documents, setDocuments] = useState<DocumentConformite[]>([
@@ -247,7 +247,7 @@ const GestionConformite = () => {
                 <Building2 size={18} className="text-[#FF7A00]" /> Type d'Entité
             </h3>
             <div className="flex gap-2">
-                {(['restaurant', 'bar', 'mixte'] as const).map(t => (
+                {(['restaurant', 'bar', 'mixte', 'boutique'] as const).map(t => (
                     <button 
                         key={t}
                         onClick={() => setTypeEtablissement(t)}

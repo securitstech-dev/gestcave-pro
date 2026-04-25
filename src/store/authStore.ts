@@ -21,7 +21,7 @@ export interface ProfilUtilisateur {
   telephone?: string;
   departement?: string;
   nb_chaises?: number;
-  type_etablissement?: 'restaurant' | 'bar' | 'mixte';
+  type_etablissement?: 'restaurant' | 'bar' | 'mixte' | 'boutique';
 }
 
 interface EtatAuth {

@@ -4,7 +4,7 @@ import {
   ChevronRight, ArrowRight, ShieldCheck, Zap, 
   Smartphone, BarChart3, Clock, LayoutDashboard,
   Mail, Phone, MapPin, Menu, X, Globe, Star,
-  Server, Cpu, Lock, Send, Flame, BookOpen, Monitor, Terminal, Scale, Gavel
+  Server, Cpu, Lock, Send, Flame, BookOpen, Monitor, Terminal, Scale, Gavel, Sparkles
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { db, storage } from '../lib/firebase';

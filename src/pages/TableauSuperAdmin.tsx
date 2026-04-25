@@ -51,6 +51,13 @@ const TableauSuperAdmin = () => {
   const [modalModules, setModalModules] = useState<any | null>(null);
   const [modulesActifs, setModulesActifs] = useState<string[]>([]);
 
+  // States for renderVueCaisse
+  const [selectedEtabCaisse, setSelectedEtabCaisse] = useState<any | null>(null);
+  const [montantCaisse, setMontantCaisse] = useState<number>(0);
+  const [motifCaisse, setMotifCaisse] = useState('Renouvellement Abonnement');
+  const [dureeCaisse, setDureeCaisse] = useState(30);
+  const [sendingCaisse, setSendingCaisse] = useState(false);
+
   useEffect(() => {
     setChargement(true);
     const unsubDemandes = onSnapshot(
@@ -532,45 +539,42 @@ const TableauSuperAdmin = () => {
                  </div>
                </div>
             </div>
+          ))
+        )}
+      </div>
     </div>
   );
 
   const renderVueCaisse = () => {
-    const [selectedEtab, setSelectedEtab] = useState<any | null>(null);
-    const [montant, setMontant] = useState<number>(0);
-    const [motif, setMotif] = useState('Renouvellement Abonnement');
-    const [duree, setDuree] = useState(30);
-    const [sending, setSending] = useState(false);
-
     const enregistrerEncaissement = async () => {
-      if (!selectedEtab || montant <= 0) return toast.error("Sélectionnez un établissement et un montant valide");
-      setSending(true);
+      if (!selectedEtabCaisse || montantCaisse <= 0) return toast.error("Sélectionnez un établissement et un montant valide");
+      setSendingCaisse(true);
       try {
         await addDoc(collection(db, 'paiements'), {
-          etablissement_id: selectedEtab.id,
-          nom_etablissement: selectedEtab.nom,
-          montant: montant,
+          etablissement_id: selectedEtabCaisse.id,
+          nom_etablissement: selectedEtabCaisse.nom,
+          montant: montantCaisse,
           date: new Date().toISOString(),
           date_validation: new Date().toISOString(),
           statut: 'valide',
           methode: 'especes_bureau',
-          motif: motif,
-          plan_id: selectedEtab.subscription_plan || 'premium',
+          motif: motifCaisse,
+          plan_id: selectedEtabCaisse.subscription_plan || 'premium',
           source: 'super_admin_caisse'
         });
 
-        const expirationActuelle = selectedEtab.subscription_end_date ? new Date(selectedEtab.subscription_end_date).getTime() : Date.now();
-        const nouvelleExpiration = new Date(Math.max(expirationActuelle, Date.now()) + duree * 24 * 60 * 60 * 1000).toISOString();
+        const expirationActuelle = selectedEtabCaisse.subscription_end_date ? new Date(selectedEtabCaisse.subscription_end_date).getTime() : Date.now();
+        const nouvelleExpiration = new Date(Math.max(expirationActuelle, Date.now()) + dureeCaisse * 24 * 60 * 60 * 1000).toISOString();
         
-        await updateDoc(doc(db, 'etablissements', selectedEtab.id), {
+        await updateDoc(doc(db, 'etablissements', selectedEtabCaisse.id), {
           subscription_end_date: nouvelleExpiration,
           subscription_status: 'actif'
         });
 
-        toast.success(`Encaissement de ${montant} XAF enregistré`);
-        setMontant(0); setSelectedEtab(null);
+        toast.success(`Encaissement de ${montantCaisse} XAF enregistré`);
+        setMontantCaisse(0); setSelectedEtabCaisse(null);
       } catch (err: any) { toast.error(err.message); }
-      finally { setSending(false); }
+      finally { setSendingCaisse(false); }
     };
 
     return (
@@ -585,7 +589,7 @@ const TableauSuperAdmin = () => {
           <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl shadow-blue-900/5 space-y-8">
             <div className="space-y-4">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Établissement</label>
-              <select value={selectedEtab?.id || ''} onChange={(e) => setSelectedEtab(etablissements.find(et => et.id === e.target.value))} className="w-full h-16 px-6 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-bold text-sm">
+              <select value={selectedEtabCaisse?.id || ''} onChange={(e) => setSelectedEtabCaisse(etablissements.find(et => et.id === e.target.value))} className="w-full h-16 px-6 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-bold text-sm">
                 <option value="">Sélectionner...</option>
                 {etablissements.map(e => <option key={e.id} value={e.id}>{e.nom}</option>)}
               </select>
@@ -593,30 +597,30 @@ const TableauSuperAdmin = () => {
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-4">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Montant (XAF)</label>
-                <input type="number" value={montant} onChange={e => setMontant(Number(e.target.value))} className="w-full h-16 px-6 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-black text-[#FF7A00] text-xl" />
+                <input type="number" value={montantCaisse} onChange={e => setMontantCaisse(Number(e.target.value))} className="w-full h-16 px-6 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-black text-[#FF7A00] text-xl" />
               </div>
               <div className="space-y-4">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Durée (Jours)</label>
-                <select value={duree} onChange={e => setDuree(Number(e.target.value))} className="w-full h-16 px-6 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-bold text-sm">
+                <select value={dureeCaisse} onChange={e => setDureeCaisse(Number(e.target.value))} className="w-full h-16 px-6 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-bold text-sm">
                   <option value={30}>30 Jours</option>
                   <option value={90}>90 Jours</option>
                   <option value={365}>1 An</option>
                 </select>
               </div>
             </div>
-            <button onClick={enregistrerEncaissement} disabled={sending || !selectedEtab || montant <= 0} className="w-full h-20 bg-[#1E3A8A] text-white rounded-[2rem] font-black uppercase tracking-widest shadow-xl shadow-blue-900/20 hover:bg-blue-800 transition-all disabled:opacity-40 flex items-center justify-center gap-4">
-              {sending ? <Loader2 className="animate-spin" /> : <Landmark size={24} />} Valider l'encaissement
+            <button onClick={enregistrerEncaissement} disabled={sendingCaisse || !selectedEtabCaisse || montantCaisse <= 0} className="w-full h-20 bg-[#1E3A8A] text-white rounded-[2rem] font-black uppercase tracking-widest shadow-xl shadow-blue-900/20 hover:bg-blue-800 transition-all disabled:opacity-40 flex items-center justify-center gap-4">
+              {sendingCaisse ? <Loader2 className="animate-spin" /> : <Landmark size={24} />} Valider l'encaissement
             </button>
           </div>
           <div className="bg-[#FF7A00] p-10 rounded-[3rem] text-white shadow-2xl shadow-orange-900/20 h-fit">
             <h4 className="font-black uppercase tracking-widest text-xs mb-4 opacity-60">Détails de l'abonnement</h4>
-            {selectedEtab ? (
+            {selectedEtabCaisse ? (
               <div className="space-y-4">
-                <p className="text-2xl font-black">{selectedEtab.nom}</p>
-                <p className="text-sm font-bold opacity-80">Expire le : {selectedEtab.subscription_end_date ? new Date(selectedEtab.subscription_end_date).toLocaleDateString() : 'Jamais'}</p>
+                <p className="text-2xl font-black">{selectedEtabCaisse.nom}</p>
+                <p className="text-sm font-bold opacity-80">Expire le : {selectedEtabCaisse.subscription_end_date ? new Date(selectedEtabCaisse.subscription_end_date).toLocaleDateString() : 'Jamais'}</p>
                 <div className="pt-4 border-t border-white/10">
                   <p className="text-xs font-bold opacity-60 uppercase">Nouvelle Expiration</p>
-                  <p className="text-2xl font-black">{new Date(Math.max(selectedEtab.subscription_end_date ? new Date(selectedEtab.subscription_end_date).getTime() : Date.now(), Date.now()) + duree * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
+                  <p className="text-2xl font-black">{new Date(Math.max(selectedEtabCaisse.subscription_end_date ? new Date(selectedEtabCaisse.subscription_end_date).getTime() : Date.now(), Date.now()) + dureeCaisse * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
                 </div>
               </div>
             ) : <p className="font-bold italic opacity-60 text-sm">Sélectionnez un établissement.</p>}
