@@ -211,7 +211,12 @@ const InterfaceCuisine = () => {
                                         {ligne.quantite}
                                     </div>
                                     <div className="flex-1">
-                                        <h4 className={`text-xl font-black tracking-tight leading-none uppercase ${ligne.statut === 'pret' ? 'text-emerald-700' : 'text-[#1E3A8A]'}`}>{ligne.produitNom}</h4>
+                                        <div className="flex items-center justify-between">
+                                          <h4 className={`text-xl font-black tracking-tight leading-none uppercase ${ligne.statut === 'pret' ? 'text-emerald-700' : 'text-[#1E3A8A]'}`}>{ligne.produitNom}</h4>
+                                          <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${ligne.destination === 'bar' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}`}>
+                                            {ligne.destination || 'Cuisine'}
+                                          </span>
+                                        </div>
                                         <div className="flex items-center gap-3 mt-2">
                                             {ligne.note && <p className="text-rose-500 font-black text-[10px] uppercase bg-rose-50 px-2 py-1 rounded-lg inline-block">Note: {ligne.note}</p>}
                                             {ligne.datePreparationStart && ligne.datePret && (

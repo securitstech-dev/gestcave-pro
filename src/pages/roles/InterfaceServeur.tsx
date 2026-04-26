@@ -362,7 +362,13 @@ const InterfaceServeur = () => {
                               className="aspect-[4/5] bg-white rounded-[2.5rem] p-6 border border-slate-100 shadow-xl shadow-blue-900/5 flex flex-col justify-between text-left group hover:border-[#FF7A00] transition-all hover:-translate-y-1"
                             >
                                 <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-2xl shadow-inner group-hover:bg-blue-50 transition-colors">
-                                    {p.categorie === 'Bière' ? '🍺' : p.categorie === 'Vin' ? '🍷' : '🍴'}
+                                    {(p.categorie || '').toLowerCase().includes('biere') ? '🍺' : 
+                                     (p.categorie || '').toLowerCase().includes('vin') ? '🍷' : 
+                                     (p.categorie || '').toLowerCase().includes('jus') ? '🥤' : 
+                                     (p.categorie || '').toLowerCase().includes('soda') ? '🥤' : 
+                                     (p.categorie || '').toLowerCase().includes('eau') ? '💧' : 
+                                     (p.categorie || '').toLowerCase().includes('champagne') ? '🍾' : 
+                                     (p.categorie || '').toLowerCase().includes('cocktail') ? '🍸' : '🍴'}
                                 </div>
                                 <div>
                                     <h4 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight leading-tight line-clamp-2">{p.nom}</h4>
@@ -397,7 +403,12 @@ const InterfaceServeur = () => {
                              </div>
                              <div className="flex-1">
                                 <h4 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight leading-none">{ligne.produitNom}</h4>
-                                <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">{(ligne.prixUnitaire || 0).toLocaleString()} / unité</p>
+                                <div className="flex items-center gap-2 mt-2">
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{(ligne.prixUnitaire || 0).toLocaleString()} XAF</p>
+                                    <div className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest ${ligne.destination === 'bar' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}`}>
+                                        {ligne.destination === 'bar' ? 'BAR' : 'CUISINE'}
+                                    </div>
+                                </div>
                              </div>
                              <button onClick={() => supprimerLigne(commandeId!, ligne.id)} className="w-10 h-10 text-slate-200 hover:text-rose-500 transition-colors"><Trash2 size={20} /></button>
                         </div>

@@ -54,6 +54,7 @@ const TableauSuperAdmin = () => {
 
   // States for renderVueCaisse
   const [selectedEtabCaisse, setSelectedEtabCaisse] = useState<any | null>(null);
+  const [totalDuCaisse, setTotalDuCaisse] = useState<number>(0);
   const [montantCaisse, setMontantCaisse] = useState<number>(0);
   const [motifCaisse, setMotifCaisse] = useState('Renouvellement Abonnement');
   const [dureeCaisse, setDureeCaisse] = useState(30);
@@ -66,6 +67,10 @@ const TableauSuperAdmin = () => {
   const [commerciaux, setCommerciaux] = useState<any[]>([]);
   const [modalAddCommercial, setModalAddCommercial] = useState(false);
   const [newCommercial, setNewCommercial] = useState({ nom: '', telephone: '', objectif_mensuel: 150000, salaire_base: 80000, taux_prime: 10 });
+
+  // States for modal Collaborateur (RH Interne)
+  const [modalAddCollab, setModalAddCollab] = useState(false);
+  const [newCollab, setNewCollab] = useState({ nom: '', prenom: '', email: '', poste: '', telephone: '' });
 
   useEffect(() => {
     setChargement(true);
@@ -445,7 +450,7 @@ const TableauSuperAdmin = () => {
           <h2 className="text-3xl font-black text-[#1E3A8A] uppercase tracking-tighter">Équipe Securits Tech</h2>
           <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">Gestion interne du personnel</p>
         </div>
-        <button className="h-14 bg-[#1E3A8A] text-white px-8 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-blue-900/20 hover:bg-blue-800 transition-all flex items-center gap-3">
+        <button onClick={() => setModalAddCollab(true)} className="h-14 bg-[#1E3A8A] text-white px-8 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-blue-900/20 hover:bg-blue-800 transition-all flex items-center gap-3">
           <Users size={16} /> Ajouter un collaborateur
         </button>
       </div>
@@ -490,6 +495,57 @@ const TableauSuperAdmin = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Modal Ajouter Collaborateur */}
+      {modalAddCollab && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-[3rem] p-10 w-full max-w-md shadow-2xl space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-black text-[#1E3A8A] uppercase">Nouveau Collaborateur</h3>
+              <button onClick={() => setModalAddCollab(false)}><X size={24} className="text-slate-400"/></button>
+            </div>
+            <div className="space-y-4">
+              {([
+                { label: 'Nom *', key: 'nom', placeholder: 'Ex: Mpemba' },
+                { label: 'Prénom', key: 'prenom', placeholder: 'Ex: Jean' },
+                { label: 'Email', key: 'email', placeholder: 'jean@securitstech.com' },
+                { label: 'Poste / Rôle', key: 'poste', placeholder: 'Ex: Développeur, Commercial...' },
+                { label: 'Téléphone', key: 'telephone', placeholder: '+242 06...' },
+              ] as { label: string; key: keyof typeof newCollab; placeholder: string }[]).map(f => (
+                <div key={f.key}>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 block mb-1">{f.label}</label>
+                  <input
+                    className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-sm focus:ring-2 focus:ring-blue-200 transition-all"
+                    value={newCollab[f.key]}
+                    onChange={e => setNewCollab({ ...newCollab, [f.key]: e.target.value })}
+                    placeholder={f.placeholder}
+                  />
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={async () => {
+                if (!newCollab.nom) return toast.error('Nom obligatoire');
+                try {
+                  await addDoc(collection(db, 'employes'), {
+                    ...newCollab,
+                    etablissement_id: 'securits-tech',
+                    role: 'employe_interne',
+                    date_creation: new Date().toISOString(),
+                    actif: true
+                  });
+                  toast.success('Collaborateur ajouté !');
+                  setModalAddCollab(false);
+                  setNewCollab({ nom: '', prenom: '', email: '', poste: '', telephone: '' });
+                } catch (e: any) { toast.error(e.message); }
+              }}
+              className="w-full h-14 bg-[#1E3A8A] text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-800 transition-all flex items-center justify-center gap-2"
+            >
+              <Users size={18}/> Enregistrer le collaborateur
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -564,7 +620,16 @@ const TableauSuperAdmin = () => {
   const genererRecuPDF = (recu: any) => {
     const pdf = new jsPDF({ unit: 'mm', format: 'a5' });
     const w = 148;
-    // Header background
+
+    // Normaliser les montants pour éviter le charabia
+    const montant = Number(recu.montant) || 0;
+    const totalConsomme = Number(recu.total_consomme) || montant;
+    const reliquat = Number(recu.reliquat) || 0;
+    const estCredit = reliquat > 0 || recu.mode_paiement_pos === 'credit';
+
+    const fmt = (n: number) => n.toLocaleString('fr-FR');
+
+    // ── Header background ──
     pdf.setFillColor(30, 58, 138);
     pdf.rect(0, 0, w, 40, 'F');
     pdf.setTextColor(255, 255, 255);
@@ -579,53 +644,87 @@ const TableauSuperAdmin = () => {
     pdf.setFillColor(255, 122, 0);
     pdf.rect(0, 40, w, 4, 'F');
 
-    // REÇU title
+    // Titre
     pdf.setTextColor(30, 58, 138);
     pdf.setFontSize(14); pdf.setFont('helvetica', 'bold');
-    pdf.text('REÇU DE PAIEMENT', w / 2, 53, { align: 'center' });
+    const titreRecu = estCredit ? 'REÇU DE CRÉDIT CLIENT' : 'REÇU DE PAIEMENT';
+    pdf.text(titreRecu, w / 2, 53, { align: 'center' });
 
-    // Recu Number & Date
+    // N° & Date
     pdf.setFontSize(8); pdf.setFont('helvetica', 'normal'); pdf.setTextColor(100, 100, 100);
     pdf.text(`N° ${recu.numero}`, 10, 62);
     pdf.text(`Date: ${new Date(recu.date).toLocaleString('fr-FR')}`, w - 10, 62, { align: 'right' });
 
-    // Divider
     pdf.setDrawColor(200, 200, 200); pdf.line(10, 65, w - 10, 65);
 
-    // Client info
+    // Infos client
     pdf.setTextColor(50, 50, 50); pdf.setFontSize(9); pdf.setFont('helvetica', 'bold');
     pdf.text('INFORMATIONS CLIENT', 10, 73);
     pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9);
-    pdf.text(`Établissement : ${recu.nom_etablissement}`, 10, 80);
+    pdf.text(`Établissement : ${recu.nom_etablissement || '—'}`, 10, 80);
     if (recu.nom_client) pdf.text(`Contact : ${recu.nom_client}`, 10, 86);
     pdf.text(`Plan : ${recu.plan || 'Premium'}`, 10, 92);
 
-    // Divider
     pdf.line(10, 97, w - 10, 97);
 
-    // Payment details
+    // Détail paiement
     pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9);
     pdf.text('DÉTAIL DU PAIEMENT', 10, 104);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`Motif : ${recu.motif}`, 10, 111);
-    pdf.text(`Durée accordée : ${recu.duree} jours`, 10, 117);
-    pdf.text(`Mode de paiement : ${recu.mode_paiement}`, 10, 123);
-    pdf.text(`Nouvelle expiration : ${recu.nouvelle_expiration}`, 10, 129);
+    pdf.text(`Motif : ${recu.motif || '—'}`, 10, 111);
+    if (recu.duree) pdf.text(`Durée accordée : ${recu.duree} jours`, 10, 117);
+    pdf.text(`Mode de paiement : ${recu.mode_paiement || '—'}`, 10, 123);
+    if (recu.nouvelle_expiration) pdf.text(`Nouvelle expiration : ${recu.nouvelle_expiration}`, 10, 129);
 
-    // Amount box
-    pdf.setFillColor(255, 122, 0);
-    pdf.roundedRect(10, 136, w - 20, 22, 3, 3, 'F');
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(11); pdf.setFont('helvetica', 'bold');
-    pdf.text('MONTANT REÇU', w / 2, 145, { align: 'center' });
-    pdf.setFontSize(18);
-    pdf.text(`${recu.montant.toLocaleString()} XAF`, w / 2, 154, { align: 'center' });
+    // ── Bloc montants ──
+    let yBox = 136;
+
+    if (estCredit) {
+      // Ligne total consommé
+      pdf.setFillColor(240, 244, 255);
+      pdf.roundedRect(10, yBox, w - 20, 10, 2, 2, 'F');
+      pdf.setTextColor(30, 58, 138); pdf.setFontSize(9); pdf.setFont('helvetica', 'bold');
+      pdf.text('Total consommé :', 14, yBox + 7);
+      pdf.text(`${fmt(totalConsomme)} XAF`, w - 14, yBox + 7, { align: 'right' });
+      yBox += 13;
+
+      // Ligne montant versé
+      pdf.setFillColor(230, 255, 240);
+      pdf.roundedRect(10, yBox, w - 20, 10, 2, 2, 'F');
+      pdf.setTextColor(22, 101, 52); pdf.setFontSize(9); pdf.setFont('helvetica', 'bold');
+      pdf.text('Montant versé :', 14, yBox + 7);
+      pdf.text(`${fmt(montant)} XAF`, w - 14, yBox + 7, { align: 'right' });
+      yBox += 13;
+
+      // Ligne reliquat (rouge)
+      pdf.setFillColor(255, 235, 235);
+      pdf.roundedRect(10, yBox, w - 20, 10, 2, 2, 'F');
+      pdf.setTextColor(185, 28, 28); pdf.setFontSize(9); pdf.setFont('helvetica', 'bold');
+      pdf.text('Reste à payer :', 14, yBox + 7);
+      pdf.text(`${fmt(reliquat)} XAF`, w - 14, yBox + 7, { align: 'right' });
+      yBox += 16;
+
+      // Note crédit
+      pdf.setTextColor(185, 28, 28); pdf.setFontSize(7); pdf.setFont('helvetica', 'italic');
+      pdf.text('⚠ Solde restant dû — Paiement à régulariser.', w / 2, yBox, { align: 'center' });
+      yBox += 8;
+    } else {
+      // Paiement comptant normal — grande boîte orange
+      pdf.setFillColor(255, 122, 0);
+      pdf.roundedRect(10, yBox, w - 20, 22, 3, 3, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(11); pdf.setFont('helvetica', 'bold');
+      pdf.text('MONTANT REÇU', w / 2, yBox + 9, { align: 'center' });
+      pdf.setFontSize(18);
+      pdf.text(`${fmt(montant)} XAF`, w / 2, yBox + 18, { align: 'center' });
+      yBox += 26;
+    }
 
     // Footer
     pdf.setTextColor(100, 100, 100); pdf.setFontSize(7); pdf.setFont('helvetica', 'italic');
-    pdf.line(10, 165, w - 10, 165);
-    pdf.text('Ce reçu est un document officiel émis par Securits Tech.', w / 2, 170, { align: 'center' });
-    pdf.text('Conservez-le précieusement. Merci pour votre confiance.', w / 2, 175, { align: 'center' });
+    pdf.line(10, yBox + 2, w - 10, yBox + 2);
+    pdf.text('Ce reçu est un document officiel émis par Securits Tech.', w / 2, yBox + 7, { align: 'center' });
+    pdf.text('Conservez-le précieusement. Merci pour votre confiance.', w / 2, yBox + 12, { align: 'center' });
 
     pdf.save(`recu-${recu.numero}.pdf`);
   };
@@ -670,13 +769,15 @@ const TableauSuperAdmin = () => {
           duree: dureeCaisse,
           mode_paiement: modePaiementCaisse,
           nouvelle_expiration: nouvelleExp.toLocaleDateString('fr-FR'),
+          total_consomme: totalDuCaisse || montantCaisse,
           montant: montantCaisse,
+          reliquat: Math.max(0, (totalDuCaisse || montantCaisse) - montantCaisse)
         };
 
         setRecuVisible(recuData);
         genererRecuPDF(recuData);
         toast.success(`✅ Encaissement de ${montantCaisse.toLocaleString()} XAF enregistré — Reçu généré !`);
-        setMontantCaisse(0); setSelectedEtabCaisse(null); setNomClientManuel('');
+        setMontantCaisse(0); setTotalDuCaisse(0); setSelectedEtabCaisse(null); setNomClientManuel('');
       } catch (err: any) { toast.error(err.message); }
       finally { setSendingCaisse(false); }
     };
@@ -708,8 +809,12 @@ const TableauSuperAdmin = () => {
                 <input type="text" value={nomClientManuel} onChange={e => setNomClientManuel(e.target.value)} placeholder={selectedEtabCaisse?.contact_principal || 'Nom du gerant...'} className={inputCls} />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Montant (XAF) *</label>
-                <input type="number" value={montantCaisse || ''} onChange={e => setMontantCaisse(Number(e.target.value))} placeholder="Ex: 25000" className={`${inputCls} font-black text-[#FF7A00] text-xl`} />
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Montant Total Dû (XAF) *</label>
+                <input type="number" value={totalDuCaisse || ''} onChange={e => setTotalDuCaisse(Number(e.target.value))} placeholder="Ex: 25000" className={inputCls} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Montant Versé (XAF) *</label>
+                <input type="number" value={montantCaisse || ''} onChange={e => setMontantCaisse(Number(e.target.value))} placeholder="Ex: 12000" className={`${inputCls} font-black text-[#FF7A00] text-xl`} />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Mode de Paiement</label>

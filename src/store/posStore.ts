@@ -18,7 +18,38 @@ import { useAuthStore } from './authStore';
 import { toast } from 'react-hot-toast';
 
 // Utilitaire pour l'impression thermique
+// Utilitaire pour l'impression thermique
 export const imprimerTicket = (commande: Commande, etablissementNom: string) => {
+  const totalFinal = Math.max(0, (commande.total || 0) - (commande.remise || 0));
+  const montantPaye = Number(commande.montantPaye) || 0;
+  const restant = Math.max(0, totalFinal - montantPaye);
+  const estCredit = restant > 0 || commande.methodePaiement === 'credit';
+  const fmt = (n: number) => n.toLocaleString('fr-FR');
+
+  const sectionPaiement = estCredit
+    ? `
+        <div class="total-section">
+          ${commande.remise ? `<div>Remise: -${fmt(commande.remise)} F</div>` : ''}
+          <div class="total">TOTAL: ${fmt(totalFinal)} FCFA</div>
+          <div style="margin-top:4mm; padding:2mm 0; border-top:1px dashed black;">
+            <div style="display:flex;justify-content:space-between;">
+              <span>Versé :</span><span style="color:#16a34a;font-weight:bold;">${fmt(montantPaye)} F</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:1mm;">
+              <span>Reste dû :</span><span style="color:#dc2626;font-weight:bold;font-size:15px;">${fmt(restant)} F</span>
+            </div>
+            ${commande.clientNom ? `<div style="margin-top:2mm;font-size:10px;">Client : <strong>${commande.clientNom}</strong></div>` : ''}
+            ${commande.clientContact ? `<div style="font-size:10px;">Contact : ${commande.clientContact}</div>` : ''}
+            <div style="margin-top:2mm;font-size:9px;font-style:italic;color:#dc2626;">⚠ CRÉDIT — Solde à régulariser</div>
+          </div>
+        </div>`
+    : `
+        <div class="total-section">
+          ${commande.remise ? `<div>Remise: -${fmt(commande.remise)} F</div>` : ''}
+          <div class="total">TOTAL: ${fmt(totalFinal)} FCFA</div>
+          <div style="margin-top:2mm;font-size:10px;color:#16a34a;font-weight:bold;">✓ PAYÉ INTÉGRALEMENT</div>
+        </div>`;
+
   const contenu = `
     <html>
       <head>
@@ -68,16 +99,13 @@ export const imprimerTicket = (commande: Commande, etablissementNom: string) => 
               <tr class="item-row">
                 <td>${l.quantite}</td>
                 <td>${l.produitNom}</td>
-                <td style="text-align: right">${l.sousTotal.toLocaleString()}</td>
+                <td style="text-align: right">${fmt(Number(l.sousTotal) || 0)}</td>
               </tr>
             `).join('')}
           </tbody>
         </table>
 
-        <div class="total-section">
-          ${commande.remise ? `<div>Remise: -${commande.remise.toLocaleString()} F</div>` : ''}
-          <div class="total">TOTAL: ${commande.total.toLocaleString()} FCFA</div>
-        </div>
+        ${sectionPaiement}
 
         <div class="footer">
           Merci de votre visite !<br/>
@@ -542,7 +570,15 @@ export const usePOSStore = create<PosState>((set, get) => ({
 
       const data = snap.data();
       const lignesActuelles = (data.lignes || []) as LigneCommande[];
-      const isBoisson = ['Boisson', 'Boissons', 'Bière', 'Bière', 'Vin', 'Vins', 'Jus', 'Champagne', 'Liqueur', 'Soda', 'Eau'].includes(produit.categorie);
+      
+      // Détection robuste des boissons pour routage KDS (Cuisine vs Bar)
+      const catNorm = (produit.categorie || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+      const motsBoissons = [
+        'boisson', 'biere', 'vin', 'jus', 'champagne', 'liqueur', 'soda', 'eau', 
+        'alcool', 'spiritueux', 'aperitif', 'cocktail', 'sucrerie', 'rafraichissement',
+        'canette', 'bouteille', 'whisky', 'rhum', 'vodka', 'gin', 'pastis', 'sirop'
+      ];
+      const isBoisson = motsBoissons.some(mot => catNorm.includes(mot));
       
       const idx = lignesActuelles.findIndex(l => l.produitId === produit.id && l.statut === 'en_attente');
       let nvellesLignes = [...lignesActuelles];
