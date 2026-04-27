@@ -433,10 +433,13 @@ const DashboardAccueil = ({ profil, etablissementSimuleId, navigate }: any) => {
     return () => unsub();
   }, [etablissementId]);
 
-  const ventesDuJour = transactions.reduce((acc, t) => acc + (t.montant || 0), 0);
-  const potentielSalle = commandes.filter(c => c.statut !== 'payee').reduce((acc, c) => acc + ((c.total || 0) - (c.montantPaye || 0)), 0);
-  const dettes = transactions.filter(t => t.modePaiement === 'credit').reduce((acc, t) => acc + (t.montantRestant || 0), 0);
-  const especes = transactions.filter(t => t.modePaiement === 'especes').reduce((acc, t) => acc + (t.montant || 0), 0);
+  // CA encaissé = somme de ce qui a réellement été reçu (hors crédit)
+  const ventesDuJour = transactions
+    .filter(t => t.modePaiement !== 'credit')
+    .reduce((acc, t) => acc + (t.montant || 0), 0);
+  const potentielSalle = commandes.filter(c => c.statut !== 'payee' && c.statut !== 'en_arriere').reduce((acc, c) => acc + Math.max(0, (c.total || 0) - (c.montantPaye || 0)), 0);
+  const dettes = transactions.filter(t => t.modePaiement === 'credit').reduce((acc, t) => acc + (t.montant || 0), 0);
+  const especes = transactions.filter(t => t.modePaiement === 'especes' || t.modePaiement === 'comptant').reduce((acc, t) => acc + (t.montant || 0), 0);
 
   const perfServeurs = useMemo(() => {
     const map: { [name: string]: number } = {};

@@ -809,7 +809,8 @@ export const usePOSStore = create<PosState>((set, get) => ({
     const nvellesLignes = (cmd.lignes || []).map(l => ({ ...l, statut: 'servi' as const }));
     
     const totalFinal = Math.max(0, cmd.total - (remise || 0));
-    const montantPayeTotal = paye || totalFinal;
+    // FIX: Si c'est un crédit total, on a reçu 0. Sinon, si paye est vide, c'est le montant exact
+    const montantPayeTotal = (mode === 'credit' && !paye) ? 0 : (paye || totalFinal);
     const restant = Math.max(0, totalFinal - montantPayeTotal);
     const nouveauStatut = restant > 0 ? 'en_arriere' : 'payee';
 
@@ -838,7 +839,7 @@ export const usePOSStore = create<PosState>((set, get) => ({
       commandeId,
       modePaiement: mode, 
       date: new Date().toISOString(),
-      montant: paye || totalFinal, // Argent encaissé maintenant
+      montant: montantPayeTotal, // Argent réellement encaissé (ou 0 si crédit)
       totalVente: totalFinal, // Total de la note pour historique
       clientNom: client || 'Direct', 
       clientContact: contact || '',
@@ -851,14 +852,15 @@ export const usePOSStore = create<PosState>((set, get) => ({
 
     const session = get().sessionActive;
     if (session) {
-      const modeAmount = paye || totalFinal;
+      const modeAmount = montantPayeTotal;
+      const creditAmount = restant;
       const m = mode as string;
       batch.update(doc(db, 'sessions_caisse', session.id), {
-        totalVentesTheorique: increment(modeAmount),
+        totalVentesTheorique: increment(totalFinal),
         ...(m === 'mobile' ? { totalMobile: increment(modeAmount) } : {}),
         ...(m === 'especes' || m === 'comptant' ? { totalEspeces: increment(modeAmount) } : {}),
         ...(m === 'carte' ? { totalCarte: increment(modeAmount) } : {}),
-        ...(m === 'credit' ? { totalCredit: increment(modeAmount) } : {})
+        ...(creditAmount > 0 ? { totalCredit: increment(creditAmount) } : {})
       });
     }
 

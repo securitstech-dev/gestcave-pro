@@ -504,18 +504,22 @@ const InterfaceServeur = () => {
                         }} className="flex-1 h-16 bg-emerald-50 text-emerald-600 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-emerald-100 hover:bg-emerald-100 transition-all">L'addition</button>
                     </div>
                     {commandeActive?.serveurId === idEmploye ? (
+                        panierActuel.length > 0 ? (
                         <button 
                           onClick={async () => {
                               const toastId = toast.loading("Envoi en cuisine...");
-                              
                               toast.success("Commande envoyée !", { id: toastId });
-
                               await envoyerCuisine(commandeId!);
                           }}
                           className="w-full h-20 bg-[#1E3A8A] text-white rounded-[2rem] font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-900/20 flex items-center justify-center gap-4 hover:bg-blue-800 transition-all group"
                         >
                             Envoyer en production <Send size={20} className="group-hover:translate-x-1 transition-transform" />
                         </button>
+                        ) : (
+                        <div className="w-full h-20 bg-emerald-50 border-2 border-emerald-200 text-emerald-600 rounded-[2rem] font-black uppercase tracking-widest text-xs flex items-center justify-center gap-4">
+                            <CheckCircle2 size={20} /> Déjà envoyé en production
+                        </div>
+                        )
                     ) : (
                         <div className="w-full h-20 bg-slate-100 text-slate-400 rounded-[2rem] font-black uppercase tracking-widest text-xs flex items-center justify-center gap-4 cursor-not-allowed border border-slate-200">
                            <Lock size={20} /> COMMANDE VERROUILLÉE

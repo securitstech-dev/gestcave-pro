@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+
 import { 
   Banknote, CreditCard, Smartphone, Receipt, 
   CheckCircle2, Users, Clock, ShoppingBag, Wine,
@@ -14,8 +15,8 @@ import { useAuthStore } from '../../store/authStore';
 import { usePosteSession } from '../../hooks/usePosteSession';
 import { useNavigate } from 'react-router-dom';
 import type { LigneCommande } from '../../store/posStore';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
+
 
 const InterfaceCaissier = () => {
   const { profil } = useAuthStore();
@@ -58,32 +59,17 @@ const InterfaceCaissier = () => {
   const [fondsSaisi, setFondsSaisi] = useState('0');
   const [datePromesse, setDatePromesse] = useState('');
 
-  // Stats en temps réel depuis transactions_pos (indépendant du store)
-  const [statsSession, setStatsSession] = useState({ totalEncaisse: 0, totalDettes: 0, nbTransactions: 0 });
-  const unsubStatsRef = useRef<(() => void) | null>(null);
-
-  useEffect(() => {
-    const etabId = etablissementId || profil?.etablissement_id;
-    if (!etabId || !sessionActive) {
-      setStatsSession({ totalEncaisse: 0, totalDettes: 0, nbTransactions: 0 });
-      return;
-    }
-    if (unsubStatsRef.current) unsubStatsRef.current();
-    const q = query(
-      collection(db, 'transactions_pos'),
-      where('etablissement_id', '==', etabId),
-      where('date', '>=', sessionActive.dateOuverture)
-    );
-    unsubStatsRef.current = onSnapshot(q, (snap) => {
-      let encaisse = 0, nb = snap.docs.length;
-      snap.docs.forEach(d => {
-        const t = d.data();
-        encaisse += (t.montant || 0);
-      });
-      setStatsSession({ totalEncaisse: encaisse, totalDettes: 0, nbTransactions: nb });
-    });
-    return () => { if (unsubStatsRef.current) unsubStatsRef.current(); };
-  }, [sessionActive?.id, etablissementId, profil?.etablissement_id]);
+  // Stats en temps réel : calcul direct depuis sessionActive (mis à jour par les increment() dans encaisserCommande)
+  const statsSession = useMemo(() => {
+    if (!sessionActive) return { totalEncaisse: 0, totalDettes: 0, nbTransactions: 0 };
+    const especes = (sessionActive as any).totalEspeces || 0;
+    const mobile = (sessionActive as any).totalMobile || 0;
+    const carte = (sessionActive as any).totalCarte || 0;
+    const credit = (sessionActive as any).totalCredit || 0;
+    const totalEncaisse = especes + mobile + carte; // Le crédit n'est pas encaissé, c'est une dette
+    const totalDettes = credit;
+    return { totalEncaisse, totalDettes, nbTransactions: (sessionActive as any).totalVentesTheorique ? 1 : 0 };
+  }, [sessionActive]);
 
   const fondAttendu = useMemo(() => {
     if (!historiqueSessions || historiqueSessions.length === 0) return 0;
