@@ -374,10 +374,18 @@ const InterfaceServeur = () => {
                                     <h4 className="text-sm font-black text-[#1E3A8A] uppercase tracking-tight leading-tight line-clamp-2">{p.nom}</h4>
                                     <p className="text-lg font-black text-[#FF7A00] tracking-tighter mt-2">{(p.prix || 0).toLocaleString()} <span className="text-[10px] opacity-40">XAF</span></p>
                                 </div>
-                                <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <div className="w-10 h-10 bg-[#FF7A00] text-white rounded-xl flex items-center justify-center shadow-lg shadow-orange-900/20">
-                                        <Plus size={20} />
-                                    </div>
+                                <div className="flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {(p.categorie?.toLowerCase().includes('liqueur') || p.categorie?.toLowerCase().includes('spirit')) ? (
+                                        <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+                                            <button onClick={() => ajouterLigne(commandeId!, p, 0.25)} className="w-8 h-8 bg-blue-500 text-white rounded-lg flex items-center justify-center text-[10px] font-black hover:bg-blue-600 transition-all">1/4</button>
+                                            <button onClick={() => ajouterLigne(commandeId!, p, 0.5)} className="w-8 h-8 bg-blue-600 text-white rounded-lg flex items-center justify-center text-[10px] font-black hover:bg-blue-700 transition-all">1/2</button>
+                                            <button onClick={() => ajouterLigne(commandeId!, p, 1)} className="w-8 h-8 bg-[#FF7A00] text-white rounded-lg flex items-center justify-center text-[10px] font-black hover:bg-orange-600 transition-all">1</button>
+                                        </div>
+                                    ) : (
+                                        <div className="w-10 h-10 bg-[#FF7A00] text-white rounded-xl flex items-center justify-center shadow-lg shadow-orange-900/20">
+                                            <Plus size={20} />
+                                        </div>
+                                    )}
                                 </div>
                             </button>
                         ))}

@@ -188,44 +188,65 @@ const GestionPaie = () => {
     const doc = new jsPDF();
     const dateStr = `${moisSelectionne}/${anneeSelectionnee}`;
 
-    doc.setFontSize(22); doc.setTextColor(30, 58, 138); doc.text("GESTCAVE PRO", 14, 20);
-    doc.setFontSize(10); doc.setTextColor(100, 116, 139); doc.text(`CERTIFICAT DE RÉMUNÉRATION - ${dateStr}`, 14, 28);
-    
-    doc.setDrawColor(30, 58, 138); doc.setLineWidth(1); doc.line(14, 35, 196, 35);
+    // Nettoyage des montants pour éviter les caractères spéciaux invisibles (ex: espace insécable)
+    const fmtPDF = (n: number) => n.toLocaleString('fr-FR').replace(/\u00a0/g, ' ') + " XAF";
 
-    doc.setFontSize(9); doc.setTextColor(30, 58, 138);
-    doc.setFont(undefined, 'bold'); doc.text("IDENTITÉ DE L'EMPLOYÉ", 14, 45);
-    doc.setFont(undefined, 'normal'); doc.text(`${emp.nom.toUpperCase()}`, 14, 52);
+    doc.setFontSize(22); 
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 58, 138); 
+    doc.text("GESTCAVE PRO", 14, 20);
+
+    doc.setFontSize(10); 
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139); 
+    doc.text(`CERTIFICAT DE RÉMUNÉRATION - ${dateStr}`, 14, 28);
+    
+    doc.setDrawColor(30, 58, 138); 
+    doc.setLineWidth(1); 
+    doc.line(14, 35, 196, 35);
+
+    doc.setFontSize(9); 
+    doc.setTextColor(30, 58, 138);
+    doc.setFont('helvetica', 'bold'); 
+    doc.text("IDENTITÉ DE L'EMPLOYÉ", 14, 45);
+    doc.setFont('helvetica', 'normal'); 
+    doc.text(`${emp.nom.toUpperCase()}`, 14, 52);
     doc.text(`POSTE: ${emp.role.toUpperCase()}`, 14, 58);
     doc.text(`ID: ${emp.id.toUpperCase()}`, 14, 64);
 
-    doc.setFont(undefined, 'bold'); doc.text("ÉTABLISSEMENT", 120, 45);
-    doc.setFont(undefined, 'normal'); doc.text(`${etablissementNom.toUpperCase()}`, 120, 52);
+    doc.setFont('helvetica', 'bold'); 
+    doc.text("ÉTABLISSEMENT", 120, 45);
+    doc.setFont('helvetica', 'normal'); 
+    doc.text(`${etablissementNom.toUpperCase()}`, 120, 52);
     doc.text(`PÉRIODE: ${dateStr}`, 120, 58);
 
     autoTable(doc, {
       startY: 80,
       head: [['DÉSIGNATION', 'VOLUME / QTÉ', 'TAUX / ÉCHELLE', 'GAINS', 'RETENUES']],
       body: [
-        ['RÉMUNÉRATION DE BASE', `${presence} ${emp.typeSalaire === 'horaire' ? 'H' : 'J'}`, `${emp.salaire.toLocaleString()} XAF`, `${salaireBase.toLocaleString()} XAF`, '-'],
-        ['INDEMNITÉ TRANSPORT', '-', '-', `${primesTransport.toLocaleString()} XAF`, '-'],
-        ['INDEMNITÉ LOGEMENT', '-', '-', `${primesLogement.toLocaleString()} XAF`, '-'],
-        ['COMMISSION SUR VENTES (2%)', '-', '-', `${commission.toLocaleString()} XAF`, '-'],
-        ['AVANCES / ACOMPTES', '-', '-', '-', `${avances.toLocaleString()} XAF`],
-        ['PÉNALITÉS DISCIPLINAIRES', `${absencesInjustifiees} ABS.`, '-', '-', `${malusTotal.toLocaleString()} XAF`],
+        ['RÉMUNÉRATION DE BASE', `${presence} ${emp.typeSalaire === 'horaire' ? 'H' : 'J'}`, fmtPDF(emp.salaire), fmtPDF(salaireBase), '-'],
+        ['INDEMNITÉ TRANSPORT', '-', '-', fmtPDF(primesTransport), '-'],
+        ['INDEMNITÉ LOGEMENT', '-', '-', fmtPDF(primesLogement), '-'],
+        ['COMMISSION SUR VENTES (2%)', '-', '-', fmtPDF(commission), '-'],
+        ['AVANCES / ACOMPTES', '-', '-', '-', fmtPDF(avances)],
+        ['PÉNALITÉS DISCIPLINAIRES', `${absencesInjustifiees} ABS.`, '-', '-', fmtPDF(malusTotal)],
       ],
-      headStyles: { fillColor: [30, 58, 138], fontSize: 8 },
+      headStyles: { fillColor: [30, 58, 138], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
       bodyStyles: { fontSize: 8, font: 'helvetica' },
-      foot: [['TOTAL GÉNÉRAL', '', '', `${brut.toLocaleString()} XAF`, `${avances.toLocaleString()} XAF`]],
-      footStyles: { fillColor: [248, 250, 252], textColor: [30, 58, 138], fontStyle: 'bold' }
+      foot: [['TOTAL GÉNÉRAL', '', '', fmtPDF(brut), fmtPDF(avances)]],
+      footStyles: { fillColor: [248, 250, 252], textColor: [30, 58, 138], fontStyle: 'bold', font: 'helvetica' }
     });
 
     const finalY = (doc as any).lastAutoTable.finalY + 15;
     
-    doc.setFillColor(30, 58, 138); doc.rect(120, finalY, 76, 18, 'F');
-    doc.setFontSize(14); doc.setFont(undefined, 'bold'); doc.setTextColor(255, 255, 255);
+    doc.setFillColor(30, 58, 138); 
+    doc.rect(120, finalY, 76, 18, 'F');
+    doc.setFontSize(14); 
+    doc.setFont('helvetica', 'bold'); 
+    doc.setTextColor(255, 255, 255);
     doc.text(`NET À PAYER :`, 125, finalY + 8);
-    doc.setFontSize(12); doc.text(`${net.toLocaleString()} XAF`, 125, finalY + 15);
+    doc.setFontSize(12); 
+    doc.text(fmtPDF(net), 125, finalY + 15);
 
     doc.setFontSize(8); doc.setTextColor(148, 163, 184);
     doc.text("SIGNATURE EMPLOYEUR", 40, finalY + 45);

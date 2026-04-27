@@ -730,7 +730,7 @@ const PageAccueil = () => {
                 </div>
                 <div>
                   <p className="text-sm font-bold text-slate-400 uppercase">Téléphone (WhatsApp)</p>
-                  <p className="text-xl font-bold text-[#1E3A8A]">+242 05 302 8383</p>
+                  <p className="text-xl font-bold text-[#1E3A8A]">+242 06 881 7104</p>
                 </div>
               </div>
               <div className="flex items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">

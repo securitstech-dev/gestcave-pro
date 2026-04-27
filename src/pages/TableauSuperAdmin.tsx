@@ -638,7 +638,7 @@ const TableauSuperAdmin = () => {
     pdf.setFontSize(8); pdf.setFont('helvetica', 'normal');
     pdf.text('Système de Gestion Intelligent pour Bars & Restaurants', w / 2, 20, { align: 'center' });
     pdf.text('Email: securitstech@gmail.com', w / 2, 26, { align: 'center' });
-    pdf.text('Tél: +242 05 302 8383  /  06 881 7104', w / 2, 32, { align: 'center' });
+    pdf.text('Tél: +242 06 881 7104', w / 2, 32, { align: 'center' });
 
     // Orange accent
     pdf.setFillColor(255, 122, 0);

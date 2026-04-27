@@ -304,7 +304,7 @@ interface PosState {
   fermerSession: (fondsFinal: number) => Promise<void>;
   ouvrirTable: (tableId: string, serveurId: string, serveurNom: string, nombreCouverts: number) => Promise<string>;
   ouvrirVenteEmporter: (serveurId: string, serveurNom: string) => Promise<string>;
-  ajouterLigne: (commandeId: string, produit: Produit) => Promise<void>;
+  ajouterLigne: (commandeId: string, produit: Produit, quantite?: number) => Promise<void>;
   modifierQuantite: (commandeId: string, ligneId: string, delta: number) => Promise<void>;
   supprimerLigne: (commandeId: string, ligneId: string) => Promise<void>;
   envoyerCuisine: (commandeId: string) => Promise<void>;
@@ -559,7 +559,7 @@ export const usePOSStore = create<PosState>((set, get) => ({
     return docRef.id;
   },
 
-  ajouterLigne: async (commandeId, produit) => {
+  ajouterLigne: async (commandeId, produit, quantite = 1) => {
     if (!commandeId || !produit) return;
     const toastId = toast.loading(`Enregistrement de ${produit.nom}...`);
 
@@ -580,19 +580,20 @@ export const usePOSStore = create<PosState>((set, get) => ({
       ];
       const isBoisson = motsBoissons.some(mot => catNorm.includes(mot));
       
+      // On cherche si une ligne identique (même produit ET même statut en attente) existe déjà
       const idx = lignesActuelles.findIndex(l => l.produitId === produit.id && l.statut === 'en_attente');
       let nvellesLignes = [...lignesActuelles];
       
       if (idx > -1) {
         const item = nvellesLignes[idx];
-        const nveleQte = (Number(item.quantite) || 0) + 1;
+        const nveleQte = (Number(item.quantite) || 0) + quantite;
         nvellesLignes[idx] = { ...item, quantite: nveleQte, sousTotal: nveleQte * Number(produit.prix) };
       } else {
         nvellesLignes.push({
           id: Math.random().toString(36).substr(2, 9),
           produitId: produit.id, produitNom: produit.nom,
-          quantite: 1, prixUnitaire: Number(produit.prix),
-          sousTotal: Number(produit.prix), statut: 'en_attente',
+          quantite: quantite, prixUnitaire: Number(produit.prix),
+          sousTotal: quantite * Number(produit.prix), statut: 'en_attente',
           destination: produit.destination_production || (isBoisson ? 'bar' : 'cuisine'),
           produitCategorie: produit.categorie
         });

@@ -6,7 +6,7 @@ import { useAuthStore } from '../../store/authStore';
 const CentreImpression = () => {
   const navigate = useNavigate();
   const { profil } = useAuthStore();
-  const [docActif, setDocActif] = useState<'inventaire' | 'pointage' | 'paie' | null>(null);
+  const [docActif, setDocActif] = useState<'inventaire' | 'pointage' | 'paie' | 'ventes' | 'caisse' | 'stock' | null>(null);
 
   const etablissementNom = profil?.etablissement_nom || 'GESTCAVE PRO';
 
@@ -48,6 +48,27 @@ const CentreImpression = () => {
             >
                 <FileText size={20} />
                 <span className="text-xs font-black uppercase tracking-widest">Quittance de Paie</span>
+            </button>
+            <button 
+                onClick={() => setDocActif('ventes')}
+                className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all ${docActif === 'ventes' ? 'bg-[#FF7A00] text-white shadow-lg' : 'text-blue-200 hover:bg-white/5'}`}
+            >
+                <Receipt size={20} />
+                <span className="text-xs font-black uppercase tracking-widest">Fiche de Ventes</span>
+            </button>
+            <button 
+                onClick={() => setDocActif('caisse')}
+                className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all ${docActif === 'caisse' ? 'bg-[#FF7A00] text-white shadow-lg' : 'text-blue-200 hover:bg-white/5'}`}
+            >
+                <Wallet size={20} />
+                <span className="text-xs font-black uppercase tracking-widest">Feuille de Caisse</span>
+            </button>
+            <button 
+                onClick={() => setDocActif('stock')}
+                className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all ${docActif === 'stock' ? 'bg-[#FF7A00] text-white shadow-lg' : 'text-blue-200 hover:bg-white/5'}`}
+            >
+                <Database size={20} />
+                <span className="text-xs font-black uppercase tracking-widest">Contrôle Stocks</span>
             </button>
         </div>
       </div>
@@ -198,6 +219,90 @@ const CentreImpression = () => {
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    )}
+
+                    {docActif === 'ventes' && (
+                        <div>
+                            <h2 className="text-2xl font-black uppercase text-center mb-8 bg-gray-100 p-4">Fiche de Suivi des Ventes Manuelles</h2>
+                            <table className="w-full border-collapse border border-black text-[10px]">
+                                <thead>
+                                    <tr className="bg-gray-100">
+                                        <th className="border border-black p-2 text-left font-bold uppercase w-12">Réf</th>
+                                        <th className="border border-black p-2 text-left font-bold uppercase">Article / Désignation</th>
+                                        <th className="border border-black p-2 text-center font-bold uppercase w-16">P.U</th>
+                                        <th className="border border-black p-2 text-center font-bold uppercase w-12">Qté</th>
+                                        <th className="border border-black p-2 text-center font-bold uppercase w-20">Total</th>
+                                        <th className="border border-black p-2 text-center font-bold uppercase w-20">Mode</th>
+                                        <th className="border border-black p-2 text-left font-bold uppercase w-32">Client / Table</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {Array.from({length: 30}).map((_, i) => (
+                                        <tr key={i}>
+                                            <td className="border border-black p-2 h-8 text-gray-300">{i+1}</td>
+                                            <td className="border border-black p-2 h-8"></td>
+                                            <td className="border border-black p-2 h-8"></td>
+                                            <td className="border border-black p-2 h-8"></td>
+                                            <td className="border border-black p-2 h-8"></td>
+                                            <td className="border border-black p-2 h-8"></td>
+                                            <td className="border border-black p-2 h-8"></td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {docActif === 'caisse' && (
+                        <div className="space-y-12">
+                            <h2 className="text-2xl font-black uppercase text-center mb-8 bg-gray-100 p-4">Feuille de Caisse et Arrêté Journalier</h2>
+                            
+                            <div className="grid grid-cols-2 gap-8">
+                                <div className="border-2 border-black p-6">
+                                    <h3 className="font-black uppercase mb-4 border-b border-black pb-2">Recettes (Entrées)</h3>
+                                    <div className="space-y-4 text-sm font-bold">
+                                        <p className="flex justify-between"><span>TOTAL ESPÈCES :</span><span>________________ F</span></p>
+                                        <p className="flex justify-between"><span>TOTAL MOBILE MONEY :</span><span>________________ F</span></p>
+                                        <p className="flex justify-between"><span>TOTAL CARTES :</span><span>________________ F</span></p>
+                                        <p className="flex justify-between text-orange-600"><span>TOTAL CRÉDITS :</span><span>________________ F</span></p>
+                                        <div className="border-t-2 border-black pt-4 flex justify-between font-black text-lg">
+                                            <span>TOTAL GÉNÉRAL :</span><span>________________ F</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="border-2 border-black p-6">
+                                    <h3 className="font-black uppercase mb-4 border-b border-black pb-2">Dépenses (Sorties)</h3>
+                                    <div className="space-y-4 text-sm font-bold">
+                                        <p className="flex justify-between"><span>ACHATS / REAPPRO :</span><span>________________ F</span></p>
+                                        <p className="flex justify-between"><span>CHARGES (EAU/ELEC) :</span><span>________________ F</span></p>
+                                        <p className="flex justify-between"><span>AUTRES FRAIS :</span><span>________________ F</span></p>
+                                        <div className="border-t-2 border-black pt-4 flex justify-between font-black text-lg">
+                                            <span>TOTAL DÉPENSES :</span><span>________________ F</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="border-4 border-black p-8 bg-gray-50 text-center">
+                                <p className="text-xl font-black uppercase mb-4">Solde Net Final (Caisse Physique)</p>
+                                <p className="text-5xl font-black">________________________ XAF</p>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-8 text-center pt-8">
+                                <div>
+                                    <p className="font-bold uppercase mb-12">Caissier</p>
+                                    <p>________________</p>
+                                </div>
+                                <div>
+                                    <p className="font-bold uppercase mb-12">Contrôleur</p>
+                                    <p>________________</p>
+                                </div>
+                                <div>
+                                    <p className="font-bold uppercase mb-12">La Gérance</p>
+                                    <p>________________</p>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
