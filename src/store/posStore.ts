@@ -431,6 +431,14 @@ export const usePOSStore = create<PosState>((set, get) => ({
       set({ sessionActive: snap.docs[0] ? { id: snap.docs[0].id, ...snap.docs[0].data() } as SessionCaisse : null });
     }));
 
+    // Sécurité : Timeout si Firestore est trop lent (mode offline ou instable)
+    setTimeout(() => {
+        if (get().loading) {
+            console.warn("initPOS: Timeout atteint, forçage de loading: false");
+            set({ loading: false });
+        }
+    }, 8000);
+
     set({ loading: false, unsubs });
   },
 

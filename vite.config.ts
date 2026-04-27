@@ -9,12 +9,12 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      registerType: 'prompt',
+      includeAssets: ['favicon.svg', 'logo_gestcave.png'],
       manifest: {
-        name: 'GESTCAVE PRO',
+        name: 'GestCave Pro',
         short_name: 'GestCave',
-        description: 'Gestion de Cave et Bar Professionnelle',
+        description: 'Système de Gestion Intelligent pour Bars & Restaurants',
         theme_color: '#1E3A8A',
         icons: [
           {
@@ -25,9 +25,13 @@ export default defineConfig({
           {
             src: 'pwa-512x512.png',
             sizes: '512x512',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           }
         ]
+      },
+      devOptions: {
+        enabled: true
       }
     })
   ],

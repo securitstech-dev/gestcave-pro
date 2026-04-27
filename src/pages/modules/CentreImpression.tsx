@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Printer, FileText, Users, ClipboardList, ArrowLeft, Download, ShieldCheck } from 'lucide-react';
+import { Printer, FileText, Users, ClipboardList, ArrowLeft, Download, ShieldCheck, Receipt, Wallet, Database, Package } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 
@@ -301,6 +301,49 @@ const CentreImpression = () => {
                                 <div>
                                     <p className="font-bold uppercase mb-12">La Gérance</p>
                                     <p>________________</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {docActif === 'stock' && (
+                        <div className="space-y-12">
+                            <h2 className="text-2xl font-black uppercase text-center mb-8 bg-gray-100 p-4">Fiche de Contrôle Physique des Stocks (Inventaire)</h2>
+                            <table className="w-full border-collapse border border-black text-[10px]">
+                                <thead>
+                                    <tr className="bg-gray-100 text-center font-black uppercase">
+                                        <th className="border border-black p-2 text-left w-64">Désignation Produit</th>
+                                        <th className="border border-black p-2 w-20">Unité</th>
+                                        <th className="border border-black p-2 w-24">Stock Théorique</th>
+                                        <th className="border border-black p-2 w-24 bg-orange-50">Stock Physique (Plein)</th>
+                                        <th className="border border-black p-2 w-24">Vides</th>
+                                        <th className="border border-black p-2 w-24">Casse / Pertes</th>
+                                        <th className="border border-black p-2 w-32">Observations</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {Array.from({length: 35}).map((_, i) => (
+                                        <tr key={i} className="h-9">
+                                            <td className="border border-black p-2 text-gray-300 italic">{i+1}. __________________________</td>
+                                            <td className="border border-black p-2"></td>
+                                            <td className="border border-black p-2 text-center text-gray-200">___</td>
+                                            <td className="border border-black p-2 bg-orange-50/20"></td>
+                                            <td className="border border-black p-2"></td>
+                                            <td className="border border-black p-2"></td>
+                                            <td className="border border-black p-2"></td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+
+                            <div className="grid grid-cols-2 gap-12 pt-12">
+                                <div className="border-2 border-black p-6">
+                                    <p className="font-black uppercase mb-16 text-center underline">Signature du Responsable Stock</p>
+                                    <p className="text-center font-bold">Nom : ____________________</p>
+                                </div>
+                                <div className="border-2 border-black p-6">
+                                    <p className="font-black uppercase mb-16 text-center underline">Visa de la Gérance</p>
+                                    <p className="text-center font-bold">Date : ____ / ____ / 2026</p>
                                 </div>
                             </div>
                         </div>

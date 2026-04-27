@@ -319,8 +319,16 @@ const TableauClient = () => {
         <div className="flex-1 overflow-y-auto p-8 no-scrollbar bg-slate-50/50">
           <div className="max-w-7xl mx-auto">
             {!modulesActifs ? (
-              <div className="h-full flex items-center justify-center py-40">
-                <Loader2 className="animate-spin text-blue-200" size={48} />
+              <div className="h-full flex flex-col items-center justify-center py-40 gap-6">
+                <Loader2 className="animate-spin text-blue-500" size={64} />
+                <div className="text-center">
+                   <p className="text-slate-400 font-bold uppercase tracking-widest text-xs animate-pulse">Initialisation du système...</p>
+                   {etablissementId ? (
+                     <p className="text-[10px] text-slate-300 mt-2">ID: {etablissementId}</p>
+                   ) : (
+                     <p className="text-[10px] text-rose-400 mt-2 uppercase font-black tracking-widest">⚠️ Aucun établissement détecté</p>
+                   )}
+                </div>
               </div>
             ) : (
             <Routes>
