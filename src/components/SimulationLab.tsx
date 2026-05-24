@@ -13,7 +13,6 @@ const SimulationLab = () => {
 
   const seedRealisticData = async () => {
     if (!etablissementId) {
-      console.log("DEBUG AUTH:", { profil, etablissementSimuleId });
       let detail = "Veuillez vous reconnecter.";
       if (!profil) detail = "Profil utilisateur non chargé.";
       else if (profil.role === 'super_admin' && !etablissementSimuleId) detail = "Veuillez sélectionner un établissement à inspecter.";
@@ -94,8 +93,7 @@ const SimulationLab = () => {
       await batch.commit();
       setDone(true);
       toast.success("Structure opérationnelle générée !");
-    } catch (error) {
-      console.error(error);
+    } catch {
       toast.error("Erreur lors de la génération");
     } finally {
       setLoading(false);

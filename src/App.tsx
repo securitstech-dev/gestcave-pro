@@ -16,24 +16,26 @@ import PagePoste from './pages/PagePoste';
 import PageDemoScenario from './pages/PageDemoScenario';
 import PagePointage from './pages/PagePointage';
 import PageTerminalManager from './pages/PageTerminalManager';
+import PagePilotageV2 from './pages/PagePilotageV2';
+import PageSuperAdminV2 from './pages/PageSuperAdminV2';
 import RoleGuard from './components/auth/RoleGuard';
-import LocalAdminSetup from './pages/LocalAdminSetup';
 import ConnectivityIndicator from './components/ui/ConnectivityIndicator';
 
 function App() {
   return (
     <Router>
       <div className="min-h-screen">
-        {/* <ConnectivityIndicator /> */}
+        <ConnectivityIndicator />
         <Routes>
           {/* Routes publiques */}
           <Route path="/" element={<PageAccueil />} />
+          <Route path="/v2" element={<PagePilotageV2 />} />
+          <Route path="/super-admin-v2" element={<PageSuperAdminV2 />} />
           <Route path="/demo-scenario" element={<PageDemoScenario />} />
           <Route path="/pointage/:etablissementId" element={<PagePointage />} />
           <Route path="/manager/:etablissementId" element={<PageTerminalManager />} />
           <Route path="/connexion" element={<PageConnexion />} />
           <Route path="/activation" element={<PageActivation />} />
-          <Route path="/setup-local-admin" element={<LocalAdminSetup />} />
           
           {/* Sélection de rôle après connexion */}
           <Route path="/choisir-role" element={<SelectionMode />} />

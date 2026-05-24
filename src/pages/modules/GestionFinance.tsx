@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   DollarSign, TrendingUp, CreditCard, 
   FileText, Calendar, Filter, ArrowUpRight, 
@@ -20,6 +20,7 @@ import {
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import ModalRapportFiscal from '../../components/modals/ModalRapportFiscal';
+import { aggregateFinancials, buildDailyFinancialSeries, expenseAmount, invoicedAmount, receivedAmount } from '../../lib/finance';
 
 interface Transaction {
   id: string;
@@ -134,8 +135,10 @@ const GestionFinance = () => {
       const trans = transactions.find(t => t.id === transactionId);
       if (!trans) return;
 
-      const nouveauRecu = (trans.montantRecu || 0) + montant;
-      const nouveauRestant = trans.total - nouveauRecu;
+      const totalFacture = invoicedAmount(trans) || Number(trans.total) || 0;
+      const dejaRecu = receivedAmount(trans);
+      const nouveauRecu = dejaRecu + montant;
+      const nouveauRestant = Math.max(0, totalFacture - nouveauRecu);
 
       const docRef = doc(db, 'transactions_pos', transactionId);
       await updateDoc(docRef, {
@@ -172,34 +175,18 @@ const GestionFinance = () => {
     window.open(`https://wa.me/${t.clientContact.replace(/\s/g, '')}?text=${encoded}`, '_blank');
   };
 
-  const totalEncaisse = transactions.filter(t => t.type !== 'depense').reduce((acc, t) => acc + (t.montantRecu || t.total), 0);
-  const dettesClients = transactions.filter(t => t.type !== 'depense').reduce((acc, t) => acc + (t.montantRestant || 0), 0);
-  const depensesAchats = transactions.filter(t => t.type === 'depense').reduce((acc, t) => acc + t.total, 0);
-  
   const totalChargesPonctuelles = charges.reduce((acc, c) => acc + c.montant, 0);
   const totalChargesRecurrentes = chargesRecurrentes.reduce((acc, c) => acc + c.montant, 0);
   const totalCharges = totalChargesPonctuelles + totalChargesRecurrentes;
-  
-  const resultatNet = totalEncaisse - depensesAchats - totalCharges;
+  const totaux = useMemo(() => aggregateFinancials(transactions, totalCharges), [transactions, totalCharges]);
+  const totalEncaisse = totaux.encaisse;
+  const dettesClients = totaux.dettes;
+  const depensesAchats = totaux.depenses - totalCharges;
+  const resultatNet = totaux.resultat;
 
   const transactionsDettes = transactions.filter(t => (t.montantRestant || 0) > 0);
 
-  const chartData = (() => {
-    const dataMap: Record<string, number> = {};
-    const last7Days = [];
-    for (let i = 6; i >= 0; i--) {
-        const d = new Date(); d.setDate(d.getDate() - i);
-        const key = d.toISOString().split('T')[0];
-        last7Days.push({ key, label: d.toLocaleDateString('fr-FR', { weekday: 'short' }) });
-        dataMap[key] = 0;
-    }
-    transactions.forEach(t => {
-        const dateStr = t.date || '';
-        const key = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr.split(' ')[0] || '';
-        if (key && dataMap[key] !== undefined && t.type !== 'depense') dataMap[key] += t.montantRecu || t.total || 0;
-    });
-    return last7Days.map(day => ({ name: day.label.toUpperCase(), revenue: dataMap[day.key] }));
-  })();
+  const chartData = useMemo(() => buildDailyFinancialSeries(transactions, 7), [transactions]);
 
   const genererRapportPDF = () => {
     const docPdf = new jsPDF();
@@ -215,8 +202,8 @@ const GestionFinance = () => {
         t.type === 'depense' ? 'ACHAT' : 'VENTE',
         (t.clientNom || t.tableNom || t.description || 'COMPTOIR').toUpperCase(),
         t.modePaiement?.toUpperCase() || 'COMPTANT',
-        t.type !== 'depense' ? `${(t.montantRecu || t.total || 0).toLocaleString()} XAF` : '-',
-        t.type === 'depense' ? `${(t.total || 0).toLocaleString()} XAF` : '-'
+        t.type !== 'depense' ? `${receivedAmount(t).toLocaleString()} XAF` : '-',
+        t.type === 'depense' ? `${expenseAmount(t).toLocaleString()} XAF` : '-'
       ]),
       headStyles: { fillColor: [30, 58, 138], fontSize: 8 }, 
       alternateRowStyles: { fillColor: [248, 250, 252] },
@@ -362,7 +349,8 @@ const GestionFinance = () => {
                           itemStyle={{fontWeight: 800, color: '#1E3A8A', fontSize: '14px'}}
                           cursor={{stroke: '#1E3A8A', strokeWidth: 2, strokeDasharray: '4 4'}}
                         />
-                        <Area type="monotone" dataKey="revenue" stroke="#1E3A8A" strokeWidth={4} fillOpacity={1} fill="url(#colorRevenue)" />
+                        <Area type="monotone" dataKey="encaisse" name="Encaisse" stroke="#1E3A8A" strokeWidth={4} fillOpacity={1} fill="url(#colorRevenue)" />
+                        <Area type="monotone" dataKey="depenses" name="Depenses" stroke="#F43F5E" strokeWidth={2} fill="transparent" />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -458,7 +446,7 @@ const GestionFinance = () => {
                                     </td>
                                     <td className="px-10 py-6 text-right">
                                         <p className={`font-black text-xl tracking-tighter ${t.type === 'depense' ? 'text-rose-500' : 'text-[#1E3A8A]'}`}>
-                                          {t.type === 'depense' ? '-' : '+'}{(t.montantRecu || t.total || 0).toLocaleString()} <span className="text-[10px] opacity-30">XAF</span>
+                                          {t.type === 'depense' ? '-' : '+'}{(t.type === 'depense' ? expenseAmount(t) : receivedAmount(t)).toLocaleString()} <span className="text-[10px] opacity-30">XAF</span>
                                         </p>
                                         {(t.montantRestant || 0) > 0 && <p className="text-[10px] font-bold text-[#FF7A00] uppercase mt-1 tracking-widest">Dette : {(t.montantRestant || 0).toLocaleString()}</p>}
                                     </td>

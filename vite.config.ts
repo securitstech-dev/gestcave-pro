@@ -5,6 +5,19 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vite.dev/config/
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+          charts: ['recharts'],
+          pdf: ['jspdf', 'jspdf-autotable'],
+          motion: ['framer-motion'],
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     tailwindcss(),
@@ -17,7 +30,7 @@ export default defineConfig({
       manifest: {
         name: 'GestCave Pro',
         short_name: 'GestCave',
-        description: 'Système de Gestion Intelligent pour Bars & Restaurants',
+        description: 'Système de gestion intelligent pour bars et restaurants',
         theme_color: '#1E3A8A',
         icons: [
           {

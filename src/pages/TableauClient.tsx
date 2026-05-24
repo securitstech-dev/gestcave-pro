@@ -13,6 +13,8 @@ import { usePOSStore } from '../store/posStore';
 import { collection, query, where, onSnapshot, doc, addDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { toast } from 'react-hot-toast';
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { aggregateFinancials, buildDailyFinancialSeries, receivedAmount, outstandingAmount } from '../lib/finance';
 
 // Modules
 import InterfaceCaissier from './roles/InterfaceCaissier';
@@ -434,18 +436,16 @@ const DashboardAccueil = ({ profil, etablissementSimuleId, navigate }: any) => {
   }, [etablissementId]);
 
   // CA encaissé = somme de ce qui a réellement été reçu (hors crédit)
-  const ventesDuJour = transactions
-    .filter(t => t.modePaiement !== 'credit')
-    .reduce((acc, t) => acc + (t.montant || 0), 0);
+  const totals = useMemo(() => aggregateFinancials(transactions), [transactions]);
+  const chartData = useMemo(() => buildDailyFinancialSeries(transactions, 7), [transactions]);
   const potentielSalle = commandes.filter(c => c.statut !== 'payee' && c.statut !== 'en_arriere').reduce((acc, c) => acc + Math.max(0, (c.total || 0) - (c.montantPaye || 0)), 0);
-  const dettes = transactions.filter(t => t.modePaiement === 'credit').reduce((acc, t) => acc + (t.montant || 0), 0);
-  const especes = transactions.filter(t => t.modePaiement === 'especes' || t.modePaiement === 'comptant').reduce((acc, t) => acc + (t.montant || 0), 0);
+  const especes = transactions.filter(t => t.modePaiement === 'especes' || t.modePaiement === 'comptant').reduce((acc, t) => acc + receivedAmount(t), 0);
 
   const perfServeurs = useMemo(() => {
     const map: { [name: string]: number } = {};
     transactions.forEach(t => {
        const nom = t.serveurNom || 'Inconnu';
-       map[nom] = (map[nom] || 0) + (t.montant || 0);
+       map[nom] = (map[nom] || 0) + receivedAmount(t);
     });
     return Object.entries(map).sort((a,b) => b[1] - a[1]).slice(0, 5);
   }, [transactions]);
@@ -503,14 +503,49 @@ const DashboardAccueil = ({ profil, etablissementSimuleId, navigate }: any) => {
       
       {/* Metrics Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard label="CA Encaissé" valeur={ventesDuJour} unit="XAF" icon={<Wallet className="text-[#1E3A8A]" />} />
+        <MetricCard label="CA Encaissé" valeur={totals.encaisse} unit="XAF" icon={<Wallet className="text-[#1E3A8A]" />} />
         <MetricCard label="Potentiel (En salle)" valeur={potentielSalle} unit="XAF" icon={<Activity className="text-[#FF7A00]" />} />
         <MetricCard label="Encaissé (Espèces)" valeur={especes} unit="XAF" icon={<DollarSign className="text-emerald-500" />} />
-        <MetricCard label="Dettes Clients" valeur={dettes} unit="XAF" icon={<AlertTriangle className="text-rose-500" />} trend="danger" />
+        <MetricCard label="Dettes Clients" valeur={totals.dettes} unit="XAF" icon={<AlertTriangle className="text-rose-500" />} trend="danger" />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
+          <div className="bg-white p-8 rounded-[2rem] shadow-xl shadow-blue-900/5 border border-slate-100">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+              <div>
+                <h3 className="text-xl font-bold text-[#1E3A8A]">Courbe des chiffres justifies</h3>
+                <p className="text-xs font-semibold text-slate-400">Base: {totals.piecesVente} pieces de vente et {totals.piecesDepense} depenses enregistrees</p>
+              </div>
+              <div className="px-4 py-2 bg-slate-50 rounded-xl text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                Encaisse / Facture / Depenses
+              </div>
+            </div>
+            <div className="h-[320px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="patronEncaisse" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#1E3A8A" stopOpacity={0.18}/>
+                      <stop offset="95%" stopColor="#1E3A8A" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="patronDepenses" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#F43F5E" stopOpacity={0.16}/>
+                      <stop offset="95%" stopColor="#F43F5E" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 10, fontWeight: 700}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 10, fontWeight: 700}} />
+                  <Tooltip formatter={(value: number) => `${Number(value).toLocaleString()} XAF`} />
+                  <Area type="monotone" dataKey="facture" name="Facture" stroke="#FF7A00" fill="transparent" strokeWidth={2} />
+                  <Area type="monotone" dataKey="encaisse" name="Encaisse" stroke="#1E3A8A" fill="url(#patronEncaisse)" strokeWidth={3} />
+                  <Area type="monotone" dataKey="depenses" name="Depenses" stroke="#F43F5E" fill="url(#patronDepenses)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
           {/* Suivi des Salles */}
           <div className="bg-white p-8 rounded-[2rem] shadow-xl shadow-blue-900/5 border border-slate-100">
              <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
@@ -576,7 +611,10 @@ const DashboardAccueil = ({ profil, etablissementSimuleId, navigate }: any) => {
                                   <p className="text-xs font-semibold text-slate-400 mt-1">{new Date(transaction.date).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})} • Serveur : {transaction.serveurNom || 'Système'}</p>
                               </div>
                           </div>
-                          <p className="text-xl font-extrabold text-[#1E3A8A] tracking-tight">{transaction.total?.toLocaleString() || 0} <span className="text-xs font-bold opacity-40 ml-1">XAF</span></p>
+                          <div className="text-right">
+                            <p className="text-xl font-extrabold text-[#1E3A8A] tracking-tight">{receivedAmount(transaction).toLocaleString()} <span className="text-xs font-bold opacity-40 ml-1">XAF</span></p>
+                            {outstandingAmount(transaction) > 0 && <p className="text-[10px] font-bold text-[#FF7A00] uppercase tracking-widest">Reste {outstandingAmount(transaction).toLocaleString()}</p>}
+                          </div>
                       </div>
                   ))
               )}
@@ -756,3 +794,4 @@ const ModuleGuard = ({ module, modulesActifs, navigate, children }: any) => {
 };
 
 export default TableauClient;
+

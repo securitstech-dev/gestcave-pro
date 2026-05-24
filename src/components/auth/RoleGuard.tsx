@@ -10,7 +10,6 @@ interface RoleGuardProps {
 const RoleGuard = ({ children, allowedRoles }: RoleGuardProps) => {
   const { profil, initialise, utilisateur } = useAuthStore();
 
-  // Attendre que l'authentification soit initialisée
   if (!initialise) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -19,18 +18,14 @@ const RoleGuard = ({ children, allowedRoles }: RoleGuardProps) => {
     );
   }
 
-  // Rediriger vers connexion si non connecté
   if (!utilisateur) {
     return <Navigate to="/connexion" replace />;
   }
 
-  // Vérifier le rôle (avec Bypass spécial pour le compte maître ou rôle super_admin)
-  const masterEmails = ['securitstech@gmail.com', 'tendressematoko@gmail.com', 'local.admin@gestcave.pro'];
-  const estMaster = utilisateur?.email && masterEmails.includes(utilisateur.email.toLowerCase());
-  const estSuperAdmin = estMaster || profil?.role === 'super_admin';
+  const estSuperAdmin = profil?.role === 'super_admin';
 
-  if (estSuperAdmin) {
-    return <>{children}</>;
+  if (estSuperAdmin && !allowedRoles.includes('super_admin')) {
+    return <Navigate to="/super-admin" replace />;
   }
 
   if (!profil || !allowedRoles.includes(profil.role)) {

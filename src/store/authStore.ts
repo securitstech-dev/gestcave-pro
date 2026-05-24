@@ -9,6 +9,8 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, addDoc, deleteDoc } from 'firebase/firestore';
 
+const genererPinInitial = () => Math.floor(1000 + Math.random() * 9000).toString();
+
 export interface ProfilUtilisateur {
   id: string;
   email: string;
@@ -171,7 +173,8 @@ export const useAuthStore = create<EtatAuth>((set, get) => ({
         nom: nom,
         email: email,
         role: 'admin',
-        pin: '0000',
+        pin: genererPinInitial(),
+        pin_initial_a_changer: true,
         etablissement_id: etabRef.id,
         actif: true
       });
@@ -228,7 +231,8 @@ export const useAuthStore = create<EtatAuth>((set, get) => ({
         prenom: 'Patron',
         email: invitation.email,
         role: 'admin',
-        pin: '0000',
+        pin: genererPinInitial(),
+        pin_initial_a_changer: true,
         etablissement_id: invitation.etablissement_id,
         actif: true
       });

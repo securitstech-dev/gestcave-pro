@@ -20,8 +20,9 @@ const PageConnexion = () => {
     setLoading(true);
     try {
       await connexion(email, password);
+      const profil = useAuthStore.getState().profil;
       toast.success("Bon retour dans votre espace !");
-      navigate('/tableau-de-bord');
+      navigate(profil?.role === 'super_admin' ? '/super-admin' : '/tableau-de-bord');
     } catch (error: any) {
       toast.error(error.message || "Identifiants invalides");
     } finally {

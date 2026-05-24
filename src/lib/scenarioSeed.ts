@@ -18,7 +18,7 @@ export const runScenarioSeed = async () => {
 
   // 2. Personnel
   const personnel = [
-    { id: 'admin-id', nom: 'ADMIN', prenom: 'Manager', role: 'admin', pin: '0000' },
+    { id: 'admin-id', nom: 'ADMIN', prenom: 'Manager', role: 'admin', pin: '9071' },
     { id: 'serv01-id', nom: 'Jean-Baptiste', prenom: 'SERV01', role: 'serveur', pin: '1234' },
     { id: 'serv02-id', nom: 'Nadège', prenom: 'SERV02', role: 'serveur', pin: '2345' },
     { id: 'cuisto1-id', nom: 'Céleste', prenom: 'CUISTO1', role: 'cuisine', pin: '3456' },

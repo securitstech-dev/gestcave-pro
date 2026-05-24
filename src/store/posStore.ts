@@ -16,8 +16,8 @@ import {
 import { db } from '../lib/firebase';
 import { useAuthStore } from './authStore';
 import { toast } from 'react-hot-toast';
+import { invoicedAmount, outstandingAmount, receivedAmount } from '../lib/finance';
 
-// Utilitaire pour l'impression thermique
 // Utilitaire pour l'impression thermique
 export const imprimerTicket = (commande: Commande, etablissementNom: string) => {
   const totalFinal = Math.max(0, (commande.total || 0) - (commande.remise || 0));
@@ -231,7 +231,7 @@ export interface Commande {
   total: number;
   nombreCouverts: number;
   type: 'sur_place' | 'a_emporter';
-  methodePaiement?: 'comptant' | 'credit';
+  methodePaiement?: 'comptant' | 'especes' | 'mobile' | 'carte' | 'credit';
   clientNom?: string;
   clientContact?: string;
   montantPaye?: number;
@@ -277,10 +277,17 @@ export interface SessionCaisse {
   fondsInitial: number;
   fondsFinalSaisi?: number;
   totalVentesTheorique: number;
+  totalFacture?: number;
+  totalEncaisse?: number;
   totalEspeces?: number;
   totalMobile?: number;
   totalCarte?: number;
   totalCredit?: number;
+  soldeTheorique?: number;
+  ecartCaisse?: number;
+  signatureCaissierId?: string;
+  signatureCaissierNom?: string;
+  dateSignature?: string;
   statut: 'ouverte' | 'fermee';
 }
 
@@ -313,7 +320,7 @@ interface PosState {
   marquerLigneEnPreparation: (commandeId: string, ligneId: string) => Promise<void>;
   marquerToutesLignesEnPreparation: (commandeId: string, posteId: string) => Promise<void>;
   marquerCommandeServie: (commandeId: string, posteId?: string | null) => Promise<void>;
-  encaisserCommande: (commandeId: string, modePaiement: 'comptant' | 'credit', clientNom: string, montantRemise?: number, montantPaye?: number, clientContact?: string, refPaiement?: string) => Promise<void>;
+  encaisserCommande: (commandeId: string, modePaiement: 'comptant' | 'especes' | 'mobile' | 'carte' | 'credit', clientNom: string, montantRemise?: number, montantPaye?: number, clientContact?: string, refPaiement?: string) => Promise<void>;
   annulerCommande: (commandeId: string) => Promise<void>;
   demanderAddition: (commandeId: string, tableId: string) => Promise<void>;
   enregistrerAcompte: (commandeId: string, montant: number, mode: string) => Promise<void>;
@@ -426,11 +433,6 @@ export const usePOSStore = create<PosState>((set, get) => ({
     ));
     unsubs.push(onSnapshot(query(collection(db, 'commandes'), where('etablissementId', '==', etablissementId)), handleCommandes));
 
-    // SESSIONS
-    unsubs.push(onSnapshot(query(collection(db, 'sessions_caisse'), where('etablissement_id', '==', etablissementId), where('statut', '==', 'ouverte')), (snap) => {
-      set({ sessionActive: snap.docs[0] ? { id: snap.docs[0].id, ...snap.docs[0].data() } as SessionCaisse : null });
-    }));
-
     // Sécurité : Timeout si Firestore est trop lent (mode offline ou instable)
     setTimeout(() => {
         if (get().loading) {
@@ -450,7 +452,6 @@ export const usePOSStore = create<PosState>((set, get) => ({
   },
 
   refreshCommande: async (id) => {
-      console.log("Refreshing command:", id);
       const snap = await getDoc(doc(db, 'commandes', id));
       if (snap.exists()) {
           const cmd = { id: snap.id, ...snap.data() } as Commande;
@@ -471,6 +472,14 @@ export const usePOSStore = create<PosState>((set, get) => ({
 
   ouvrirSession: async (fondsInitial, caissierId?: string, caissierNom?: string) => {
     const etabId = get().etablissement_id || useAuthStore.getState().etablissementSimuleId;
+    if (!etabId) throw new Error("Etablissement introuvable pour ouvrir la caisse");
+    if (get().sessionActive) throw new Error("Une session de caisse est deja ouverte");
+
+    const derniereSession = [...get().historiqueSessions]
+      .filter(s => s.statut === 'fermee')
+      .sort((a, b) => new Date(b.dateFermeture || 0).getTime() - new Date(a.dateFermeture || 0).getTime())[0];
+    const fondsInitialReel = derniereSession?.fondsFinalSaisi ?? Number(fondsInitial);
+
     const cid = caissierId || sessionStorage.getItem('poste_employe_id') || useAuthStore.getState().profil?.id || 'unknown';
     const cnom = caissierNom || sessionStorage.getItem('poste_employe_nom') || useAuthStore.getState().profil?.nom || 'Caissier';
     
@@ -479,8 +488,14 @@ export const usePOSStore = create<PosState>((set, get) => ({
       caissierId: cid,
       caissierNom: cnom,
       dateOuverture: new Date().toISOString(),
-      fondsInitial: Number(fondsInitial),
+      fondsInitial: Number(fondsInitialReel) || 0,
       totalVentesTheorique: 0,
+      totalFacture: 0,
+      totalEncaisse: 0,
+      totalEspeces: 0,
+      totalMobile: 0,
+      totalCarte: 0,
+      totalCredit: 0,
       statut: 'ouverte' as const
     };
     await addDoc(collection(db, 'sessions_caisse'), session);
@@ -501,27 +516,39 @@ export const usePOSStore = create<PosState>((set, get) => ({
       );
       
       const snap = await getDocs(q);
-      let totalE = 0, totalM = 0, totalC = 0, totalCred = 0;
+      let totalE = 0, totalM = 0, totalC = 0, totalCred = 0, totalFacture = 0;
       
       snap.docs.forEach((d) => {
         const t = d.data();
-        if (t.modePaiement === 'especes' || t.modePaiement === 'comptant') totalE += (t.total || 0);
-        else if (t.modePaiement === 'mobile') totalM += (t.total || 0);
-        else if (t.modePaiement === 'carte') totalC += (t.total || 0);
-        else if (t.modePaiement === 'credit') totalCred += (t.total || 0);
+        if (t.type === 'depense') return;
+        const encaisse = receivedAmount(t);
+        totalFacture += invoicedAmount(t);
+        if (t.modePaiement === 'especes' || t.modePaiement === 'comptant') totalE += encaisse;
+        else if (t.modePaiement === 'mobile') totalM += encaisse;
+        else if (t.modePaiement === 'carte') totalC += encaisse;
+        totalCred += outstandingAmount(t);
       });
 
-      const totalTheorique = totalE + totalM + totalC + totalCred;
+      const totalEncaisse = totalE + totalM + totalC;
+      const soldeTheorique = (Number(session.fondsInitial) || 0) + totalE;
+      const ecartCaisse = Number(fondsFinal) - soldeTheorique;
 
       await updateDoc(doc(db, 'sessions_caisse', session.id), {
         statut: 'fermee',
         dateFermeture: new Date().toISOString(),
         fondsFinalSaisi: Number(fondsFinal),
-        totalVentesTheorique: totalTheorique,
+        totalVentesTheorique: totalFacture,
+        totalFacture,
+        totalEncaisse,
         totalEspeces: totalE,
         totalMobile: totalM,
         totalCarte: totalC,
-        totalCredit: totalCred
+        totalCredit: totalCred,
+        soldeTheorique,
+        ecartCaisse,
+        signatureCaissierId: session.caissierId,
+        signatureCaissierNom: session.caissierNom,
+        dateSignature: new Date().toISOString()
       });
 
       toast.success("Caisse clôturée avec succès !", { id: toastId });
@@ -809,8 +836,10 @@ export const usePOSStore = create<PosState>((set, get) => ({
     const nvellesLignes = (cmd.lignes || []).map(l => ({ ...l, statut: 'servi' as const }));
     
     const totalFinal = Math.max(0, cmd.total - (remise || 0));
+    const montantDejaTrace = Number(cmd.montantPaye) || 0;
     // FIX: Si c'est un crédit total, on a reçu 0. Sinon, si paye est vide, c'est le montant exact
     const montantPayeTotal = (mode === 'credit' && !paye) ? 0 : (paye || totalFinal);
+    const montantEncaisseTransaction = Math.max(0, montantPayeTotal - montantDejaTrace);
     const restant = Math.max(0, totalFinal - montantPayeTotal);
     const nouveauStatut = restant > 0 ? 'en_arriere' : 'payee';
 
@@ -835,28 +864,34 @@ export const usePOSStore = create<PosState>((set, get) => ({
       });
     }
 
+    const session = get().sessionActive;
+
     batch.set(doc(collection(db, 'transactions_pos')), {
       commandeId,
       modePaiement: mode, 
       date: new Date().toISOString(),
-      montant: montantPayeTotal, // Argent réellement encaissé (ou 0 si crédit)
+      montant: montantEncaisseTransaction,
       totalVente: totalFinal, // Total de la note pour historique
+      montantRestant: restant,
+      datePromessePaiement: cmd.datePromessePaiement || null,
       clientNom: client || 'Direct', 
       clientContact: contact || '',
       etablissement_id: get().etablissement_id || cmd.etablissement_id || '',
+      sessionId: session?.id || null,
       serveurId: cmd.serveurId,
       serveurNom: cmd.serveurNom,
       refPaiement: refPaiement || null,
       type: 'final'
     });
 
-    const session = get().sessionActive;
     if (session) {
-      const modeAmount = montantPayeTotal;
+      const modeAmount = montantEncaisseTransaction;
       const creditAmount = restant;
       const m = mode as string;
       batch.update(doc(db, 'sessions_caisse', session.id), {
         totalVentesTheorique: increment(totalFinal),
+        totalFacture: increment(totalFinal),
+        totalEncaisse: increment(modeAmount),
         ...(m === 'mobile' ? { totalMobile: increment(modeAmount) } : {}),
         ...(m === 'especes' || m === 'comptant' ? { totalEspeces: increment(modeAmount) } : {}),
         ...(m === 'carte' ? { totalCarte: increment(modeAmount) } : {}),
@@ -932,6 +967,7 @@ export const usePOSStore = create<PosState>((set, get) => ({
       date: new Date().toISOString(),
       modePaiement: mode,
       type: 'acompte',
+      sessionId: get().sessionActive?.id || null,
       serveurNom: cmd.serveurNom
     };
     
@@ -940,7 +976,7 @@ export const usePOSStore = create<PosState>((set, get) => ({
     const session = get().sessionActive;
     if (session) {
       batch.update(doc(db, 'sessions_caisse', session.id), {
-        totalVentesTheorique: increment(montant),
+        totalEncaisse: increment(montant),
         ...(mode === 'mobile' ? { totalMobile: increment(montant) } : {}),
         ...(mode === 'especes' || mode === 'comptant' ? { totalEspeces: increment(montant) } : {}),
         ...(mode === 'carte' ? { totalCarte: increment(montant) } : {}),
@@ -991,3 +1027,4 @@ export const usePOSStore = create<PosState>((set, get) => ({
     });
   }
 }));
+

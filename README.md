@@ -1,4 +1,37 @@
-# React + TypeScript + Vite
+# GestCave Pro 2.0
+
+Cette version est une copie separee de l'application existante. Le dossier historique `frontend` n'est pas modifie.
+
+## Demarrer
+
+```bash
+npm run dev
+```
+
+Puis ouvrir l'application et tester la nouvelle interface de pilotage:
+
+```text
+http://127.0.0.1:5173/v2
+```
+
+## Nouveautes 2.0
+
+- Centre de pilotage manager disponible sur `/v2`.
+- Simulation locale de commandes pour tester le flux serveur, cuisine et caisse sans compte Firebase.
+- Alerte de stock critique interactive.
+- Controle de configuration Firebase visible dans l'interface.
+- Protection anti-ecran blanc avec page de recuperation.
+
+## Verification
+
+```bash
+npm run typecheck
+npm run build
+```
+
+---
+
+# Base technique
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

@@ -77,6 +77,12 @@ const SelectionMode = () => {
   ];
 
   const gererSelection = (mode: any) => {
+    if (profil?.role === 'super_admin') {
+      toast.success("Accès Super Admin");
+      navigate('/super-admin');
+      return;
+    }
+
     setSelectedMode(mode);
     setShowPinModal(true);
     setPin('');

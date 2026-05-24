@@ -68,7 +68,12 @@ const InterfaceCaissier = () => {
     const credit = (sessionActive as any).totalCredit || 0;
     const totalEncaisse = especes + mobile + carte; // Le crédit n'est pas encaissé, c'est une dette
     const totalDettes = credit;
-    return { totalEncaisse, totalDettes, nbTransactions: (sessionActive as any).totalVentesTheorique ? 1 : 0 };
+    return { totalEncaisse, totalDettes, nbTransactions: commandes.filter(c => c.statut === 'payee' || c.statut === 'en_arriere').length };
+  }, [commandes, sessionActive]);
+
+  const soldeTheoriqueCloture = useMemo(() => {
+    if (!sessionActive) return 0;
+    return (Number(sessionActive.fondsInitial) || 0) + (Number((sessionActive as any).totalEspeces) || 0);
   }, [sessionActive]);
 
   const fondAttendu = useMemo(() => {
@@ -150,12 +155,12 @@ const InterfaceCaissier = () => {
     try {
       await encaisserCommande(
         commandeSelectionnee, 
-        modePaiement === 'credit' ? 'credit' : 'comptant', 
+        modePaiement, 
         nomClient, 
         remise, 
         montantRecu + dejaPaye, 
         contactClient,
-        modePaiement
+        refPaiement
       );
       
       imprimerTicket(commandeActive!, profil?.etablissement_nom || 'GESTCAVE PRO');
@@ -698,7 +703,13 @@ const InterfaceCaissier = () => {
             </div>
 
             <button 
-              onClick={() => ouvrirSession(Number(fondsSaisi), idEmploye || '', nomEmploye || '')}
+              onClick={async () => {
+                try {
+                  await ouvrirSession(Number(fondsSaisi), idEmploye || '', nomEmploye || '');
+                } catch (error: any) {
+                  toast.error(error?.message || "Impossible d'ouvrir la caisse");
+                }
+              }}
               className="w-full h-24 bg-[#1E3A8A] text-white rounded-[2.5rem] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-2xl shadow-blue-900/30 text-lg flex items-center justify-center gap-6"
             >
               Démarrer le Service <ArrowRight size={32} />
@@ -715,7 +726,17 @@ const InterfaceCaissier = () => {
               <Lock size={64} />
             </div>
             <h2 className="text-4xl font-black text-[#1E3A8A] tracking-tighter uppercase mb-4 leading-none">Clôture Finale</h2>
-            <p className="text-slate-500 font-medium text-lg mb-16">Validez le solde de fin de journée pour libérer la caisse.</p>
+            <p className="text-slate-500 font-medium text-lg mb-8">Validez le solde de fin de journee pour liberer la caisse. La signature du caissier sera enregistree.</p>
+            <div className="grid grid-cols-2 gap-4 mb-8 text-left">
+              <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Solde theorique cash</p>
+                <p className="text-xl font-black text-[#1E3A8A]">{soldeTheoriqueCloture.toLocaleString()} XAF</p>
+              </div>
+              <div className="bg-orange-50 rounded-2xl p-5 border border-orange-100">
+                <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest">Ecart attendu</p>
+                <p className="text-xl font-black text-[#FF7A00]">{(Number(fondsSaisi || 0) - soldeTheoriqueCloture).toLocaleString()} XAF</p>
+              </div>
+            </div>
             
             <div className="bg-slate-50 p-12 rounded-[3rem] border border-slate-100 mb-16 shadow-inner focus-within:bg-white focus-within:border-rose-100 transition-all">
                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Montant Constaté (XAF)</p>

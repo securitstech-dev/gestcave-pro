@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { db, storage } from '../lib/firebase';
-import { collection, addDoc, Timestamp, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, onSnapshot, doc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import toast from 'react-hot-toast';
 import { Upload, ImageIcon, FileCheck } from 'lucide-react';
@@ -106,9 +106,9 @@ const PageAccueil = () => {
 
   const [activeSpots, setActiveSpots] = useState(0);
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'etablissements'), (snap) => {
+    const unsub = onSnapshot(doc(db, 'stats_public', 'plateforme'), (snap) => {
       // On compte les établissements actifs (spot occupés)
-      setActiveSpots(snap.size);
+      setActiveSpots(Number(snap.data()?.etablissements_actifs) || 0);
     });
     return () => unsub();
   }, []);
@@ -493,7 +493,15 @@ const PageAccueil = () => {
             </span>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-8">
+            <PriceCard
+              name="Solo Mini-Bar"
+              price={billingCycle === 'monthly' ? "9.900" : "99.000"}
+              duration={billingCycle === 'monthly' ? "MOIS" : "AN"}
+              features={['1 utilisateur polyvalent', 'Vente rapide', 'Stock + seuils alerte', 'Dettes clients', 'Rapport journalier PDF', 'Mode hors-ligne']}
+              onClick={() => setModalPaiement({ ouvert: true, plan: 'Solo Mini-Bar', prix: billingCycle === 'monthly' ? "9.900" : "99.000" })}
+              promo={spotsRestants > 0}
+            />
             <PriceCard 
               name="Starter" 
               price={billingCycle === 'monthly' ? "30.000" : "300.000"} 
@@ -921,8 +929,19 @@ const InscriptionDirecte = () => {
     telephone_contact: '',
     nom_contact: '',
     email_contact: '',
+    formule_souhaitee: 'solo',
+    modules_souhaites: ['solo', 'stock', 'caisse'],
     accepte_cgu: false,
   });
+
+  const toggleModule = (moduleId: string) => {
+    setFormData((current) => {
+      const modules = current.modules_souhaites.includes(moduleId)
+        ? current.modules_souhaites.filter((item) => item !== moduleId)
+        : [...current.modules_souhaites, moduleId];
+      return { ...current, modules_souhaites: modules };
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -930,6 +949,8 @@ const InscriptionDirecte = () => {
     try {
       await addDoc(collection(db, 'demandes_acces'), {
         ...formData,
+        essai_jours: 14,
+        type_demande: 'essai_avec_choix_formule',
         statut: 'en_attente',
         date_demande: Timestamp.now(),
       });
@@ -990,6 +1011,68 @@ const InscriptionDirecte = () => {
             className="w-full bg-slate-50 border border-slate-200 rounded-2xl h-14 pl-14 pr-6 outline-none focus:border-[#1E3A8A] transition-colors font-medium" 
           />
         </div>
+      </div>
+      <div className="md:col-span-2 space-y-4">
+        <label className="text-xs font-bold text-slate-400 uppercase ml-1">Formule a tester pendant 14 jours</label>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { id: 'solo', label: 'Solo Mini-Bar', price: '9.900 F/mois' },
+            { id: 'starter', label: 'Starter', price: '30.000 F/mois' },
+            { id: 'premium', label: 'Premium', price: '55.000 F/mois' },
+            { id: 'business', label: 'Business', price: '95.000 F/mois' },
+          ].map((plan) => (
+            <button
+              type="button"
+              key={plan.id}
+              onClick={() => setFormData({ ...formData, formule_souhaitee: plan.id })}
+              className={`p-4 rounded-2xl border-2 text-left transition-all ${
+                formData.formule_souhaitee === plan.id
+                  ? 'border-[#FF7A00] bg-orange-50 text-[#1E3A8A]'
+                  : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-blue-100'
+              }`}
+            >
+              <p className="text-sm font-black uppercase">{plan.label}</p>
+              <p className="text-[11px] font-bold mt-1">{plan.price}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="md:col-span-2 space-y-4">
+        <label className="text-xs font-bold text-slate-400 uppercase ml-1">Modules a activer pour l'essai</label>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {[
+            { id: 'solo', label: 'Mode Solo' },
+            { id: 'caisse', label: 'Caisse / ventes' },
+            { id: 'stock', label: 'Stock + alertes' },
+            { id: 'dettes', label: 'Dettes clients' },
+            { id: 'kds', label: 'Cuisine / bar' },
+            { id: 'rh', label: 'Personnel / pointage' },
+            { id: 'compta', label: 'Finance / PDF' },
+            { id: 'analytics', label: 'Analyses' },
+            { id: 'conformite', label: 'Conformite taxes' },
+          ].map((module) => (
+            <button
+              type="button"
+              key={module.id}
+              onClick={() => toggleModule(module.id)}
+              className={`flex items-center gap-3 rounded-2xl border-2 p-4 text-left transition-all ${
+                formData.modules_souhaites.includes(module.id)
+                  ? 'border-[#1E3A8A] bg-blue-50 text-[#1E3A8A]'
+                  : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-blue-100'
+              }`}
+            >
+              <span className={`flex h-6 w-6 items-center justify-center rounded-lg ${
+                formData.modules_souhaites.includes(module.id) ? 'bg-[#1E3A8A] text-white' : 'bg-white text-slate-300'
+              }`}>
+                <CheckCircle2 size={14} />
+              </span>
+              <span className="text-xs font-black uppercase">{module.label}</span>
+            </button>
+          ))}
+        </div>
+        <p className="text-xs font-bold text-slate-400">
+          Meme pendant l'essai de 14 jours, le client choisit la formule et les modules qu'il veut tester.
+        </p>
       </div>
       <div className="md:col-span-2 space-y-4 pt-4">
         <label className="flex items-start gap-4 cursor-pointer group">

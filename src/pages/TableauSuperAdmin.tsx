@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { 
   Users, CheckCircle, XCircle, LogOut, 
   Search, Building2, CreditCard, TrendingUp, Shield,
@@ -16,7 +16,7 @@ import { clearFirestoreCache } from '../lib/firebase';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import SimulateurTablette from './modules/SimulateurTablette';
 
-type Onglet = 'demandes' | 'messages' | 'paiements' | 'etablissements' | 'comptabilite' | 'maintenance' | 'laboratoire' | 'rh_interne' | 'finance_interne' | 'support' | 'caisse' | 'commerciaux';
+type Onglet = 'dashboard' | 'demandes' | 'messages' | 'paiements' | 'etablissements' | 'comptabilite' | 'maintenance' | 'laboratoire' | 'rh_interne' | 'finance_interne' | 'support' | 'caisse' | 'commerciaux';
 
 const TableauSuperAdmin = () => {
   const [demandes, setDemandes] = useState<any[]>([]);
@@ -26,7 +26,7 @@ const TableauSuperAdmin = () => {
   const [equipeInterne, setEquipeInterne] = useState<any[]>([]);
   const [ticketsSupport, setTicketsSupport] = useState<any[]>([]);
   const [chargement, setChargement] = useState(true);
-  const [onglet, setOnglet] = useState<Onglet>('demandes');
+  const [onglet, setOnglet] = useState<Onglet>('dashboard');
   const [recherche, setRecherche] = useState('');
   const navigate = useNavigate();
   const { deconnexion, reinitialiserMotDePasse } = useAuthStore();
@@ -121,6 +121,76 @@ const TableauSuperAdmin = () => {
   const mrrReel = paiements
     .filter(p => { if (p.statut !== 'valide') return false; const d = new Date(p.date_validation || p.date || ''); return d.getMonth() === maintenant.getMonth() && d.getFullYear() === maintenant.getFullYear(); })
     .reduce((acc, p) => acc + (p.montant || 0), 0);
+
+  const financeInterne = useMemo(() => {
+    const paiementsValides = paiements.filter(p => p.statut === 'valide');
+    const caGlobal = paiementsValides.reduce((acc, p) => acc + (Number(p.montant) || 0), 0);
+    const seriesMap: Record<string, number> = {};
+    const series = [];
+
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      seriesMap[key] = 0;
+      series.push({ key, name: d.toLocaleDateString('fr-FR', { month: 'short' }).toUpperCase() });
+    }
+
+    paiementsValides.forEach(p => {
+      const d = new Date(p.date_validation || p.date || '');
+      if (Number.isNaN(d.getTime())) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (seriesMap[key] !== undefined) seriesMap[key] += Number(p.montant) || 0;
+    });
+
+    return {
+      caGlobal,
+      pieces: paiementsValides.length,
+      enAttente: paiements.filter(p => p.statut === 'en_attente').length,
+      series: series.map(item => ({ name: item.name, revenus: seriesMap[item.key] }))
+    };
+  }, [paiements]);
+
+  const pilotageSuperAdmin = useMemo(() => {
+    const paiementsValides = paiements.filter(p => p.statut === 'valide');
+    const paiementsEnAttente = paiements.filter(p => p.statut === 'en_attente');
+    const actifs = etablissements.filter(e => e.subscription_status === 'actif');
+    const essais = etablissements.filter(e => e.subscription_status === 'essai');
+    const expires = etablissements.filter(e => {
+      const d = new Date(e.subscription_end_date || e.date_fin || '');
+      return !Number.isNaN(d.getTime()) && d.getTime() < Date.now();
+    });
+    const expireBientot = etablissements.filter(e => {
+      const d = new Date(e.subscription_end_date || e.date_fin || '');
+      if (Number.isNaN(d.getTime())) return false;
+      const jours = (d.getTime() - Date.now()) / (24 * 60 * 60 * 1000);
+      return jours >= 0 && jours <= 7;
+    });
+    const caMois = mrrReel;
+    const caTotal = paiementsValides.reduce((acc, p) => acc + (Number(p.montant) || 0), 0);
+    const tauxConversion = etablissements.length ? Math.round((actifs.length / etablissements.length) * 100) : 0;
+    const montantAttente = paiementsEnAttente.reduce((acc, p) => acc + (Number(p.montant) || 0), 0);
+    const topClients = [...paiementsValides]
+      .reduce<Record<string, { nom: string; montant: number; pieces: number }>>((acc, p) => {
+        const key = p.etablissement_id || p.etablissementId || p.client_id || p.nom_client || 'inconnu';
+        const etab = etablissements.find(e => e.id === key);
+        const nom = p.nom_etablissement || p.clientNom || etab?.nom || etab?.contact_principal || `Client ${String(key).slice(-6)}`;
+        acc[key] = acc[key] || { nom, montant: 0, pieces: 0 };
+        acc[key].montant += Number(p.montant) || 0;
+        acc[key].pieces += 1;
+        return acc;
+      }, {});
+    const topClientsList = Object.values(topClients).sort((a, b) => b.montant - a.montant).slice(0, 5);
+
+    const alertes = [
+      ...(paiementsEnAttente.length ? [`${paiementsEnAttente.length} paiement(s) a verifier pour ${montantAttente.toLocaleString()} XAF.`] : []),
+      ...(expires.length ? [`${expires.length} abonnement(s) expire(s) a relancer ou suspendre.`] : []),
+      ...(expireBientot.length ? [`${expireBientot.length} abonnement(s) expirent dans 7 jours.`] : []),
+      ...(essais.length ? [`${essais.length} client(s) en essai a convertir.`] : []),
+    ];
+
+    return { actifs, essais, expires, expireBientot, caMois, caTotal, tauxConversion, montantAttente, topClientsList, alertes };
+  }, [etablissements, mrrReel, paiements]);
 
   const nomEtab = (etabId: string) => { const etab = etablissements.find(e => e.id === etabId); return etab?.nom || etab?.contact_principal || `...${etabId?.slice(-6)}`; };
 
@@ -427,6 +497,7 @@ const TableauSuperAdmin = () => {
   const etabsFiltres = etablissements.filter(e => e.nom?.toLowerCase().includes(recherche.toLowerCase()));
 
   const navItems = [
+    { key: 'dashboard', icon: <LayoutDashboard size={20} />, label: "Pilotage 2.0" },
     { key: 'demandes', icon: <Users size={20} />, label: "Demandes d'accès", badge: demandes.filter(d => d.statut === 'en_attente').length },
     { key: 'messages', icon: <MessageSquare size={20} />, label: "Messages", badge: messagesContact.filter(m => m.statut === 'nouveau').length },
     { key: 'etablissements', icon: <Building2 size={20} />, label: "Établissements", badge: etablissements.length },
@@ -442,6 +513,110 @@ const TableauSuperAdmin = () => {
     { key: 'laboratoire', icon: <Tablet size={20} />, label: "Lab de Simulation (Tablette)" },
     { key: 'maintenance', icon: <Database size={20} />, label: "Maintenance", danger: true },
   ];
+
+  const renderVuePilotage = () => (
+    <div className="p-10 md:p-16 space-y-10 animate-in fade-in duration-700">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+        <div>
+          <h2 className="text-3xl font-black text-[#1E3A8A] uppercase tracking-tighter">Tableau de bord Super Admin 2.0</h2>
+          <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-2">Indicateurs reels: paiements valides, abonnements, conversion et commerciaux</p>
+        </div>
+        <div className="px-5 py-3 bg-emerald-50 text-emerald-700 rounded-2xl text-[10px] font-black uppercase tracking-widest">
+          Donnees sans estimation
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {[
+          { label: 'CA total valide', val: `${pilotageSuperAdmin.caTotal.toLocaleString()} XAF`, icon: <Landmark size={22} />, tone: 'text-[#1E3A8A]' },
+          { label: 'CA mois courant', val: `${pilotageSuperAdmin.caMois.toLocaleString()} XAF`, icon: <TrendingUp size={22} />, tone: 'text-[#FF7A00]' },
+          { label: 'Taux conversion', val: `${pilotageSuperAdmin.tauxConversion}%`, icon: <Target size={22} />, tone: 'text-emerald-600' },
+          { label: 'A encaisser/verifier', val: `${pilotageSuperAdmin.montantAttente.toLocaleString()} XAF`, icon: <AlertTriangle size={22} />, tone: 'text-rose-600' },
+        ].map(item => (
+          <div key={item.label} className="bg-white p-7 rounded-[2rem] border border-slate-100 shadow-xl shadow-blue-900/5">
+            <div className="flex items-center justify-between mb-6">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.label}</p>
+              <span className="text-slate-300">{item.icon}</span>
+            </div>
+            <p className={`text-3xl font-black tracking-tight ${item.tone}`}>{item.val}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        <div className="xl:col-span-2 bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-blue-900/5">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h3 className="text-xl font-black text-[#1E3A8A] tracking-tight">Encaissements valides</h3>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Six derniers mois</p>
+            </div>
+            <BarChart3 className="text-[#FF7A00]" size={26} />
+          </div>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={financeInterne.series}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 10, fontWeight: 700}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 10, fontWeight: 700}} />
+                <Tooltip formatter={(value: number) => `${Number(value).toLocaleString()} XAF`} />
+                <Line type="monotone" dataKey="revenus" name="Revenus valides" stroke="#1E3A8A" strokeWidth={4} dot={{ r: 5, fill: '#FF7A00', strokeWidth: 0 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="bg-slate-950 p-8 rounded-[2.5rem] text-white shadow-2xl shadow-slate-900/20">
+          <div className="flex items-center gap-3 mb-8">
+            <ShieldCheck className="text-emerald-400" size={24} />
+            <h3 className="text-lg font-black uppercase tracking-tight">Aide decision</h3>
+          </div>
+          <div className="space-y-4">
+            {(pilotageSuperAdmin.alertes.length ? pilotageSuperAdmin.alertes : ['Aucune alerte critique: continuer le suivi commercial.']).map(alerte => (
+              <div key={alerte} className="bg-white/10 border border-white/10 rounded-2xl p-5">
+                <p className="text-sm font-bold leading-relaxed text-slate-100">{alerte}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-blue-900/5">
+          <h3 className="text-xl font-black text-[#1E3A8A] mb-6">Portefeuille clients</h3>
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              { label: 'Actifs', val: pilotageSuperAdmin.actifs.length, tone: 'text-emerald-600' },
+              { label: 'Essais', val: pilotageSuperAdmin.essais.length, tone: 'text-blue-600' },
+              { label: 'Expirent 7j', val: pilotageSuperAdmin.expireBientot.length, tone: 'text-orange-500' },
+              { label: 'Expires', val: pilotageSuperAdmin.expires.length, tone: 'text-rose-600' },
+            ].map(item => (
+              <div key={item.label} className="bg-slate-50 rounded-2xl p-6 border border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.label}</p>
+                <p className={`text-3xl font-black mt-2 ${item.tone}`}>{item.val}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-blue-900/5">
+          <h3 className="text-xl font-black text-[#1E3A8A] mb-6">Top clients payants</h3>
+          <div className="space-y-4">
+            {pilotageSuperAdmin.topClientsList.length === 0 ? (
+              <p className="text-slate-400 font-bold text-sm">Aucun paiement valide enregistre.</p>
+            ) : pilotageSuperAdmin.topClientsList.map(client => (
+              <div key={client.nom} className="flex items-center justify-between gap-4 border-b border-slate-100 pb-4 last:border-0">
+                <div>
+                  <p className="font-black text-slate-700">{client.nom}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{client.pieces} piece(s)</p>
+                </div>
+                <p className="text-lg font-black text-[#1E3A8A]">{client.montant.toLocaleString()} XAF</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   const renderVueRHInterne = () => (
     <div className="p-10 md:p-16 space-y-12 animate-in fade-in duration-700">
@@ -554,22 +729,50 @@ const TableauSuperAdmin = () => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-black text-[#1E3A8A] uppercase tracking-tighter">Finance Securits Tech</h2>
-          <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">Chiffre d'affaires et santé financière</p>
+          <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">Revenus issus des paiements valides, sans estimation</p>
+        </div>
+        <div className="px-5 py-3 bg-blue-50 text-[#1E3A8A] rounded-2xl text-[10px] font-black uppercase tracking-widest">
+          {financeInterne.pieces} pieces justifiees
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
         <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl shadow-blue-900/5">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Chiffre d'Affaires Global</p>
-          <p className="text-4xl font-black text-[#1E3A8A] tracking-tighter">{paiements.filter(p => p.statut === 'valide').reduce((acc, p) => acc + (p.montant || 0), 0).toLocaleString()} <span className="text-sm opacity-30">XAF</span></p>
+          <p className="text-4xl font-black text-[#1E3A8A] tracking-tighter">{financeInterne.caGlobal.toLocaleString()} <span className="text-sm opacity-30">XAF</span></p>
         </div>
         <div className="bg-[#1E3A8A] p-10 rounded-[3rem] text-white shadow-2xl shadow-blue-900/20">
-          <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-2">MRR (Revenu Récurrent)</p>
+          <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-2">MRR Encaisse</p>
           <p className="text-4xl font-black text-[#FF7A00] tracking-tighter">{mrrReel.toLocaleString()} <span className="text-sm opacity-30">XAF</span></p>
         </div>
         <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl shadow-blue-900/5">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Clients Payants</p>
           <p className="text-4xl font-black text-slate-700 tracking-tighter">{etablissements.filter(e => e.subscription_status === 'actif').length}</p>
+        </div>
+        <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl shadow-blue-900/5">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Paiements a verifier</p>
+          <p className="text-4xl font-black text-[#FF7A00] tracking-tighter">{financeInterne.enAttente}</p>
+        </div>
+      </div>
+
+      <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl shadow-blue-900/5">
+        <div className="flex justify-between items-center mb-10">
+          <div>
+            <h3 className="text-xl font-black text-[#1E3A8A] tracking-tight">Courbe des encaissements valides</h3>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">Six derniers mois, source collection paiements</p>
+          </div>
+          <BarChart3 className="text-[#FF7A00]" size={28} />
+        </div>
+        <div className="h-[360px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={financeInterne.series}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 10, fontWeight: 700}} />
+              <YAxis axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 10, fontWeight: 700}} />
+              <Tooltip formatter={(value: number) => `${Number(value).toLocaleString()} XAF`} />
+              <Line type="monotone" dataKey="revenus" name="Revenus valides" stroke="#1E3A8A" strokeWidth={4} dot={{ r: 5, fill: '#FF7A00', strokeWidth: 0 }} />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>
@@ -1084,6 +1287,7 @@ const TableauSuperAdmin = () => {
                  )}
               </div>
              <h1 className="text-4xl md:text-5xl font-black text-[#1E3A8A] tracking-tight leading-none">
+              {onglet === 'dashboard' && 'Pilotage Super Admin 2.0'}
               {onglet === 'demandes' && "Demandes d'accès"}
               {onglet === 'paiements' && 'Paiements & Abonnements'}
               {onglet === 'comptabilite' && 'Comptabilité Globale'}
@@ -1125,6 +1329,7 @@ const TableauSuperAdmin = () => {
         </div>
 
         <div className="bg-white rounded-[3.5rem] shadow-xl shadow-blue-900/5 border border-slate-100 overflow-hidden min-h-[600px] animate-in fade-in duration-500">
+          {onglet === 'dashboard' && renderVuePilotage()}
           {onglet === 'caisse' && renderVueCaisse()}
           {onglet === 'commerciaux' && renderVueCommerciaux()}
           {/* ── DEMANDES ── */}
