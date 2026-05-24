@@ -125,8 +125,8 @@ const TableauClient = () => {
           <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Activités</p>
           <div className="space-y-1">
             <SidebarLink icon={<LayoutDashboard size={18} />} label="Vue d'ensemble" path="/tableau-de-bord" />
-            {!isSolo && <SidebarLink icon={<Clock size={18} />} label="Sessions de travail" path="/tableau-de-bord/sessions" />}
-            {!isSolo && typeEtab !== 'boutique' && (
+            <SidebarLink icon={<Clock size={18} />} label="Sessions de travail" path="/tableau-de-bord/sessions" />
+            {typeEtab !== 'boutique' && (
               <>
                 <SidebarLink icon={<Layout size={18} />} label="Plan des salles" path="/tableau-de-bord/plan-salles" />
                 <SidebarLink icon={<PlusCircle size={18} />} label="Gestion des tables" path="/tableau-de-bord/tables" />
@@ -139,9 +139,9 @@ const TableauClient = () => {
         <div>
           <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Postes de travail</p>
           <div className="space-y-1">
-            {!isSolo && <SidebarLink icon={<Monitor size={18} />} label="Console Déploiement" path="/terminaux" />}
+            <SidebarLink icon={<Monitor size={18} />} label="Console Déploiement" path="/terminaux" />
             {hasModule('pos') && <SidebarLink icon={typeEtab === 'boutique' ? <Package size={18} /> : <ShoppingCart size={18} />} label={typeEtab === 'boutique' ? "Caisse Boutique" : "Caisse Bar/Resto"} path="/tableau-de-bord/caisse" />}
-            {!isSolo && hasModule('kds') && typeEtab !== 'boutique' && <SidebarLink icon={<Zap size={18} />} label="Écran Cuisine" path="/tableau-de-bord/cuisine" />}
+            {hasModule('kds') && typeEtab !== 'boutique' && <SidebarLink icon={<Zap size={18} />} label="Écran Cuisine" path="/tableau-de-bord/cuisine" />}
           </div>
         </div>
         )}
@@ -153,9 +153,9 @@ const TableauClient = () => {
             {hasModule('stock') && <SidebarLink icon={<TrendingUp size={18} />} label="Achats Fournisseurs" path="/tableau-de-bord/achats" />}
             {hasModule('compta') && <SidebarLink icon={<DollarSign size={18} />} label="Comptabilité" path="/tableau-de-bord/admin" />}
             {hasModule('compta') && <SidebarLink icon={<BookOpen size={18} />} label="Grand Livre" path="/tableau-de-bord/grand-livre" />}
-            {!isSolo && hasModule('hr') && <SidebarLink icon={<Users size={18} />} label="Équipe & Personnel" path="/tableau-de-bord/rh" />}
-            {!isSolo && hasModule('hr') && <SidebarLink icon={<Wallet size={18} />} label="Paies & Salaires" path="/tableau-de-bord/paie" />}
-            {!isSolo && hasModule('hr') && <SidebarLink icon={<Clock size={18} />} label="Borne de Pointage" path={`/pointage/${etablissementId}`} />}
+            {hasModule('hr') && <SidebarLink icon={<Users size={18} />} label="Équipe & Personnel" path="/tableau-de-bord/rh" />}
+            {hasModule('hr') && <SidebarLink icon={<Wallet size={18} />} label="Paies & Salaires" path="/tableau-de-bord/paie" />}
+            {hasModule('hr') && <SidebarLink icon={<Clock size={18} />} label="Borne de Pointage" path={`/pointage/${etablissementId}`} />}
             {hasModule('compta') && <SidebarLink icon={<Scale size={18} />} label="Conformité & Taxes" path="/tableau-de-bord/conformite" />}
             <SidebarLink icon={<Printer size={18} />} label="Fiches à Imprimer" path="/tableau-de-bord/impression" />
             <SidebarLink icon={<Settings size={18} />} label="Paramètres" path="/tableau-de-bord/settings" />
