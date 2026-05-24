@@ -318,6 +318,16 @@ const CentreImpression = () => {
                                                     <td className="border border-black p-2"></td>
                                                 </tr>
                                             ))}
+                                            {Array.from({length: 15}).map((_, i) => (
+                                                <tr key={`empty-${i}`} className="h-8">
+                                                    <td className="border border-black p-2 text-center">{23 + i}</td>
+                                                    <td className="border border-black p-2"></td>
+                                                    <td className="border border-black p-2"></td>
+                                                    <td className="border border-black p-2"></td>
+                                                    <td className="border border-black p-2"></td>
+                                                    <td className="border border-black p-2"></td>
+                                                </tr>
+                                            ))}
                                             <tr className="bg-gray-400 text-white font-bold h-8">
                                                 <td colSpan={4} className="border border-black p-2">SOUS-TOTAL</td>
                                                 <td className="border border-black p-2"></td>
@@ -532,6 +542,21 @@ const CentreImpression = () => {
                                                     <td className="border border-black p-1 text-center bg-gray-50">{p.buyPrice}</td>
                                                     <td className="border border-black p-1 text-center bg-gray-50">{p.price}</td>
                                                     <td className="border border-black p-1 text-center bg-gray-50">{p.price - p.buyPrice}</td>
+                                                    <td className="border border-black p-1"></td>
+                                                    <td className="border border-black p-1"></td>
+                                                    <td className="border border-black p-1"></td>
+                                                    <td className="border border-black p-1"></td>
+                                                    <td className="border border-black p-1"></td>
+                                                    <td className="border border-black p-1"></td>
+                                                </tr>
+                                            ))}
+                                            {Array.from({length: 15}).map((_, i) => (
+                                                <tr key={`empty-stock-${i}`} className="h-6">
+                                                    <td className="border border-black p-1 text-center font-bold">{23 + i}</td>
+                                                    <td className="border border-black p-1"></td>
+                                                    <td className="border border-black p-1 bg-gray-50"></td>
+                                                    <td className="border border-black p-1 bg-gray-50"></td>
+                                                    <td className="border border-black p-1 bg-gray-50"></td>
                                                     <td className="border border-black p-1"></td>
                                                     <td className="border border-black p-1"></td>
                                                     <td className="border border-black p-1"></td>
