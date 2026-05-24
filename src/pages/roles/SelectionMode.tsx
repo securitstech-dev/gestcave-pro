@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { db } from '../../lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
 
 const SelectionMode = () => {
@@ -18,8 +18,38 @@ const SelectionMode = () => {
   const [selectedMode, setSelectedMode] = useState<any>(null);
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
+  const [modulesActifs, setModulesActifs] = useState<string[]>([]);
+  const [planEtab, setPlanEtab] = useState<string | null>(null);
 
-  const modes = [
+  React.useEffect(() => {
+    const chargerEtablissement = async () => {
+      const etablissementId = etablissementSimuleId || profil?.etablissement_id;
+      if (!etablissementId) return;
+      try {
+        const snap = await getDoc(doc(db, 'etablissements', etablissementId));
+        const data = snap.data();
+        setModulesActifs(data?.modules_actifs || []);
+        setPlanEtab(data?.subscription_plan || data?.plan || data?.formule_souhaitee || null);
+      } catch (error) {
+        console.warn('Impossible de charger le mode etablissement:', error);
+      }
+    };
+    chargerEtablissement();
+  }, [etablissementSimuleId, profil?.etablissement_id]);
+
+  const isSolo = modulesActifs.includes('solo') || ['solo', 'solo_mini_bar', 'solo-mini-bar'].includes(String(planEtab || '').toLowerCase());
+
+  const modes = isSolo ? [
+    {
+      id: 'solo',
+      titre: 'Mode Solo',
+      description: 'Vendre, préparer et encaisser depuis une seule interface.',
+      icon: <Receipt size={32} />,
+      role: 'solo',
+      route: '/caisse',
+      badge: 'MINI-BAR',
+    },
+  ] : [
     {
       id: 'serveur',
       titre: 'Flux Service',
@@ -115,8 +145,9 @@ const SelectionMode = () => {
       if (!snap.empty) {
         const employe = snap.docs[0].data();
         const estAdmin = employe.role === 'admin' || employe.role === 'gerant';
+        const autoriseSolo = isSolo && selectedMode.id === 'solo';
 
-        if (estAdmin || employe.role === selectedMode.role) {
+        if (estAdmin || autoriseSolo || employe.role === selectedMode.role) {
           toast.success(`Session : ${employe.nom}`);
           
           sessionStorage.setItem('poste_employe_id', employe.id);
