@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { 
   Wine, ShoppingCart, TrendingUp, AlertTriangle, Users, 
   Settings, LogOut, ChevronRight, Package, CreditCard, 
@@ -45,7 +45,6 @@ const TableauClient = () => {
   const [modulesActifs, setModulesActifs] = useState<string[] | null>(null);
   const [statusEtab, setStatusEtab] = useState<string | null>(null);
   const [typeEtab, setTypeEtab] = useState<string | null>(null);
-  const [planEtab, setPlanEtab] = useState<string | null>(null);
 
   const etablissementId = etablissementSimuleId || profil?.etablissement_id;
 
@@ -57,22 +56,12 @@ const TableauClient = () => {
       setModulesActifs(data?.modules_actifs || []);
       setStatusEtab(data?.subscription_status || data?.statut || null);
       setTypeEtab(data?.type_etablissement || 'bar_restaurant');
-      setPlanEtab(data?.subscription_plan || data?.plan || data?.formule_souhaitee || null);
     });
     return () => unsub();
   }, [etablissementId]);
 
-  const moduleAliases: Record<string, string[]> = {
-    pos: ['pos', 'caisse', 'solo'],
-    compta: ['compta', 'finance'],
-  };
-
-  const hasModule = (id: string) => {
-    const accepted = moduleAliases[id] || [id];
-    return modulesActifs?.some(module => accepted.includes(module)) ?? false;
-  };
-
-  const isSolo = (modulesActifs?.includes('solo') || ['solo', 'solo_mini_bar', 'solo-mini-bar'].includes(String(planEtab || '').toLowerCase())) ?? false;
+  const hasModule = (id: string) => modulesActifs?.includes(id) ?? false;
+  const isSolo = hasModule('solo');
 
   useEffect(() => {
     if (etablissementId) {
@@ -114,7 +103,7 @@ const TableauClient = () => {
             <h2 className="text-xl font-extrabold text-[#1E3A8A] tracking-tight">
               {profil?.etablissement_nom || 'Ma Cave'}
             </h2>
-            <p className="text-xs font-semibold text-slate-400">{isSolo ? 'Mode Solo' : 'Administration'}</p>
+            <p className="text-xs font-semibold text-slate-400">Administration</p>
           </div>
         </div>
         
@@ -132,9 +121,8 @@ const TableauClient = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-2 space-y-8 no-scrollbar">
-        {!isSolo && (
         <div>
-          <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">ActivitÃ©s</p>
+          <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Activités</p>
           <div className="space-y-1">
             <SidebarLink icon={<LayoutDashboard size={18} />} label="Vue d'ensemble" path="/tableau-de-bord" />
             {!isSolo && <SidebarLink icon={<Clock size={18} />} label="Sessions de travail" path="/tableau-de-bord/sessions" />}
@@ -146,14 +134,13 @@ const TableauClient = () => {
             )}
           </div>
         </div>
-        )}
 
-        {(hasModule('pos') || hasModule('kds') || isSolo) && (
+        {(hasModule('pos') || hasModule('kds')) && (
         <div>
-          <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{isSolo ? 'Mode Solo' : 'Postes de travail'}</p>
+          <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Postes de travail</p>
           <div className="space-y-1">
             {!isSolo && <SidebarLink icon={<Monitor size={18} />} label="Console Déploiement" path="/terminaux" />}
-            {hasModule('pos') && <SidebarLink icon={typeEtab === 'boutique' ? <Package size={18} /> : <ShoppingCart size={18} />} label={isSolo ? "Vente & Caisse Solo" : (typeEtab === 'boutique' ? "Caisse Boutique" : "Caisse Bar/Resto")} path="/tableau-de-bord/caisse" />}
+            {hasModule('pos') && <SidebarLink icon={typeEtab === 'boutique' ? <Package size={18} /> : <ShoppingCart size={18} />} label={typeEtab === 'boutique' ? "Caisse Boutique" : "Caisse Bar/Resto"} path="/tableau-de-bord/caisse" />}
             {!isSolo && hasModule('kds') && typeEtab !== 'boutique' && <SidebarLink icon={<Zap size={18} />} label="Écran Cuisine" path="/tableau-de-bord/cuisine" />}
           </div>
         </div>
@@ -162,29 +149,27 @@ const TableauClient = () => {
         <div>
           <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Gestion Interne</p>
           <div className="space-y-1">
-            {hasModule('stock') && <SidebarLink icon={<Package size={18} />} label={isSolo ? "Stock & Alertes" : "Inventaire & Stocks"} path="/tableau-de-bord/stocks" />}
-            {!isSolo && hasModule('stock') && <SidebarLink icon={<TrendingUp size={18} />} label="Achats Fournisseurs" path="/tableau-de-bord/achats" />}
-            {hasModule('compta') && <SidebarLink icon={<DollarSign size={18} />} label={isSolo ? "Bilan Journalier" : "Comptabilité"} path="/tableau-de-bord/admin" />}
-            {!isSolo && hasModule('compta') && <SidebarLink icon={<BookOpen size={18} />} label="Grand Livre" path="/tableau-de-bord/grand-livre" />}
-            {!isSolo && hasModule('hr') && <SidebarLink icon={<Users size={18} />} label="Ã‰quipe & Personnel" path="/tableau-de-bord/rh" />}
+            {hasModule('stock') && <SidebarLink icon={<Package size={18} />} label="Inventaire & Stocks" path="/tableau-de-bord/stocks" />}
+            {hasModule('stock') && <SidebarLink icon={<TrendingUp size={18} />} label="Achats Fournisseurs" path="/tableau-de-bord/achats" />}
+            {hasModule('compta') && <SidebarLink icon={<DollarSign size={18} />} label="Comptabilité" path="/tableau-de-bord/admin" />}
+            {hasModule('compta') && <SidebarLink icon={<BookOpen size={18} />} label="Grand Livre" path="/tableau-de-bord/grand-livre" />}
+            {!isSolo && hasModule('hr') && <SidebarLink icon={<Users size={18} />} label="Équipe & Personnel" path="/tableau-de-bord/rh" />}
             {!isSolo && hasModule('hr') && <SidebarLink icon={<Wallet size={18} />} label="Paies & Salaires" path="/tableau-de-bord/paie" />}
             {!isSolo && hasModule('hr') && <SidebarLink icon={<Clock size={18} />} label="Borne de Pointage" path={`/pointage/${etablissementId}`} />}
-            {!isSolo && hasModule('compta') && <SidebarLink icon={<Scale size={18} />} label="Conformité & Taxes" path="/tableau-de-bord/conformite" />}
-            <SidebarLink icon={<Printer size={18} />} label="Fiches Ã  Imprimer" path="/tableau-de-bord/impression" />
-            <SidebarLink icon={<Settings size={18} />} label="ParamÃ¨tres" path="/tableau-de-bord/settings" />
+            {hasModule('compta') && <SidebarLink icon={<Scale size={18} />} label="Conformité & Taxes" path="/tableau-de-bord/conformite" />}
+            <SidebarLink icon={<Printer size={18} />} label="Fiches à Imprimer" path="/tableau-de-bord/impression" />
+            <SidebarLink icon={<Settings size={18} />} label="Paramètres" path="/tableau-de-bord/settings" />
           </div>
         </div>
 
-        {!isSolo && (
         <div>
           <p className="px-4 text-[10px] font-bold text-[#FF7A00] uppercase tracking-widest mb-3">Intelligence & Lab</p>
           <div className="space-y-1 text-[#FF7A00]">
-            <SidebarLink icon={<Bot size={18} />} label="Analyses PrÃ©dictives" path="/tableau-de-bord/ia" />
-            <SidebarLink icon={<Terminal size={18} />} label="Diagnostic SystÃ¨me" path="/tableau-de-bord/debug" />
+            <SidebarLink icon={<Bot size={18} />} label="Analyses Prédictives" path="/tableau-de-bord/ia" />
+            <SidebarLink icon={<Terminal size={18} />} label="Diagnostic Système" path="/tableau-de-bord/debug" />
 
           </div>
         </div>
-        )}
       </div>
 
       <div className="p-6 mt-auto">
@@ -193,7 +178,7 @@ const TableauClient = () => {
           className="w-full py-4 flex items-center justify-center gap-3 bg-slate-50 text-slate-500 rounded-2xl font-bold text-sm hover:bg-rose-50 hover:text-rose-600 transition-all group"
         >
           <LogOut size={18} className="group-hover:translate-x-1 transition-transform" /> 
-          DÃ©connexion
+          Déconnexion
         </button>
       </div>
     </div>
@@ -216,7 +201,7 @@ const TableauClient = () => {
         statut: 'nouveau',
         type: 'support_client'
       });
-      toast.success('Message envoyÃ© au support !');
+      toast.success('Message envoyé au support !');
       setSupportMessage('');
       setModalSupport(false);
     } catch (error) {
@@ -240,12 +225,12 @@ const TableauClient = () => {
             <button onClick={() => setModalSupport(false)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 transition-all"><X size={24} /></button>
             <div className="mb-8">
               <h3 className="text-2xl font-black text-[#1E3A8A] uppercase tracking-tight mb-2">Contacter le Support</h3>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Une question ? Un problÃ¨me technique ?</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Une question ? Un problème technique ?</p>
             </div>
             <textarea 
               value={supportMessage}
               onChange={(e) => setSupportMessage(e.target.value)}
-              placeholder="DÃ©crivez votre besoin ici..."
+              placeholder="Décrivez votre besoin ici..."
               className="w-full p-6 bg-slate-50 border border-slate-100 rounded-3xl outline-none focus:border-[#1E3A8A] transition-all font-bold text-sm min-h-[150px] mb-8"
             />
             <button 
@@ -283,7 +268,7 @@ const TableauClient = () => {
           </div>
           <div className="flex-1 space-y-2 text-center md:text-left">
              <h3 className="text-2xl font-black text-[#1E3A8A] tracking-tight uppercase leading-none">Compte en attente de validation</h3>
-             <p className="text-slate-500 font-medium">Votre Ã©tablissement est en cours de vÃ©rification par nos services. Certaines fonctionnalitÃ©s de reporting global sont limitÃ©es jusqu'Ã  l'activation complÃ¨te.</p>
+             <p className="text-slate-500 font-medium">Votre établissement est en cours de vérification par nos services. Certaines fonctionnalités de reporting global sont limitées jusqu'à l'activation complète.</p>
           </div>
           <button 
             onClick={() => setModalSupport(true)}
@@ -302,12 +287,12 @@ const TableauClient = () => {
             </button>
             <div className="hidden md:flex items-center gap-3 bg-slate-50 rounded-2xl px-5 h-12 w-[400px] border border-slate-100 group focus-within:border-blue-200 transition-all">
               <Search size={18} className="text-slate-400 group-focus-within:text-[#1E3A8A]" />
-              <input type="text" placeholder="Rechercher une transaction, un employÃ©..." className="bg-transparent border-none outline-none text-sm w-full text-slate-700 font-medium" />
+              <input type="text" placeholder="Rechercher une transaction, un employé..." className="bg-transparent border-none outline-none text-sm w-full text-slate-700 font-medium" />
             </div>
             
             {window.location.hostname === 'localhost' && (
               <div className="flex items-center gap-2 px-4 h-10 bg-orange-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest animate-pulse shadow-lg shadow-orange-500/20">
-                <AlertTriangle size={14} /> Mode Test Local - DonnÃ©es RÃ©elles
+                <AlertTriangle size={14} /> Mode Test Local - Données Réelles
               </div>
             )}
           </div>
@@ -320,7 +305,7 @@ const TableauClient = () => {
             
             <div className="flex items-center gap-5 pl-8 border-l border-slate-100">
                <div className="text-right hidden md:block">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Session PropriÃ©taire</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Session Propriétaire</p>
                   <p className="text-lg font-black text-[#1E3A8A] tracking-tighter leading-none">
                     Bienvenue, <span className="text-[#FF7A00]">{profil?.prenom || 'Monsieur'}</span> !
                   </p>
@@ -340,17 +325,17 @@ const TableauClient = () => {
               <div className="h-full flex flex-col items-center justify-center py-40 gap-6">
                 <Loader2 className="animate-spin text-blue-500" size={64} />
                 <div className="text-center">
-                   <p className="text-slate-400 font-bold uppercase tracking-widest text-xs animate-pulse">Initialisation du systÃ¨me...</p>
+                   <p className="text-slate-400 font-bold uppercase tracking-widest text-xs animate-pulse">Initialisation du système...</p>
                    {etablissementId ? (
                      <p className="text-[10px] text-slate-300 mt-2">ID: {etablissementId}</p>
                    ) : (
-                     <p className="text-[10px] text-rose-400 mt-2 uppercase font-black tracking-widest">âš ï¸ Aucun Ã©tablissement dÃ©tectÃ©</p>
+                     <p className="text-[10px] text-rose-400 mt-2 uppercase font-black tracking-widest">⚠️ Aucun établissement détecté</p>
                    )}
                 </div>
               </div>
             ) : (
             <Routes>
-              {/* â”€â”€ Routes libres (toujours accessibles) â”€â”€ */}
+              {/* ── Routes libres (toujours accessibles) ── */}
               <Route path="/" element={<DashboardAccueil profil={profil} etablissementSimuleId={etablissementSimuleId} navigate={navigate} />} />
               <Route path="/plan-salles" element={<PlanDeSalles />} />
               <Route path="/tables" element={<GestionTables />} />
@@ -359,21 +344,21 @@ const TableauClient = () => {
               <Route path="/impression" element={<CentreImpression />} />
               <Route path="/debug" element={<ModuleDebug />} />
 
-              {/* â”€â”€ POS â”€â”€ */}
+              {/* ── POS ── */}
               <Route path="/caisse" element={
                 <ModuleGuard module="pos" modulesActifs={modulesActifs} navigate={navigate}>
                   <InterfaceCaissier />
                 </ModuleGuard>
               } />
 
-              {/* â”€â”€ KDS â”€â”€ */}
+              {/* ── KDS ── */}
               <Route path="/cuisine" element={
                 <ModuleGuard module="kds" modulesActifs={modulesActifs} navigate={navigate}>
                   <InterfaceCuisine />
                 </ModuleGuard>
               } />
 
-              {/* â”€â”€ RH â”€â”€ */}
+              {/* ── RH ── */}
               <Route path="/rh" element={
                 <ModuleGuard module="hr" modulesActifs={modulesActifs} navigate={navigate}>
                   <GestionEmployes />
@@ -385,7 +370,7 @@ const TableauClient = () => {
                 </ModuleGuard>
               } />
 
-              {/* â”€â”€ STOCK â”€â”€ */}
+              {/* ── STOCK ── */}
               <Route path="/stocks" element={
                 <ModuleGuard module="stock" modulesActifs={modulesActifs} navigate={navigate}>
                   <GestionStocks />
@@ -397,7 +382,7 @@ const TableauClient = () => {
                 </ModuleGuard>
               } />
 
-              {/* â”€â”€ COMPTA â”€â”€ */}
+              {/* ── COMPTA ── */}
               <Route path="/admin" element={
                 <ModuleGuard module="compta" modulesActifs={modulesActifs} navigate={navigate}>
                   <GestionFinance />
@@ -414,7 +399,7 @@ const TableauClient = () => {
                 </ModuleGuard>
               } />
 
-              {/* â”€â”€ ANALYTICS â”€â”€ */}
+              {/* ── ANALYTICS ── */}
               <Route path="/ia" element={
                 <ModuleGuard module="analytics" modulesActifs={modulesActifs} navigate={navigate}>
                   <IAIntelligence />
@@ -451,7 +436,7 @@ const DashboardAccueil = ({ profil, etablissementSimuleId, navigate }: any) => {
     return () => unsub();
   }, [etablissementId]);
 
-  // CA encaissÃ© = somme de ce qui a rÃ©ellement Ã©tÃ© reÃ§u (hors crÃ©dit)
+  // CA encaissé = somme de ce qui a réellement été reçu (hors crédit)
   const totals = useMemo(() => aggregateFinancials(transactions), [transactions]);
   const chartData = useMemo(() => buildDailyFinancialSeries(transactions, 7), [transactions]);
   const potentielSalle = commandes.filter(c => c.statut !== 'payee' && c.statut !== 'en_arriere').reduce((acc, c) => acc + Math.max(0, (c.total || 0) - (c.montantPaye || 0)), 0);
@@ -479,7 +464,7 @@ const DashboardAccueil = ({ profil, etablissementSimuleId, navigate }: any) => {
            <h1 className="text-4xl md:text-5xl font-extrabold text-[#1E3A8A] tracking-tight leading-tight mb-4">
               Tableau de bord <span className="text-[#FF7A00]">Patron</span>
            </h1>
-           <p className="text-slate-500 font-medium text-lg max-w-md">Bienvenue. Voici l'Ã©tat actuel de votre Ã©tablissement en temps rÃ©el.</p>
+           <p className="text-slate-500 font-medium text-lg max-w-md">Bienvenue. Voici l'état actuel de votre établissement en temps réel.</p>
         </div>
 
         <div className="shrink-0 relative z-10">
@@ -490,7 +475,7 @@ const DashboardAccueil = ({ profil, etablissementSimuleId, navigate }: any) => {
                    </div>
                    <div>
                       <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Synchronisation...</p>
-                      <p className="text-xl font-extrabold text-slate-300">VÃ©rification caisse</p>
+                      <p className="text-xl font-extrabold text-slate-300">Vérification caisse</p>
                    </div>
                 </div>
              ) : sessionActive ? (
@@ -509,8 +494,8 @@ const DashboardAccueil = ({ profil, etablissementSimuleId, navigate }: any) => {
                      <Shield size={28} />
                   </div>
                   <div>
-                     <p className="text-[11px] font-bold text-rose-600 uppercase tracking-widest mb-1">SystÃ¨me Hors-ligne</p>
-                     <p className="text-xl font-extrabold text-slate-800">Caisse fermÃ©e</p>
+                     <p className="text-[11px] font-bold text-rose-600 uppercase tracking-widest mb-1">Système Hors-ligne</p>
+                     <p className="text-xl font-extrabold text-slate-800">Caisse fermée</p>
                   </div>
                </div>
              )}
@@ -519,9 +504,9 @@ const DashboardAccueil = ({ profil, etablissementSimuleId, navigate }: any) => {
       
       {/* Metrics Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard label="CA EncaissÃ©" valeur={totals.encaisse} unit="XAF" icon={<Wallet className="text-[#1E3A8A]" />} />
+        <MetricCard label="CA Encaissé" valeur={totals.encaisse} unit="XAF" icon={<Wallet className="text-[#1E3A8A]" />} />
         <MetricCard label="Potentiel (En salle)" valeur={potentielSalle} unit="XAF" icon={<Activity className="text-[#FF7A00]" />} />
-        <MetricCard label="EncaissÃ© (EspÃ¨ces)" valeur={especes} unit="XAF" icon={<DollarSign className="text-emerald-500" />} />
+        <MetricCard label="Encaissé (Espèces)" valeur={especes} unit="XAF" icon={<DollarSign className="text-emerald-500" />} />
         <MetricCard label="Dettes Clients" valeur={totals.dettes} unit="XAF" icon={<AlertTriangle className="text-rose-500" />} trend="danger" />
       </div>
 
@@ -569,11 +554,11 @@ const DashboardAccueil = ({ profil, etablissementSimuleId, navigate }: any) => {
                    <div className="w-12 h-12 bg-blue-50 text-[#1E3A8A] rounded-2xl flex items-center justify-center shadow-sm"><Activity size={24} /></div>
                    <div>
                       <h3 className="text-xl font-bold text-[#1E3A8A]">Suivi des Salles</h3>
-                      <p className="text-xs font-semibold text-slate-400">Occupation des tables en temps rÃ©el</p>
+                      <p className="text-xs font-semibold text-slate-400">Occupation des tables en temps réel</p>
                    </div>
                 </div>
                 <button onClick={() => navigate('/tableau-de-bord/plan-salles')} className="text-xs font-bold text-[#1E3A8A] px-5 py-2.5 bg-blue-50 rounded-xl hover:bg-blue-100 transition-all border border-blue-100">
-                   Voir le plan dÃ©taillÃ©
+                   Voir le plan détaillé
                 </button>
              </div>
 
@@ -602,7 +587,7 @@ const DashboardAccueil = ({ profil, etablissementSimuleId, navigate }: any) => {
                   <div className="w-12 h-12 bg-white text-[#1E3A8A] rounded-2xl flex items-center justify-center shadow-sm border border-slate-100"><Receipt size={24} /></div>
                   <div>
                     <h3 className="text-xl font-bold text-[#1E3A8A]">Historique des Ventes</h3>
-                    <p className="text-xs font-semibold text-slate-400">Derniers rÃ¨glements enregistrÃ©s</p>
+                    <p className="text-xs font-semibold text-slate-400">Derniers règlements enregistrés</p>
                   </div>
                </div>
             </div>
@@ -624,7 +609,7 @@ const DashboardAccueil = ({ profil, etablissementSimuleId, navigate }: any) => {
                               </div>
                               <div>
                                   <h4 className="font-bold text-slate-800">Note #{transaction.commandeId?.slice(-6).toUpperCase() || '...'}</h4>
-                                  <p className="text-xs font-semibold text-slate-400 mt-1">{new Date(transaction.date).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})} â€¢ Serveur : {transaction.serveurNom || 'SystÃ¨me'}</p>
+                                  <p className="text-xs font-semibold text-slate-400 mt-1">{new Date(transaction.date).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})} • Serveur : {transaction.serveurNom || 'Système'}</p>
                               </div>
                           </div>
                           <div className="text-right">
@@ -649,7 +634,7 @@ const DashboardAccueil = ({ profil, etablissementSimuleId, navigate }: any) => {
                 </div>
                 <div className="space-y-8 relative z-10">
                    {perfServeurs.length === 0 ? (
-                     <p className="text-blue-100/40 text-xs font-bold text-center py-10 uppercase tracking-widest">En attente de donnÃ©es</p>
+                     <p className="text-blue-100/40 text-xs font-bold text-center py-10 uppercase tracking-widest">En attente de données</p>
                    ) : perfServeurs.map(([nom, val], idx) => (
                       <div key={idx} className="space-y-3">
                          <div className="flex justify-between items-end">
@@ -683,7 +668,7 @@ const DashboardAccueil = ({ profil, etablissementSimuleId, navigate }: any) => {
                       <div key={p.id} className="space-y-2">
                         <div className="flex justify-between items-center text-xs font-bold">
                           <span className="text-slate-600 truncate max-w-[150px]">{p.nom}</span>
-                          <span className={p.stockTotal <= 0 ? 'text-rose-600' : 'text-[#FF7A00]'}>{p.stockTotal} unitÃ©s</span>
+                          <span className={p.stockTotal <= 0 ? 'text-rose-600' : 'text-[#FF7A00]'}>{p.stockTotal} unités</span>
                         </div>
                         <div className="h-2 w-full bg-slate-50 rounded-full overflow-hidden">
                            <div className={`h-full rounded-full ${p.stockTotal <= 0 ? 'bg-rose-600' : 'bg-[#FF7A00]'}`} style={{ width: `${Math.min(100, (p.stockTotal/(p.stockAlerte || 1))*100)}%` }} />
@@ -692,7 +677,7 @@ const DashboardAccueil = ({ profil, etablissementSimuleId, navigate }: any) => {
                     ))}
                 </div>
                 <button onClick={() => navigate('/tableau-de-bord/stocks')} className="mt-10 w-full py-4 bg-slate-900 text-white rounded-2xl font-bold text-sm hover:bg-[#1E3A8A] transition-all flex items-center justify-center gap-3">
-                    GÃ©rer l'inventaire <ArrowRight size={16} />
+                    Gérer l'inventaire <ArrowRight size={16} />
                 </button>
              </div>
         </div>
@@ -729,7 +714,7 @@ const PerformanceCuisine = ({ commandes }: { commandes: any[] }) => {
           const end = new Date(l.datePret).getTime();
           const diff = Math.max(1, Math.floor((end - start) / 60000));
           
-          const cat = l.produitCategorie || 'GÃ©nÃ©ral';
+          const cat = l.produitCategorie || 'Général';
           if (!data[cat]) data[cat] = { totalTime: 0, count: 0 };
           data[cat].totalTime += diff;
           data[cat].count += 1;
@@ -760,7 +745,7 @@ const PerformanceCuisine = ({ commandes }: { commandes: any[] }) => {
                 <div className="w-12 h-12 bg-blue-50 text-[#1E3A8A] rounded-2xl flex items-center justify-center"><ChefHat size={24} /></div>
                 <div>
                   <h3 className="text-xl font-bold text-[#1E3A8A]">Performance Cuisine</h3>
-                  <p className="text-xs font-semibold text-slate-400">Temps de prÃ©paration par catÃ©gorie</p>
+                  <p className="text-xs font-semibold text-slate-400">Temps de préparation par catégorie</p>
                 </div>
             </div>
             <div className="text-right bg-slate-50 px-6 py-3 rounded-2xl border border-slate-100">
@@ -771,7 +756,7 @@ const PerformanceCuisine = ({ commandes }: { commandes: any[] }) => {
 
         {stats.categories.length === 0 ? (
           <div className="py-16 text-center">
-            <p className="text-slate-300 font-bold uppercase tracking-widest text-[11px]">En attente de commandes prÃ©parÃ©es</p>
+            <p className="text-slate-300 font-bold uppercase tracking-widest text-[11px]">En attente de commandes préparées</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -796,16 +781,11 @@ const PerformanceCuisine = ({ commandes }: { commandes: any[] }) => {
 };
 
 const ModuleGuard = ({ module, modulesActifs, navigate, children }: any) => {
-  const aliases: Record<string, string[]> = {
-    pos: ['pos', 'caisse', 'solo'],
-    compta: ['compta', 'finance'],
-  };
-  const accepted = aliases[module] || [module];
-  const isAllowed = modulesActifs.some((active: string) => accepted.includes(active));
+  const isAllowed = modulesActifs.includes(module);
   
   useEffect(() => {
     if (!isAllowed) {
-      toast.error(`Le module "${module}" n'est pas activÃ© pour votre Ã©tablissement.`);
+      toast.error(`Le module "${module}" n'est pas activé pour votre établissement.`);
       navigate('/tableau-de-bord');
     }
   }, [isAllowed, module, navigate]);
@@ -815,5 +795,4 @@ const ModuleGuard = ({ module, modulesActifs, navigate, children }: any) => {
 };
 
 export default TableauClient;
-
 
