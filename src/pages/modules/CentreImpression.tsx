@@ -1,17 +1,74 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Printer, FileText, Users, ClipboardList, ArrowLeft, Download, ShieldCheck, Receipt, Wallet, Database, Package } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
+import { initStocksSolo } from '../../lib/initStocksSolo';
+import { toast } from 'react-hot-toast';
+
+const SOLO_PRODUCTS = [
+  { ref: '01', name: 'PRIMUS', price: 500, buyPrice: 400 },
+  { ref: '02', name: 'HEINEKEN', price: 500, buyPrice: 400 },
+  { ref: '03', name: 'NGOK', price: 500, buyPrice: 400 },
+  { ref: '04', name: 'JUS (BRASCO)', price: 500, buyPrice: 400 },
+  { ref: '05', name: 'GINTONIC', price: 600, buyPrice: 480 },
+  { ref: '06', name: 'TURBO', price: 500, buyPrice: 400 },
+  { ref: '07', name: 'CLASS', price: 600, buyPrice: 480 },
+  { ref: '08', name: 'CHATEAU DE FRANCE', price: 500, buyPrice: 400 },
+  { ref: '09', name: '33 EXPORT', price: 600, buyPrice: 480 },
+  { ref: '10', name: 'BLACK', price: 600, buyPrice: 480 },
+  { ref: '11', name: 'RACINE', price: 600, buyPrice: 480 },
+  { ref: '12', name: 'GIN TONIC (BRALICO)', price: 600, buyPrice: 480 },
+  { ref: '13', name: 'JUS (BRALICO)', price: 300, buyPrice: 240 },
+  { ref: '14', name: 'CASTEL', price: 700, buyPrice: 560 },
+  { ref: '15', name: 'BEAUFORD', price: 600, buyPrice: 480 },
+  { ref: '16', name: '3X', price: 700, buyPrice: 560 },
+  { ref: '17', name: 'REACTOR', price: 500, buyPrice: 400 },
+  { ref: '18', name: 'BOOSTER ROUGE', price: 600, buyPrice: 480 },
+  { ref: '19', name: 'CHILL', price: 600, buyPrice: 480 },
+  { ref: '20', name: 'SYNERGIE', price: 500, buyPrice: 400 },
+  { ref: '21', name: 'VIVAL', price: 300, buyPrice: 240 },
+  { ref: '22', name: 'GIN TONIC (BRASCO)', price: 600, buyPrice: 480 },
+];
 
 const CentreImpression = () => {
   const navigate = useNavigate();
   const { profil } = useAuthStore();
   const [docActif, setDocActif] = useState<'inventaire' | 'pointage' | 'paie' | 'ventes' | 'caisse' | 'stock' | null>(null);
+  const [isSolo, setIsSolo] = useState(false);
+  const etablissementId = profil?.etablissement_id;
+  const [isInitLoading, setIsInitLoading] = useState(false);
+
+  useEffect(() => {
+    if (!etablissementId) return;
+    const fetchModules = async () => {
+      const snap = await getDoc(doc(db, 'etablissements', etablissementId));
+      if (snap.exists()) {
+        const modules = snap.data().modules_actifs || [];
+        setIsSolo(modules.includes('solo'));
+      }
+    };
+    fetchModules();
+  }, [etablissementId]);
 
   const etablissementNom = profil?.etablissement_nom || 'GESTCAVE PRO';
 
   const imprimer = () => {
     window.print();
+  };
+
+  const handleInitStock = async () => {
+    if (!etablissementId) return;
+    setIsInitLoading(true);
+    try {
+      await initStocksSolo(etablissementId, SOLO_PRODUCTS);
+      toast.success("Stock initialisé avec succès pour le mode Solo !");
+    } catch (e: any) {
+      toast.error("Erreur: " + e.message);
+    } finally {
+      setIsInitLoading(false);
+    }
   };
 
   return (
@@ -84,7 +141,14 @@ const CentreImpression = () => {
           ) : (
             <div className="p-8 print:p-0 max-w-4xl mx-auto w-full">
                 {/* Actions Bar - Hidden in print */}
-                <div className="bg-white p-4 rounded-2xl shadow-sm mb-8 flex justify-end items-center gap-4 print:hidden">
+                <div className="bg-white p-4 rounded-2xl shadow-sm mb-8 flex justify-between items-center print:hidden">
+                    <div>
+                        {isSolo && (
+                            <button onClick={handleInitStock} disabled={isInitLoading} className="px-4 py-2 bg-[#FF7A00] text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-orange-600 transition-all shadow-lg">
+                                {isInitLoading ? 'Initialisation...' : 'Initialiser Stock Solo'}
+                            </button>
+                        )}
+                    </div>
                     <button onClick={imprimer} className="px-6 py-3 bg-[#1E3A8A] text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-lg flex items-center gap-2">
                         <Printer size={16} /> Lancer l'impression
                     </button>
@@ -224,128 +288,313 @@ const CentreImpression = () => {
 
                     {docActif === 'ventes' && (
                         <div>
-                            <h2 className="text-2xl font-black uppercase text-center mb-8 bg-gray-100 p-4">Fiche de Suivi des Ventes Manuelles</h2>
-                            <table className="w-full border-collapse border border-black text-[10px]">
-                                <thead>
-                                    <tr className="bg-gray-100">
-                                        <th className="border border-black p-2 text-left font-bold uppercase w-12">Réf</th>
-                                        <th className="border border-black p-2 text-left font-bold uppercase">Article / Désignation</th>
-                                        <th className="border border-black p-2 text-center font-bold uppercase w-16">P.U</th>
-                                        <th className="border border-black p-2 text-center font-bold uppercase w-12">Qté</th>
-                                        <th className="border border-black p-2 text-center font-bold uppercase w-20">Total</th>
-                                        <th className="border border-black p-2 text-center font-bold uppercase w-20">Mode</th>
-                                        <th className="border border-black p-2 text-left font-bold uppercase w-32">Client / Table</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {Array.from({length: 30}).map((_, i) => (
-                                        <tr key={i}>
-                                            <td className="border border-black p-2 h-8 text-gray-300">{i+1}</td>
-                                            <td className="border border-black p-2 h-8"></td>
-                                            <td className="border border-black p-2 h-8"></td>
-                                            <td className="border border-black p-2 h-8"></td>
-                                            <td className="border border-black p-2 h-8"></td>
-                                            <td className="border border-black p-2 h-8"></td>
-                                            <td className="border border-black p-2 h-8"></td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                            {isSolo ? (
+                                <>
+                                    <h2 className="text-2xl font-black uppercase text-center mb-8 bg-gray-100 p-4">TABLEAU OPÉRATIONNEL JOURNALIER</h2>
+                                    <div className="flex justify-between font-bold text-sm mb-4">
+                                        <p>Date : ____ / ____ / 202__</p>
+                                        <p>Jour : ___________________</p>
+                                        <p>Vendeuse : ___________________</p>
+                                    </div>
+                                    <table className="w-full border-collapse border border-black text-sm">
+                                        <thead>
+                                            <tr className="bg-gray-700 text-white">
+                                                <th className="border border-black p-2 text-center w-12">N°</th>
+                                                <th className="border border-black p-2 text-left">PRODUIT VENDU</th>
+                                                <th className="border border-black p-2 text-center w-32">QTE</th>
+                                                <th className="border border-black p-2 text-center w-24">PRIX<br/>UNIT.</th>
+                                                <th className="border border-black p-2 text-center w-32">MONTANT<br/>(FCFA)</th>
+                                                <th className="border border-black p-2 text-center w-48">OBSERVATION</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {SOLO_PRODUCTS.map((p, i) => (
+                                                <tr key={i}>
+                                                    <td className="border border-black p-2 text-center">{p.ref}</td>
+                                                    <td className="border border-black p-2 font-bold">{p.name}</td>
+                                                    <td className="border border-black p-2"></td>
+                                                    <td className="border border-black p-2 text-center">{p.price} F</td>
+                                                    <td className="border border-black p-2"></td>
+                                                    <td className="border border-black p-2"></td>
+                                                </tr>
+                                            ))}
+                                            <tr className="bg-gray-400 text-white font-bold h-8">
+                                                <td colSpan={4} className="border border-black p-2">SOUS-TOTAL</td>
+                                                <td className="border border-black p-2"></td>
+                                                <td className="border border-black p-2 bg-white"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </>
+                            ) : (
+                                <>
+                                    <h2 className="text-2xl font-black uppercase text-center mb-8 bg-gray-100 p-4">Fiche de Suivi des Ventes Manuelles</h2>
+                                    <table className="w-full border-collapse border border-black text-[10px]">
+                                        <thead>
+                                            <tr className="bg-gray-100">
+                                                <th className="border border-black p-2 text-left font-bold uppercase w-12">Réf</th>
+                                                <th className="border border-black p-2 text-left font-bold uppercase">Article / Désignation</th>
+                                                <th className="border border-black p-2 text-center font-bold uppercase w-16">P.U</th>
+                                                <th className="border border-black p-2 text-center font-bold uppercase w-12">Qté</th>
+                                                <th className="border border-black p-2 text-center font-bold uppercase w-20">Total</th>
+                                                <th className="border border-black p-2 text-center font-bold uppercase w-20">Mode</th>
+                                                <th className="border border-black p-2 text-left font-bold uppercase w-32">Client / Table</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {Array.from({length: 30}).map((_, i) => (
+                                                <tr key={i}>
+                                                    <td className="border border-black p-2 h-8 text-gray-300">{i+1}</td>
+                                                    <td className="border border-black p-2 h-8"></td>
+                                                    <td className="border border-black p-2 h-8"></td>
+                                                    <td className="border border-black p-2 h-8"></td>
+                                                    <td className="border border-black p-2 h-8"></td>
+                                                    <td className="border border-black p-2 h-8"></td>
+                                                    <td className="border border-black p-2 h-8"></td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </>
+                            )}
                         </div>
                     )}
 
                     {docActif === 'caisse' && (
                         <div className="space-y-12">
-                            <h2 className="text-2xl font-black uppercase text-center mb-8 bg-gray-100 p-4">Feuille de Caisse et Arrêté Journalier</h2>
-                            
-                            <div className="grid grid-cols-2 gap-8">
-                                <div className="border-2 border-black p-6">
-                                    <h3 className="font-black uppercase mb-4 border-b border-black pb-2">Recettes (Entrées)</h3>
-                                    <div className="space-y-4 text-sm font-bold">
-                                        <p className="flex justify-between"><span>TOTAL ESPÈCES :</span><span>________________ F</span></p>
-                                        <p className="flex justify-between"><span>TOTAL MOBILE MONEY :</span><span>________________ F</span></p>
-                                        <p className="flex justify-between"><span>TOTAL CARTES :</span><span>________________ F</span></p>
-                                        <p className="flex justify-between text-orange-600"><span>TOTAL CRÉDITS :</span><span>________________ F</span></p>
-                                        <div className="border-t-2 border-black pt-4 flex justify-between font-black text-lg">
-                                            <span>TOTAL GÉNÉRAL :</span><span>________________ F</span>
+                            {isSolo ? (
+                                <>
+                                    <h2 className="text-2xl font-black uppercase text-center mb-8 bg-gray-400 text-white p-2">PARTIE 2 - BILAN DE LA JOURNEE (à remplir le soir)</h2>
+                                    
+                                    <div className="flex gap-8">
+                                        <div className="flex-1">
+                                            <h3 className="text-center font-bold text-sm mb-4">RECETTES DU JOUR</h3>
+                                            <div className="space-y-4 text-sm">
+                                                <p className="flex justify-between items-end border-b border-black pb-1">
+                                                    <span>Total ventes (sous-total ci-dessus) :</span>
+                                                    <span className="w-48 text-right font-bold pr-2">____________________ FCFA</span>
+                                                </p>
+                                                <p className="flex justify-between items-end border-b border-black pb-1">
+                                                    <span>Autres recettes / avances reçues :</span>
+                                                    <span className="w-48 text-right font-bold pr-2">____________________ FCFA</span>
+                                                </p>
+                                                <p className="flex justify-between items-end border-b border-black pb-1">
+                                                    <span>Solde caisse début de journée :</span>
+                                                    <span className="w-48 text-right font-bold pr-2">____________________ FCFA</span>
+                                                </p>
+                                                <p className="flex justify-between items-end pt-4">
+                                                    <span className="font-bold">TOTAL RECETTES</span>
+                                                    <span className="w-48 text-right font-bold border-b-2 border-black pr-2 text-xl">____________________ FCFA</span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="text-center font-bold text-sm mb-4">DEPENSES DU JOUR</h3>
+                                            <div className="space-y-4 text-sm">
+                                                <p className="flex justify-between items-end border-b border-black pb-1">
+                                                    <span>Achat boissons / livraisons :</span>
+                                                    <span className="w-48 text-right font-bold pr-2">____________________ FCFA</span>
+                                                </p>
+                                                <p className="flex justify-between items-end border-b border-black pb-1">
+                                                    <span>Dépenses diverses du bar :</span>
+                                                    <span className="w-48 text-right font-bold pr-2">____________________ FCFA</span>
+                                                </p>
+                                                <p className="flex justify-between items-end border-b border-black pb-1">
+                                                    <span>Remise au patron :</span>
+                                                    <span className="w-48 text-right font-bold pr-2">____________________ FCFA</span>
+                                                </p>
+                                                <p className="flex justify-between items-end pt-4">
+                                                    <span className="font-bold">TOTAL DEPENSES</span>
+                                                    <span className="w-48 text-right font-bold border-b-2 border-black pr-2 text-xl">____________________ FCFA</span>
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div className="border-2 border-black p-6">
-                                    <h3 className="font-black uppercase mb-4 border-b border-black pb-2">Dépenses (Sorties)</h3>
-                                    <div className="space-y-4 text-sm font-bold">
-                                        <p className="flex justify-between"><span>ACHATS / REAPPRO :</span><span>________________ F</span></p>
-                                        <p className="flex justify-between"><span>CHARGES (EAU/ELEC) :</span><span>________________ F</span></p>
-                                        <p className="flex justify-between"><span>AUTRES FRAIS :</span><span>________________ F</span></p>
-                                        <div className="border-t-2 border-black pt-4 flex justify-between font-black text-lg">
-                                            <span>TOTAL DÉPENSES :</span><span>________________ F</span>
+
+                                    <div className="bg-gray-600 text-white p-2 flex justify-between font-bold text-lg mt-8 items-center px-4">
+                                        <span>SOLDE CAISSE FIN DE JOURNEE = Recettes - Dépenses =</span>
+                                        <span className="text-2xl border-b border-white w-64 text-right">____________________ FCFA</span>
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-8 text-center pt-16">
+                                        <div>
+                                            <p className="font-bold text-xs mb-16">OBSERVATION VENDEUSE</p>
+                                            <p className="border-b border-black w-48 mx-auto"></p>
+                                            <p className="border-b border-black w-48 mx-auto mt-4"></p>
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-xs mb-16">SIGNATURE VENDEUSE</p>
+                                            <p>________________</p>
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-xs mb-16">VISA PATRON (soir)</p>
+                                            <p>________________</p>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
+                                </>
+                            ) : (
+                                <>
+                                    <h2 className="text-2xl font-black uppercase text-center mb-8 bg-gray-100 p-4">Feuille de Caisse et Arrêté Journalier</h2>
+                                    
+                                    <div className="grid grid-cols-2 gap-8">
+                                        <div className="border-2 border-black p-6">
+                                            <h3 className="font-black uppercase mb-4 border-b border-black pb-2">Recettes (Entrées)</h3>
+                                            <div className="space-y-4 text-sm font-bold">
+                                                <p className="flex justify-between"><span>TOTAL ESPÈCES :</span><span>________________ F</span></p>
+                                                <p className="flex justify-between"><span>TOTAL MOBILE MONEY :</span><span>________________ F</span></p>
+                                                <p className="flex justify-between"><span>TOTAL CARTES :</span><span>________________ F</span></p>
+                                                <p className="flex justify-between text-orange-600"><span>TOTAL CRÉDITS :</span><span>________________ F</span></p>
+                                                <div className="border-t-2 border-black pt-4 flex justify-between font-black text-lg">
+                                                    <span>TOTAL GÉNÉRAL :</span><span>________________ F</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="border-2 border-black p-6">
+                                            <h3 className="font-black uppercase mb-4 border-b border-black pb-2">Dépenses (Sorties)</h3>
+                                            <div className="space-y-4 text-sm font-bold">
+                                                <p className="flex justify-between"><span>ACHATS / REAPPRO :</span><span>________________ F</span></p>
+                                                <p className="flex justify-between"><span>CHARGES (EAU/ELEC) :</span><span>________________ F</span></p>
+                                                <p className="flex justify-between"><span>AUTRES FRAIS :</span><span>________________ F</span></p>
+                                                <div className="border-t-2 border-black pt-4 flex justify-between font-black text-lg">
+                                                    <span>TOTAL DÉPENSES :</span><span>________________ F</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
 
-                            <div className="border-4 border-black p-8 bg-gray-50 text-center">
-                                <p className="text-xl font-black uppercase mb-4">Solde Net Final (Caisse Physique)</p>
-                                <p className="text-5xl font-black">________________________ XAF</p>
-                            </div>
+                                    <div className="border-4 border-black p-8 bg-gray-50 text-center">
+                                        <p className="text-xl font-black uppercase mb-4">Solde Net Final (Caisse Physique)</p>
+                                        <p className="text-5xl font-black">________________________ XAF</p>
+                                    </div>
 
-                            <div className="grid grid-cols-3 gap-8 text-center pt-8">
-                                <div>
-                                    <p className="font-bold uppercase mb-12">Caissier</p>
-                                    <p>________________</p>
-                                </div>
-                                <div>
-                                    <p className="font-bold uppercase mb-12">Contrôleur</p>
-                                    <p>________________</p>
-                                </div>
-                                <div>
-                                    <p className="font-bold uppercase mb-12">La Gérance</p>
-                                    <p>________________</p>
-                                </div>
-                            </div>
+                                    <div className="grid grid-cols-3 gap-8 text-center pt-8">
+                                        <div>
+                                            <p className="font-bold uppercase mb-12">Caissier</p>
+                                            <p>________________</p>
+                                        </div>
+                                        <div>
+                                            <p className="font-bold uppercase mb-12">Contrôleur</p>
+                                            <p>________________</p>
+                                        </div>
+                                        <div>
+                                            <p className="font-bold uppercase mb-12">La Gérance</p>
+                                            <p>________________</p>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     )}
                     
                     {docActif === 'stock' && (
                         <div className="space-y-12">
-                            <h2 className="text-2xl font-black uppercase text-center mb-8 bg-gray-100 p-4">Fiche de Contrôle Physique des Stocks (Inventaire)</h2>
-                            <table className="w-full border-collapse border border-black text-[10px]">
-                                <thead>
-                                    <tr className="bg-gray-100 text-center font-black uppercase">
-                                        <th className="border border-black p-2 text-left w-64">Désignation Produit</th>
-                                        <th className="border border-black p-2 w-20">Unité</th>
-                                        <th className="border border-black p-2 w-24">Stock Théorique</th>
-                                        <th className="border border-black p-2 w-24 bg-orange-50">Stock Physique (Plein)</th>
-                                        <th className="border border-black p-2 w-24">Vides</th>
-                                        <th className="border border-black p-2 w-24">Casse / Pertes</th>
-                                        <th className="border border-black p-2 w-32">Observations</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {Array.from({length: 35}).map((_, i) => (
-                                        <tr key={i} className="h-9">
-                                            <td className="border border-black p-2 text-gray-300 italic">{i+1}. __________________________</td>
-                                            <td className="border border-black p-2"></td>
-                                            <td className="border border-black p-2 text-center text-gray-200">___</td>
-                                            <td className="border border-black p-2 bg-orange-50/20"></td>
-                                            <td className="border border-black p-2"></td>
-                                            <td className="border border-black p-2"></td>
-                                            <td className="border border-black p-2"></td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                            {isSolo ? (
+                                <>
+                                    <h2 className="text-2xl font-black uppercase text-center mb-8 bg-gray-400 text-white p-2">FICHE DE SUIVI DES VENTES ET DU STOCK</h2>
+                                    <div className="flex justify-between font-bold text-sm mb-4">
+                                        <p>Date : ____ / ____ / 202__</p>
+                                        <p>Semaine N° : ___________________</p>
+                                        <p>Rempli par : ___________________</p>
+                                    </div>
+                                    <table className="w-full border-collapse border border-black text-[10px]">
+                                        <thead>
+                                            <tr>
+                                                <th colSpan={2}></th>
+                                                <th className="border border-black p-1 font-normal text-[8px]">A remplir 1 fois</th>
+                                                <th className="border border-black p-1 font-normal text-[8px]">A remplir 1 fois</th>
+                                                <th className="border border-black p-1 font-normal text-[8px]">= Vente - Achat</th>
+                                                <th className="border border-black p-1 font-normal text-[8px]">Chaque matin</th>
+                                                <th className="border border-black p-1 font-normal text-[8px]">Si livraison</th>
+                                                <th className="border border-black p-1 font-normal text-[8px]">Chaque soir</th>
+                                                <th className="border border-black p-1 font-normal text-[8px]">Chaque soir</th>
+                                                <th className="border border-black p-1 font-normal text-[8px]">Sorties x P.Vente</th>
+                                                <th className="border border-black p-1 font-normal text-[8px]"></th>
+                                            </tr>
+                                            <tr className="bg-gray-700 text-white">
+                                                <th className="border border-black p-1 w-8">N°</th>
+                                                <th className="border border-black p-1 text-left">PRODUIT / BOISSON</th>
+                                                <th className="border border-black p-1 w-14">PRIX<br/>ACHAT<br/>(FCFA)</th>
+                                                <th className="border border-black p-1 w-14">PRIX<br/>VENTE<br/>(FCFA)</th>
+                                                <th className="border border-black p-1 w-16">MARGE<br/>UNITAIRE<br/>(FCFA)</th>
+                                                <th className="border border-black p-1 w-14">STOCK<br/>DEBUT</th>
+                                                <th className="border border-black p-1 w-14">ENTREES<br/>(+)</th>
+                                                <th className="border border-black p-1 w-14">SORTIES<br/>(-)</th>
+                                                <th className="border border-black p-1 w-14">STOCK<br/>RESTANT</th>
+                                                <th className="border border-black p-1 w-20">MONTANT VENDU<br/>(Sorties x P.Vente)</th>
+                                                <th className="border border-black p-1 w-20">ETAT<br/>Physique</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {SOLO_PRODUCTS.map((p, i) => (
+                                                <tr key={i} className="h-6">
+                                                    <td className="border border-black p-1 text-center font-bold">{p.ref}</td>
+                                                    <td className="border border-black p-1 font-bold text-[11px]">{p.name}</td>
+                                                    <td className="border border-black p-1 text-center bg-gray-50">{p.buyPrice}</td>
+                                                    <td className="border border-black p-1 text-center bg-gray-50">{p.price}</td>
+                                                    <td className="border border-black p-1 text-center bg-gray-50">{p.price - p.buyPrice}</td>
+                                                    <td className="border border-black p-1"></td>
+                                                    <td className="border border-black p-1"></td>
+                                                    <td className="border border-black p-1"></td>
+                                                    <td className="border border-black p-1"></td>
+                                                    <td className="border border-black p-1"></td>
+                                                    <td className="border border-black p-1"></td>
+                                                </tr>
+                                            ))}
+                                            <tr className="bg-gray-400 text-white font-bold h-6">
+                                                <td colSpan={9} className="border border-black p-1 text-left">TOTAL DU JOUR</td>
+                                                <td className="border border-black p-1"></td>
+                                                <td className="border border-black p-1 bg-white"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    
+                                    <div className="mt-4 text-[9px] text-gray-600">
+                                        <p className="font-bold uppercase text-[10px] text-black">GUIDE RAPIDE :</p>
+                                        <p>Prix : remplir ACHAT et VENTE une seule fois (en début de semaine) | MARGE = Prix Vente - Prix Achat | Matin : compter et noter STOCK DEBUT | Livraison : noter dans ENTREES | Soir : recompter → STOCK RESTANT | SORTIES = DEBUT + ENTREES - RESTANT | MONTANT = SORTIES x PRIX VENTE</p>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <h2 className="text-2xl font-black uppercase text-center mb-8 bg-gray-100 p-4">Fiche de Contrôle Physique des Stocks (Inventaire)</h2>
+                                    <table className="w-full border-collapse border border-black text-[10px]">
+                                        <thead>
+                                            <tr className="bg-gray-100 text-center font-black uppercase">
+                                                <th className="border border-black p-2 text-left w-64">Désignation Produit</th>
+                                                <th className="border border-black p-2 w-20">Unité</th>
+                                                <th className="border border-black p-2 w-24">Stock Théorique</th>
+                                                <th className="border border-black p-2 w-24 bg-orange-50">Stock Physique (Plein)</th>
+                                                <th className="border border-black p-2 w-24">Vides</th>
+                                                <th className="border border-black p-2 w-24">Casse / Pertes</th>
+                                                <th className="border border-black p-2 w-32">Observations</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {Array.from({length: 35}).map((_, i) => (
+                                                <tr key={i} className="h-9">
+                                                    <td className="border border-black p-2 text-gray-300 italic">{i+1}. __________________________</td>
+                                                    <td className="border border-black p-2"></td>
+                                                    <td className="border border-black p-2 text-center text-gray-200">___</td>
+                                                    <td className="border border-black p-2 bg-orange-50/20"></td>
+                                                    <td className="border border-black p-2"></td>
+                                                    <td className="border border-black p-2"></td>
+                                                    <td className="border border-black p-2"></td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
 
-                            <div className="grid grid-cols-2 gap-12 pt-12">
-                                <div className="border-2 border-black p-6">
-                                    <p className="font-black uppercase mb-16 text-center underline">Signature du Responsable Stock</p>
-                                    <p className="text-center font-bold">Nom : ____________________</p>
-                                </div>
-                                <div className="border-2 border-black p-6">
-                                    <p className="font-black uppercase mb-16 text-center underline">Visa de la Gérance</p>
-                                    <p className="text-center font-bold">Date : ____ / ____ / 2026</p>
-                                </div>
-                            </div>
+                                    <div className="grid grid-cols-2 gap-12 pt-12">
+                                        <div className="border-2 border-black p-6">
+                                            <p className="font-black uppercase mb-16 text-center underline">Signature du Responsable Stock</p>
+                                            <p className="text-center font-bold">Nom : ____________________</p>
+                                        </div>
+                                        <div className="border-2 border-black p-6">
+                                            <p className="font-black uppercase mb-16 text-center underline">Visa de la Gérance</p>
+                                            <p className="text-center font-bold">Date : ____ / ____ / 2026</p>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     )}
                 </div>
