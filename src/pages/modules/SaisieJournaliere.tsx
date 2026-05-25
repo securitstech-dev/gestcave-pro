@@ -22,6 +22,8 @@ interface Produit {
   stockAlerte: number;
   unitesParCasier?: number;
   emoji?: string;
+  dernierAchatDate?: string;
+  dernierAchatFournisseur?: string;
 }
 
 interface LigneVente {
@@ -36,6 +38,8 @@ interface LigneVente {
   stockFin: number;
   stockAlerte: number;
   unitesParCasier: number;
+  dernierAchatDate?: string;
+  dernierAchatFournisseur?: string;
 }
 
 // ─── Composant principal ──────────────────────────────────────────────────────
@@ -52,6 +56,7 @@ const SaisieJournaliere = () => {
   const [observation, setObservation] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
   const [dejaEnregistre, setDejaEnregistre] = useState(false);
+  const [hasPosTransactions, setHasPosTransactions] = useState(false);
 
   // Input refs pour navigation clavier (Tab entre lignes)
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -100,6 +105,8 @@ const SaisieJournaliere = () => {
               stockFin: p.stockTotal,
               stockAlerte: p.stockAlerte || 5,
               unitesParCasier: p.unitesParCasier || 12,
+              dernierAchatDate: p.dernierAchatDate,
+              dernierAchatFournisseur: p.dernierAchatFournisseur,
             };
           });
           setLignes(nouvLignes);
@@ -118,9 +125,27 @@ const SaisieJournaliere = () => {
             stockFin: p.stockTotal,
             stockAlerte: p.stockAlerte || 5,
             unitesParCasier: p.unitesParCasier || 12,
+            dernierAchatDate: p.dernierAchatDate,
+            dernierAchatFournisseur: p.dernierAchatFournisseur,
           }));
           setLignes(nouvLignes);
         }
+
+        // Vérifier si des transactions POS (hors saisie manuelle et dépenses) existent pour cette date
+        const dateDeb = new Date(dateJournee + 'T00:00:00').toISOString();
+        const dateFin = new Date(dateJournee + 'T23:59:59').toISOString();
+        const qPOS = query(
+          collection(db, 'transactions_pos'),
+          where('etablissement_id', '==', etablissementId),
+          where('date', '>=', dateDeb),
+          where('date', '<=', dateFin)
+        );
+        const snapPOS = await getDocs(qPOS);
+        const hasPos = snapPOS.docs.some(d => {
+          const t = d.data().type;
+          return t && t !== 'saisie_manuelle' && t !== 'depense' && t !== 'acompte';
+        });
+        setHasPosTransactions(hasPos);
       } catch (e) {
         toast.error('Erreur lors du chargement des produits');
       } finally {
