@@ -1,755 +1,449 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ClipboardList, Save, RotateCcw, CheckCircle2, AlertTriangle,
-  ChevronDown, ChevronUp, Printer, Calendar, X, Package, TrendingDown, FileText, Lock
+  AlertTriangle,
+  Calculator,
+  CheckCircle2,
+  ClipboardList,
+  Package,
+  Save,
+  Search,
+  Wallet,
 } from 'lucide-react';
+import { collection, doc, onSnapshot, query, where, writeBatch, increment } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import {
-  collection, query, where, getDocs, addDoc, updateDoc, doc, writeBatch
-} from 'firebase/firestore';
 import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-interface Produit {
+type ProduitJournalier = {
   id: string;
   nom: string;
+  categorie: string;
   prix: number;
-  prix_achat?: number;
   stockTotal: number;
-  stockAlerte: number;
+  stockAlerte?: number;
   unitesParCasier?: number;
-  emoji?: string;
-  dernierAchatDate?: string;
-  dernierAchatFournisseur?: string;
-}
+  uniteMesure?: string;
+};
 
-interface LigneVente {
-  produitId: string;
-  ref: string;
-  nom: string;
-  prix: number;
-  prixAchat: number;
-  emoji: string;
-  qteVendue: number;
-  stockDebut: number;
-  stockFin: number;
-  stockAlerte: number;
-  unitesParCasier: number;
-  dernierAchatDate?: string;
-  dernierAchatFournisseur?: string;
-}
+type LigneSaisie = {
+  vendu: number;
+  casse: number;
+  observation: string;
+};
 
-// ─── Composant principal ──────────────────────────────────────────────────────
+const nombre = (value: unknown) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 const SaisieJournaliere = () => {
   const { profil, etablissementSimuleId } = useAuthStore();
   const etablissementId = etablissementSimuleId || profil?.etablissement_id;
-
-  const [produits, setProduits] = useState<Produit[]>([]);
-  const [lignes, setLignes] = useState<LigneVente[]>([]);
+  const [produits, setProduits] = useState<ProduitJournalier[]>([]);
+  const [saisies, setSaisies] = useState<Record<string, LigneSaisie>>({});
+  const [dateJournee, setDateJournee] = useState(() => new Date().toISOString().slice(0, 10));
+  const [vendeuse, setVendeuse] = useState('');
+  const [fondDebut, setFondDebut] = useState(0);
+  const [depenses, setDepenses] = useState(0);
+  const [remisePatron, setRemisePatron] = useState(0);
+  const [autresRecettes, setAutresRecettes] = useState(0);
+  const [soldePhysique, setSoldePhysique] = useState(0);
+  const [recherche, setRecherche] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [dateJournee, setDateJournee] = useState(new Date().toISOString().split('T')[0]);
-  const [observation, setObservation] = useState('');
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [dejaEnregistre, setDejaEnregistre] = useState(false);
-  const [hasPosTransactions, setHasPosTransactions] = useState(false);
 
-  // Input refs pour navigation clavier (Tab entre lignes)
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-
-  // ── Charger les produits depuis Firebase ──────────────────────────────────
   useEffect(() => {
-    if (!etablissementId) { setLoading(false); return; }
+    if (!etablissementId) {
+      setLoading(false);
+      return;
+    }
 
-    const charger = async () => {
-      setLoading(true);
-      try {
-        const q = query(
-          collection(db, 'produits'),
-          where('etablissement_id', '==', etablissementId)
-        );
-        const snap = await getDocs(q);
-        const liste = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Produit[];
-        liste.sort((a, b) => a.nom.localeCompare(b.nom));
-        setProduits(liste);
+    const q = query(collection(db, 'produits'), where('etablissement_id', '==', etablissementId));
+    const unsub = onSnapshot(q, (snap) => {
+      const data = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }) as ProduitJournalier)
+        .sort((a, b) => a.nom.localeCompare(b.nom));
+      setProduits(data);
+      setLoading(false);
+    });
 
-        const qSaisie = query(
-          collection(db, 'transactions_pos'), 
-          where('etablissement_id', '==', etablissementId),
-          where('type', '==', 'saisie_manuelle'),
-          where('date', '==', dateJournee)
-        );
-        const snapSaisie = await getDocs(qSaisie);
-        
-        if (!snapSaisie.empty) {
-          const saisieData = snapSaisie.docs[0].data();
-          setObservation(saisieData.observation || '');
-          setDejaEnregistre(true);
-          const mapSaisie = new Map<string, number>(saisieData.lignes?.map((l: any) => [l.produitId, Number(l.qteVendue) || 0]) || []);
-          
-          const nouvLignes: LigneVente[] = liste.map((p, i) => {
-            const qte = mapSaisie.get(p.id) || 0;
-            return {
-              produitId: p.id,
-              ref: String(i + 1).padStart(2, '0'),
-              nom: p.nom,
-              prix: p.prix,
-              prixAchat: p.prix_achat || 0,
-              emoji: p.emoji || '🍺',
-              qteVendue: qte,
-              stockDebut: p.stockTotal + qte,
-              stockFin: p.stockTotal,
-              stockAlerte: p.stockAlerte || 5,
-              unitesParCasier: p.unitesParCasier || 12,
-              dernierAchatDate: p.dernierAchatDate,
-              dernierAchatFournisseur: p.dernierAchatFournisseur,
-            };
-          });
-          setLignes(nouvLignes);
-        } else {
-          setDejaEnregistre(false);
-          setObservation('');
-          const nouvLignes: LigneVente[] = liste.map((p, i) => ({
-            produitId: p.id,
-            ref: String(i + 1).padStart(2, '0'),
-            nom: p.nom,
-            prix: p.prix,
-            prixAchat: p.prix_achat || 0,
-            emoji: p.emoji || '🍺',
-            qteVendue: 0,
-            stockDebut: p.stockTotal,
-            stockFin: p.stockTotal,
-            stockAlerte: p.stockAlerte || 5,
-            unitesParCasier: p.unitesParCasier || 12,
-            dernierAchatDate: p.dernierAchatDate,
-            dernierAchatFournisseur: p.dernierAchatFournisseur,
-          }));
-          setLignes(nouvLignes);
-        }
+    return () => unsub();
+  }, [etablissementId]);
 
-        // Vérifier si des transactions POS (hors saisie manuelle et dépenses) existent pour cette date
-        const dateDeb = new Date(dateJournee + 'T00:00:00').toISOString();
-        const dateFin = new Date(dateJournee + 'T23:59:59').toISOString();
-        const qPOS = query(
-          collection(db, 'transactions_pos'),
-          where('etablissement_id', '==', etablissementId),
-          where('date', '>=', dateDeb),
-          where('date', '<=', dateFin)
-        );
-        const snapPOS = await getDocs(qPOS);
-        const hasPos = snapPOS.docs.some(d => {
-          const t = d.data().type;
-          return t && t !== 'saisie_manuelle' && t !== 'depense' && t !== 'acompte';
-        });
-        setHasPosTransactions(hasPos);
-      } catch (e) {
-        toast.error('Erreur lors du chargement des produits');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const produitsFiltres = useMemo(() => {
+    const term = recherche.trim().toLowerCase();
+    if (!term) return produits;
+    return produits.filter((p) => `${p.nom} ${p.categorie}`.toLowerCase().includes(term));
+  }, [produits, recherche]);
 
-    charger();
-  }, [etablissementId, dateJournee]);
+  const totaux = useMemo(() => {
+    return produits.reduce(
+      (acc, produit) => {
+        const ligne = saisies[produit.id];
+        const vendu = Math.max(0, nombre(ligne?.vendu));
+        const casse = Math.max(0, nombre(ligne?.casse));
+        const sortie = vendu + casse;
+        const stockDepart = nombre(produit.stockTotal);
+        const restant = Math.max(0, stockDepart - sortie);
+        const montant = vendu * nombre(produit.prix);
 
-  // ── Mise à jour d'une ligne ───────────────────────────────────────────────
-  const majQteVendue = (idx: number, val: number) => {
-    if (dejaEnregistre) return;
-    setLignes(prev => prev.map((l, i) => {
-      if (i !== idx) return l;
-      const qte = Math.max(0, val);
-      return {
-        ...l,
-        qteVendue: qte,
-        stockFin: Math.max(0, l.stockDebut - qte),
-      };
+        acc.vendus += vendu;
+        acc.sorties += sortie;
+        acc.ventes += montant;
+        acc.alertes += restant <= nombre(produit.stockAlerte) ? 1 : 0;
+        return acc;
+      },
+      { vendus: 0, sorties: 0, ventes: 0, alertes: 0 }
+    );
+  }, [produits, saisies]);
+
+  const soldeCalcule = fondDebut + totaux.ventes + autresRecettes - depenses - remisePatron;
+  const ecartCaisse = soldePhysique - soldeCalcule;
+
+  const setLigne = (produitId: string, field: keyof LigneSaisie, value: string | number) => {
+    setSaisies((prev) => ({
+      ...prev,
+      [produitId]: {
+        vendu: 0,
+        casse: 0,
+        observation: '',
+        ...prev[produitId],
+        [field]: field === 'observation' ? String(value) : Math.max(0, nombre(value)),
+      },
     }));
   };
 
-  const majStockDebut = (idx: number, val: number) => {
-    if (dejaEnregistre) return;
-    setLignes(prev => prev.map((l, i) => {
-      if (i !== idx) return l;
-      const debut = Math.max(0, val);
-      return {
-        ...l,
-        stockDebut: debut,
-        stockFin: Math.max(0, debut - l.qteVendue),
-      };
-    }));
-  };
+  const enregistrerJournee = async () => {
+    if (!etablissementId) {
+      toast.error('Etablissement introuvable');
+      return;
+    }
 
-  const majStockFin = (idx: number, val: number) => {
-    if (dejaEnregistre) return;
-    setLignes(prev => prev.map((l, i) => {
-      if (i !== idx) return l;
-      const fin = Math.max(0, val);
-      return {
-        ...l,
-        stockFin: fin,
-        qteVendue: Math.max(0, l.stockDebut - fin),
-      };
-    }));
-  };
+    const lignes = produits
+      .map((produit) => {
+        const saisie = saisies[produit.id];
+        const vendu = Math.max(0, nombre(saisie?.vendu));
+        const casse = Math.max(0, nombre(saisie?.casse));
+        const sortie = vendu + casse;
+        const stockDepart = nombre(produit.stockTotal);
+        return {
+          produitId: produit.id,
+          produitNom: produit.nom,
+          categorie: produit.categorie,
+          prixUnitaire: nombre(produit.prix),
+          stockDepart,
+          vendu,
+          casse,
+          sortie,
+          stockFinalCalcule: Math.max(0, stockDepart - sortie),
+          observation: saisie?.observation || '',
+        };
+      })
+      .filter((ligne) => ligne.vendu > 0 || ligne.casse > 0 || ligne.observation.trim());
 
-  const majPrixAchat = (idx: number, val: number) => {
-    // Prix achat est chargé depuis Firebase - non éditable ici
-  };
+    const lignesAvecStockInsuffisant = lignes.filter((ligne) => ligne.sortie > ligne.stockDepart);
+    if (lignesAvecStockInsuffisant.length > 0) {
+      toast.error(`Stock insuffisant pour ${lignesAvecStockInsuffisant[0].produitNom}`);
+      return;
+    }
 
-  // ── Totaux ────────────────────────────────────────────────────────────────
-  const totalVentes = lignes.reduce((s, l) => s + l.qteVendue * l.prix, 0);
-  const totalUnites = lignes.reduce((s, l) => s + l.qteVendue, 0);
-  const totalMarge  = lignes.reduce((s, l) => s + l.qteVendue * (l.prix - l.prixAchat), 0);
-  const lignesEnAlerte = lignes.filter(l => l.stockFin <= l.stockAlerte);
+    if (lignes.length === 0 && depenses <= 0 && autresRecettes <= 0) {
+      toast.error('Aucune ligne a enregistrer');
+      return;
+    }
 
-  // ── Réinitialiser ─────────────────────────────────────────────────────────
-  const reinitialiser = () => {
-    setLignes(prev => prev.map(l => ({ ...l, qteVendue: 0, stockFin: l.stockDebut })));
-    setObservation('');
-    setSaved(false);
-  };
-
-  // ── Enregistrement ────────────────────────────────────────────────────────
-  const enregistrer = async () => {
-    if (!etablissementId) return;
     setSaving(true);
-    setShowConfirm(false);
+    const toastId = toast.loading('Enregistrement de la fiche...');
+
     try {
       const batch = writeBatch(db);
-      const lignesVendues = lignes.filter(l => l.qteVendue > 0);
+      const maintenant = new Date().toISOString();
+      const ficheRef = doc(collection(db, 'saisies_journalieres'));
+      const totalVentes = lignes.reduce((sum, ligne) => sum + ligne.vendu * ligne.prixUnitaire, 0);
 
-      // 1. Mise à jour du stock dans Firebase pour chaque produit vendu
-      for (const l of lignesVendues) {
-        const ref = doc(db, 'produits', l.produitId);
-        batch.update(ref, { stockTotal: l.stockFin });
-      }
-
-      // 2. Enregistrement d'une transaction de synthèse journalière
-      const txRef = doc(collection(db, 'transactions_pos'));
-      batch.set(txRef, {
+      batch.set(ficheRef, {
         etablissement_id: etablissementId,
-        type: 'saisie_manuelle',
-        date: new Date(dateJournee).toISOString().split('T')[0],
-        total: totalVentes,
-        montantRecu: totalVentes,
-        modePaiement: 'comptant',
-        totalUnites,
-        lignes: lignesVendues.map(l => ({
-          produitId: l.produitId,
-          nom: l.nom,
-          prixUnitaire: l.prix,
-          prixAchat: l.prixAchat,
-          margeUnitaire: l.prix - l.prixAchat,
-          qteVendue: l.qteVendue,
-          montant: l.qteVendue * l.prix,
-          margeTotal: l.qteVendue * (l.prix - l.prixAchat),
-          stockDebut: l.stockDebut,
-          stockFin: l.stockFin,
-        })),
-        observation,
-        caissierNom: profil?.prenom || profil?.nom || 'Gérant',
-        createdAt: new Date().toISOString(),
+        dateAffaire: dateJournee,
+        date: maintenant,
+        vendeuse: vendeuse || null,
+        lignes,
+        fondDebut,
+        totalVentes,
+        depenses,
+        remisePatron,
+        autresRecettes,
+        soldeCalcule,
+        soldePhysique,
+        ecartCaisse,
+        source: 'fiche_papier',
+        saisiPar: profil?.id || null,
+        statut: 'validee',
       });
 
-      // 3. Historique des stocks pour chaque ligne
-      for (const l of lignesVendues) {
-        const hRef = doc(collection(db, 'historique_stocks'));
-        batch.set(hRef, {
-          produitId: l.produitId,
-          produitNom: l.nom,
-          type: 'vente_manuelle',
-          ancienStock: l.stockDebut,
-          nouveauStock: l.stockFin,
-          ecart: -(l.qteVendue),
-          date: new Date(dateJournee).toISOString(),
+      lignes.forEach((ligne) => {
+        if (ligne.sortie <= 0) return;
+
+        batch.update(doc(db, 'produits', ligne.produitId), {
+          stockTotal: increment(-ligne.sortie),
+        });
+
+        batch.set(doc(collection(db, 'historique_stocks')), {
+          produitId: ligne.produitId,
+          produitNom: ligne.produitNom,
+          type: 'sortie_saisie_journaliere',
+          quantite: ligne.sortie,
+          vendu: ligne.vendu,
+          casse: ligne.casse,
+          ancienStock: ligne.stockDepart,
+          nouveauStock: ligne.stockFinalCalcule,
+          date: maintenant,
+          dateAffaire: dateJournee,
           etablissement_id: etablissementId,
+          saisieJournaliereId: ficheRef.id,
+          note: ligne.observation || 'Reprise manuelle depuis fiche papier',
+        });
+      });
+
+      if (totalVentes > 0 || autresRecettes > 0) {
+        batch.set(doc(collection(db, 'transactions_pos')), {
+          etablissement_id: etablissementId,
+          date: maintenant,
+          dateAffaire: dateJournee,
+          type: 'final',
+          modePaiement: 'comptant',
+          montant: totalVentes + autresRecettes,
+          totalVente: totalVentes + autresRecettes,
+          montantRestant: 0,
+          source: 'saisie_journaliere',
+          commandeId: ficheRef.id,
+          serveurNom: vendeuse || 'Saisie journaliere',
+          description: `Reprise fiche papier du ${dateJournee}`,
+        });
+      }
+
+      if (depenses > 0) {
+        batch.set(doc(collection(db, 'transactions_pos')), {
+          etablissement_id: etablissementId,
+          date: maintenant,
+          dateAffaire: dateJournee,
+          type: 'depense',
+          modePaiement: 'comptant',
+          montant: depenses,
+          total: depenses,
+          source: 'saisie_journaliere',
+          commandeId: ficheRef.id,
+          description: `Depenses declarees sur fiche papier du ${dateJournee}`,
         });
       }
 
       await batch.commit();
-
-      toast.success(`✅ Journée du ${new Date(dateJournee).toLocaleDateString('fr-FR')} enregistrée !`);
-      setSaved(true);
-      setDejaEnregistre(true);
-    } catch (e: any) {
-      toast.error('Erreur : ' + e.message);
+      toast.success('Journee enregistree sans stock manuel contradictoire', { id: toastId });
+      setSaisies({});
+      setDepenses(0);
+      setRemisePatron(0);
+      setAutresRecettes(0);
+      setSoldePhysique(0);
+    } catch (error) {
+      console.error(error);
+      toast.error("Erreur lors de l'enregistrement", { id: toastId });
     } finally {
       setSaving(false);
     }
   };
 
-  // ── Export PDF ────────────────────────────────────────────────────────────
-  const telechargerPDF = () => {
-    const doc = new jsPDF('p', 'mm', 'a4');
-    
-    // Titre
-    doc.setFontSize(16);
-    doc.setTextColor(30, 58, 138); // #1E3A8A
-    doc.text(`Rapport de Journée - ${profil?.etablissement_nom || 'Mon Etablissement'}`, 14, 20);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Date : ${new Date(dateJournee).toLocaleDateString('fr-FR')}`, 14, 28);
-    doc.text(`Total Unités : ${totalUnites} | Total Encaissé : ${totalVentes.toLocaleString()} XAF`, 14, 34);
-
-    const tableData = lignes.map(l => [
-      l.ref,
-      l.nom,
-      l.prix.toLocaleString(),
-      l.qteVendue.toString(),
-      (l.qteVendue * l.prix).toLocaleString(),
-      l.stockDebut.toString(),
-      l.stockFin.toString()
-    ]);
-
-    autoTable(doc, {
-      startY: 42,
-      head: [['Réf', 'Article', 'Prix Vente', 'Qté Vendue', 'Montant', 'Stock Début', 'Stock Fin']],
-      body: tableData,
-      theme: 'grid',
-      headStyles: { fillColor: [30, 58, 138], textColor: 255 },
-      styles: { fontSize: 8 },
-      columnStyles: {
-        3: { fontStyle: 'bold', textColor: [255, 122, 0] }, // Qté vendue
-        4: { fontStyle: 'bold', textColor: [16, 185, 129] } // Montant
-      }
-    });
-
-    if (observation) {
-      const finalY = (doc as any).lastAutoTable.finalY || 42;
-      doc.setFontSize(10);
-      doc.setTextColor(30, 58, 138);
-      doc.text('Observations :', 14, finalY + 10);
-      doc.setTextColor(100, 100, 100);
-      doc.text(observation, 14, finalY + 16, { maxWidth: 180 });
-    }
-
-    doc.save(`Rapport_Ventes_${dateJournee}.pdf`);
-  };
-
-  // ── Rendu ─────────────────────────────────────────────────────────────────
-  if (loading) return (
-    <div className="flex items-center justify-center h-full py-40">
-      <div className="flex flex-col items-center gap-6 text-[#1E3A8A]">
-        <div className="w-16 h-16 border-4 border-slate-100 border-t-[#1E3A8A] rounded-full animate-spin" />
-        <p className="text-xs font-black uppercase tracking-widest opacity-50">Chargement des articles...</p>
-      </div>
-    </div>
-  );
-
-  const dateAff = new Date(dateJournee + 'T12:00:00').toLocaleDateString('fr-FR', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-  });
+  if (loading) {
+    return <div className="p-20 text-center font-bold uppercase tracking-widest text-[#1E3A8A]">Chargement de la fiche...</div>;
+  }
 
   return (
-    <div className="space-y-6 lg:space-y-8 pb-24 animate-in fade-in duration-700">
-
-      {/* ── En-tête ── */}
-      <div className="bg-white p-6 md:p-10 rounded-[2rem] shadow-xl shadow-blue-900/5 border border-slate-100 flex flex-col md:flex-row justify-between items-start gap-6">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-orange-50 rounded-full text-[#FF7A00] text-[10px] font-black uppercase tracking-widest mb-4">
-            <ClipboardList size={14} /> Saisie Manuelle
-          </div>
-          <h1 className="text-3xl md:text-4xl font-extrabold text-[#1E3A8A] tracking-tight leading-tight mb-2">
-            Rapport de <span className="text-[#FF7A00]">Journée</span>
-          </h1>
-          <p className="text-slate-400 font-medium text-sm max-w-md">
-            Reportez ici les ventes de votre fiche papier. Les stocks seront mis à jour automatiquement.
-          </p>
-        </div>
-
-        {/* Date sélecteur */}
-        <div className="flex flex-col items-end gap-4 w-full md:w-auto">
-          <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl px-5 py-3 w-full md:w-auto">
-            <Calendar size={18} className="text-[#FF7A00] shrink-0" />
-            <input
-              type="date"
-              value={dateJournee}
-              onChange={e => setDateJournee(e.target.value)}
-              className="bg-transparent border-none outline-none font-bold text-[#1E3A8A] text-sm w-full"
-            />
-          </div>
-          <p className="text-xs font-bold text-slate-400 capitalize">{dateAff}</p>
-        </div>
-      </div>
-
-      {dejaEnregistre && (
-        <div className="bg-emerald-50 border border-emerald-100 rounded-[1.5rem] p-5 flex items-center gap-4">
-          <div className="w-10 h-10 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600 shrink-0">
-            <Lock size={20} />
-          </div>
+    <div className="space-y-8 pb-20">
+      <header className="bg-white p-8 md:p-10 rounded-[2rem] shadow-xl shadow-blue-900/5 border border-slate-100">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <p className="text-sm font-black text-emerald-700">Journée déjà enregistrée</p>
-            <p className="text-xs text-emerald-600 font-medium mt-0.5">
-              Les données de cette date sont en lecture seule pour protéger l'intégrité de la comptabilité et des stocks.
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-orange-50 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#FF7A00]">
+              <ClipboardList size={14} />
+              Reprise fiche papier
+            </div>
+            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-[#1E3A8A]">Saisie journaliere</h1>
+            <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-slate-500">
+              Les stocks de depart viennent de l'inventaire systeme. La fiche permet seulement de saisir les ventes, pertes et montants de caisse.
             </p>
           </div>
+
+          <button
+            onClick={enregistrerJournee}
+            disabled={saving}
+            className="inline-flex h-14 items-center justify-center gap-3 rounded-xl bg-[#1E3A8A] px-7 text-sm font-bold text-white shadow-lg shadow-blue-900/10 transition hover:bg-blue-800 disabled:opacity-50"
+          >
+            <Save size={18} />
+            Enregistrer la journee
+          </button>
         </div>
-      )}
+      </header>
 
-      {/* ── Alerte ruptures ── */}
-      {lignesEnAlerte.length > 0 && (
-        <div className="bg-rose-50 border border-rose-100 rounded-[1.5rem] p-5 flex items-center gap-4">
-          <div className="w-10 h-10 bg-rose-100 rounded-2xl flex items-center justify-center text-rose-500 shrink-0">
-            <AlertTriangle size={20} />
+      <section className="grid gap-4 lg:grid-cols-4">
+        <Metric label="Ventes papier" value={`${totaux.ventes.toLocaleString()} XAF`} />
+        <Metric label="Articles sortis" value={totaux.sorties.toLocaleString()} />
+        <Metric label="Solde calcule" value={`${soldeCalcule.toLocaleString()} XAF`} tone="green" />
+        <Metric label="Ecart caisse" value={`${ecartCaisse.toLocaleString()} XAF`} tone={ecartCaisse === 0 ? 'blue' : 'orange'} />
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[1fr_340px]">
+        <div className="overflow-hidden rounded-2xl bg-white shadow-xl shadow-blue-900/5 border border-slate-100">
+          <div className="flex flex-col gap-4 border-b border-slate-100 p-5 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-3">
+              <Package className="text-[#1E3A8A]" size={22} />
+              <h2 className="text-lg font-extrabold text-[#1E3A8A]">Produits de l'inventaire</h2>
+            </div>
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <input
+                value={recherche}
+                onChange={(e) => setRecherche(e.target.value)}
+                className="h-11 w-full rounded-xl border border-slate-100 bg-slate-50 pl-11 pr-4 text-sm font-semibold outline-none focus:ring-4 focus:ring-blue-100 md:w-72"
+                placeholder="Rechercher..."
+              />
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-black text-rose-700">
-              {lignesEnAlerte.length} article{lignesEnAlerte.length > 1 ? 's' : ''} en alerte de stock
-            </p>
-            <p className="text-xs text-rose-500 font-medium mt-0.5">
-              {lignesEnAlerte.map(l => l.nom).join(' • ')}
-            </p>
-          </div>
-        </div>
-      )}
 
-      {/* ── Tableau de saisie ── */}
-      <div className="bg-white rounded-[2rem] shadow-xl shadow-blue-900/5 border border-slate-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[920px] text-left">
+              <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                <tr>
+                  <th className="px-5 py-4">Produit</th>
+                  <th className="px-5 py-4 text-center">Stock systeme</th>
+                  <th className="px-5 py-4 text-center">Vendu</th>
+                  <th className="px-5 py-4 text-center">Perte</th>
+                  <th className="px-5 py-4 text-center">Restant calcule</th>
+                  <th className="px-5 py-4">Observation</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {produitsFiltres.map((produit) => {
+                  const ligne = saisies[produit.id] || { vendu: 0, casse: 0, observation: '' };
+                  const stockDepart = nombre(produit.stockTotal);
+                  const sortie = nombre(ligne.vendu) + nombre(ligne.casse);
+                  const restant = stockDepart - sortie;
+                  const alerte = restant <= nombre(produit.stockAlerte);
+                  const depasse = sortie > stockDepart;
 
-        {/* En-tête du tableau — style fiche papier */}
-        <div className="bg-[#1E3A8A] px-6 py-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-white font-black text-sm uppercase tracking-widest">
-              {profil?.etablissement_nom || 'Mon Bar'} — Fiche de Ventes Journalière
-            </h2>
-            <p className="text-blue-300 text-[10px] font-bold uppercase tracking-widest mt-1 capitalize">{dateAff}</p>
-          </div>
-          <div className="hidden sm:flex items-center gap-2 text-blue-300 text-[10px] font-black uppercase tracking-widest">
-            <Package size={14} /> {lignes.length} articles
-          </div>
-        </div>
-
-        {/* Tableau responsive */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left min-w-[600px]">
-            <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                <th className="px-4 py-4 w-10">#</th>
-                <th className="px-4 py-4">Article</th>
-                <th className="px-4 py-4 text-center w-28">Prix Vente</th>
-                <th className="px-4 py-4 text-center w-28 bg-slate-100/80 border-x border-slate-200">Prix Achat</th>
-                <th className="px-4 py-4 text-center w-28 bg-orange-50/50 border-x border-orange-100">Qté Vendue</th>
-                <th className="px-4 py-4 text-center w-32">Montant</th>
-                <th className="px-4 py-4 text-center w-28 bg-emerald-50/50 border-x border-emerald-100">Marge U.</th>
-                <th className="px-4 py-4 text-center w-28 bg-emerald-50/50 border-r border-emerald-100">Marge Tot.</th>
-                <th className="px-4 py-4 text-center w-28 bg-blue-50/50 border-x border-blue-100">Stk Début</th>
-                <th className="px-4 py-4 text-center w-28 bg-blue-50/50">Stk Fin</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {lignes.map((l, idx) => {
-                const montant = l.qteVendue * l.prix;
-                const enAlerte = l.stockFin <= l.stockAlerte;
-                return (
-                  <tr
-                    key={l.produitId}
-                    className={`group transition-all ${enAlerte && l.stockFin >= 0 ? 'bg-rose-50/30' : 'hover:bg-slate-50/50'}`}
-                  >
-                    {/* Référence */}
-                    <td className="px-4 py-3">
-                      <span className="text-[10px] font-black text-slate-300">{l.ref}</span>
-                    </td>
-
-                    {/* Nom article */}
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl">{l.emoji}</span>
-                        <div>
-                          <p className="font-bold text-[#1E3A8A] text-sm leading-tight">{l.nom}</p>
-                          {enAlerte && <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest mt-0.5">⚠ Stock bas</p>}
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Prix vente */}
-                    <td className="px-4 py-3 text-center">
-                      <span className="font-extrabold text-[#1E3A8A] text-sm">{l.prix.toLocaleString()}</span>
-                      <span className="text-[9px] text-slate-300 font-bold ml-1">XAF</span>
-                    </td>
-
-                    {/* Prix achat — lu depuis Firebase, lecture seule */}
-                    <td className="px-4 py-3 text-center bg-slate-50/50 border-x border-slate-100">
-                      {l.prixAchat > 0 ? (
-                        <>
-                          <span className="font-bold text-slate-500 text-sm">{l.prixAchat.toLocaleString()}</span>
-                          <span className="text-[9px] text-slate-300 font-bold ml-1">XAF</span>
-                        </>
-                      ) : (
-                        <span className="text-slate-200 text-xs font-bold">—</span>
-                      )}
-                    </td>
-
-                    {/* Quantité vendue — saisie principale */}
-                    <td className="px-2 py-2 bg-orange-50/30 border-x border-orange-100">
-                      <input
-                        type="number"
-                        min="0"
-                        disabled={dejaEnregistre}
-                        value={l.qteVendue === 0 ? '' : l.qteVendue}
-                        placeholder="0"
-                        onChange={e => majQteVendue(idx, Number(e.target.value) || 0)}
-                        ref={el => { inputRefs.current[idx * 3] = el; }}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter' || e.key === 'ArrowDown') {
-                            e.preventDefault();
-                            inputRefs.current[(idx + 1) * 3]?.focus();
-                          }
-                          if (e.key === 'ArrowUp') {
-                            e.preventDefault();
-                            inputRefs.current[(idx - 1) * 3]?.focus();
-                          }
-                        }}
-                        className={`w-full h-11 text-center text-xl font-black rounded-xl outline-none transition-all ${
-                          dejaEnregistre 
-                            ? 'bg-transparent text-slate-400 border-none'
-                            : 'text-[#FF7A00] bg-white border-2 border-orange-200 focus:border-[#FF7A00] focus:shadow-[0_0_0_3px_rgba(255,122,0,0.15)]'
-                        }`}
-                      />
-                    </td>
-
-                    {/* Montant calculé */}
-                    <td className="px-4 py-3 text-center">
-                      {montant > 0 ? (
-                        <span className="font-extrabold text-emerald-600 text-sm">{montant.toLocaleString()} <span className="text-[9px] text-slate-300 font-bold">XAF</span></span>
-                      ) : (
-                        <span className="text-slate-200 font-bold text-sm">—</span>
-                      )}
-                    </td>
-
-                    {/* Marge Unitaire = Prix Vente - Prix Achat */}
-                    <td className="px-4 py-3 text-center bg-emerald-50/20 border-x border-emerald-100">
-                      {l.prixAchat > 0 ? (
-                        <span className={`font-extrabold text-sm ${
-                          l.prix - l.prixAchat > 0 ? 'text-emerald-600' : 'text-rose-500'
-                        }`}>
-                          {(l.prix - l.prixAchat).toLocaleString()}
-                          <span className="text-[9px] text-slate-300 font-bold ml-1">XAF</span>
+                  return (
+                    <tr key={produit.id} className="text-sm font-semibold text-slate-700">
+                      <td className="px-5 py-4">
+                        <p className="font-extrabold text-slate-900">{produit.nom}</p>
+                        <p className="mt-1 text-xs text-slate-400">{produit.categorie}</p>
+                      </td>
+                      <td className="px-5 py-4 text-center font-black text-[#1E3A8A]">{stockDepart}</td>
+                      <td className="px-5 py-4">
+                        <input
+                          type="number"
+                          min="0"
+                          value={ligne.vendu}
+                          onChange={(e) => setLigne(produit.id, 'vendu', e.target.value)}
+                          className="mx-auto h-11 w-24 rounded-xl border border-slate-100 bg-slate-50 px-3 text-center font-black text-[#1E3A8A] outline-none focus:ring-4 focus:ring-blue-100"
+                        />
+                      </td>
+                      <td className="px-5 py-4">
+                        <input
+                          type="number"
+                          min="0"
+                          value={ligne.casse}
+                          onChange={(e) => setLigne(produit.id, 'casse', e.target.value)}
+                          className="mx-auto h-11 w-24 rounded-xl border border-slate-100 bg-slate-50 px-3 text-center font-black text-[#1E3A8A] outline-none focus:ring-4 focus:ring-blue-100"
+                        />
+                      </td>
+                      <td className="px-5 py-4 text-center">
+                        <span className={`inline-flex min-w-20 items-center justify-center rounded-lg px-3 py-2 font-black ${depasse ? 'bg-rose-50 text-rose-600' : alerte ? 'bg-orange-50 text-[#FF7A00]' : 'bg-emerald-50 text-emerald-700'}`}>
+                          {restant}
                         </span>
-                      ) : (
-                        <span className="text-slate-200 text-sm font-bold">—</span>
-                      )}
-                    </td>
-
-                    {/* Marge Totale = Marge U. × Qté */}
-                    <td className="px-4 py-3 text-center bg-emerald-50/20 border-r border-emerald-100">
-                      {l.prixAchat > 0 && l.qteVendue > 0 ? (
-                        <span className={`font-extrabold text-sm ${
-                          (l.prix - l.prixAchat) * l.qteVendue > 0 ? 'text-emerald-600' : 'text-rose-500'
-                        }`}>
-                          {((l.prix - l.prixAchat) * l.qteVendue).toLocaleString()}
-                          <span className="text-[9px] text-slate-300 font-bold ml-1">XAF</span>
-                        </span>
-                      ) : (
-                        <span className="text-slate-200 text-sm font-bold">—</span>
-                      )}
-                    </td>
-
-                    {/* Stock début */}
-                    <td className="px-2 py-2 bg-blue-50/30 border-x border-blue-100">
-                      <input
-                        type="number"
-                        min={0}
-                        disabled={dejaEnregistre}
-                        value={l.stockDebut === 0 ? '' : l.stockDebut}
-                        placeholder="0"
-                        onChange={e => majStockDebut(idx, Number(e.target.value) || 0)}
-                        ref={el => { inputRefs.current[idx * 3 + 1] = el; }}
-                        className={`w-full h-11 text-center text-sm font-bold rounded-xl outline-none transition-all ${
-                          dejaEnregistre ? 'bg-transparent text-slate-400 border-none' : 'text-[#1E3A8A] bg-white border border-blue-100 focus:border-[#1E3A8A]'
-                        }`}
-                      />
-                    </td>
-
-                    {/* Stock fin */}
-                    <td className="px-2 py-2 bg-blue-50/30">
-                      <input
-                        type="number"
-                        min={0}
-                        disabled={dejaEnregistre}
-                        value={l.stockFin === 0 ? '' : l.stockFin}
-                        placeholder="0"
-                        onChange={e => majStockFin(idx, Number(e.target.value) || 0)}
-                        ref={el => { inputRefs.current[idx * 3 + 2] = el; }}
-                        className={`w-full h-11 text-center text-sm font-bold rounded-xl outline-none transition-all ${
-                          dejaEnregistre 
-                            ? 'bg-transparent text-slate-400 border-none' 
-                            : enAlerte
-                              ? 'bg-white text-rose-600 border border-rose-300 focus:border-rose-500'
-                              : 'bg-white text-[#1E3A8A] border border-blue-100 focus:border-[#1E3A8A]'
-                        }`}
-                      />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-
-            <tfoot>
-              <tr className="bg-[#1E3A8A] text-white">
-                <td colSpan={3} className="px-6 py-4">
-                  <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Totaux de la Journée</span>
-                </td>
-                <td className="px-2 py-4" />
-                <td className="px-4 py-4 text-center">
-                  <span className="text-xl font-black text-[#FF7A00]">{totalUnites}</span>
-                  <span className="text-[10px] text-blue-300 font-bold ml-1 uppercase">unités</span>
-                </td>
-                <td className="px-4 py-4 text-center">
-                  <span className="text-xl font-black text-emerald-400">{totalVentes.toLocaleString()}</span>
-                  <span className="text-[10px] text-blue-300 font-bold ml-1 uppercase">XAF</span>
-                </td>
-                <td className="px-4 py-4 text-center bg-emerald-900/20" colSpan={2}>
-                  <span className="text-xl font-black text-emerald-300">{totalMarge.toLocaleString()}</span>
-                  <span className="text-[10px] text-blue-300 font-bold ml-1 uppercase">XAF marge</span>
-                </td>
-                <td colSpan={2} />
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </div>
-
-      {/* ── Observations ── */}
-      <div className="bg-white p-6 lg:p-8 rounded-[1.5rem] border border-slate-100 shadow-xl shadow-blue-900/5">
-        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">
-          Observations / Notes du Gérant
-        </label>
-        <textarea
-          disabled={dejaEnregistre}
-          value={observation}
-          onChange={e => setObservation(e.target.value)}
-          placeholder="Ex: Panne de frigo, commande spéciale, événement particulier..."
-          rows={3}
-          className={`w-full border rounded-2xl px-5 py-4 outline-none transition-all font-medium text-sm resize-none ${
-            dejaEnregistre 
-              ? 'bg-transparent border-slate-100 text-slate-500' 
-              : 'bg-slate-50 border-slate-100 text-slate-700 focus:border-[#1E3A8A]'
-          }`}
-        />
-      </div>
-
-      {/* ── Résumé & Actions ── */}
-      <div className="bg-white p-6 lg:p-8 rounded-[1.5rem] border border-slate-100 shadow-xl shadow-blue-900/5">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-
-          {/* Résumé chiffres */}
-          <div className="flex gap-6 lg:gap-10 flex-wrap">
-            <div className="text-center">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Encaissé</p>
-              <p className="text-2xl font-black text-emerald-600">{totalVentes.toLocaleString()} <span className="text-xs text-slate-400">XAF</span></p>
-            </div>
-            <div className="text-center">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Unités Vendues</p>
-              <p className="text-2xl font-black text-[#1E3A8A]">{totalUnites}</p>
-            </div>
-            {totalMarge > 0 && (
-              <div className="text-center">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Marge Brute</p>
-                <p className="text-2xl font-black text-emerald-500">{totalMarge.toLocaleString()} <span className="text-xs text-slate-400">XAF</span></p>
-              </div>
-            )}
-            {lignesEnAlerte.length > 0 && (
-              <div className="text-center">
-                <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1">Articles Critiques</p>
-                <p className="text-2xl font-black text-rose-600">{lignesEnAlerte.length}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Boutons */}
-          <div className="flex gap-3 w-full sm:w-auto flex-wrap sm:flex-nowrap">
-            <button
-              onClick={telechargerPDF}
-              className="h-14 px-6 bg-slate-100 text-[#1E3A8A] rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition-all flex items-center gap-2"
-            >
-              <FileText size={16} /> Exporter PDF
-            </button>
-            <button
-              onClick={reinitialiser}
-              className="h-14 px-6 bg-slate-100 text-slate-500 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition-all flex items-center gap-2"
-            >
-              <RotateCcw size={16} /> Remettre à zéro
-            </button>
-
-            {saved ? (
-              <div className="h-14 px-8 bg-emerald-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2">
-                <CheckCircle2 size={18} /> Journée enregistrée !
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowConfirm(true)}
-                disabled={saving || totalUnites === 0}
-                className="h-14 px-8 bg-[#1E3A8A] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-800 transition-all flex items-center gap-2 shadow-lg shadow-blue-900/20 disabled:opacity-40"
-              >
-                {saving ? (
-                  <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Enregistrement...</>
-                ) : (
-                  <><Save size={16} /> Enregistrer la journée</>
-                )}
-              </button>
-            )}
+                      </td>
+                      <td className="px-5 py-4">
+                        <input
+                          value={ligne.observation}
+                          onChange={(e) => setLigne(produit.id, 'observation', e.target.value)}
+                          className="h-11 w-full rounded-xl border border-slate-100 bg-slate-50 px-4 text-sm outline-none focus:ring-4 focus:ring-blue-100"
+                          placeholder="Credit, casse, remarque..."
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
-      </div>
 
-      {/* ── Modal de confirmation ── */}
-      {showConfirm && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-[#1E3A8A]/40 backdrop-blur-md">
-          <div className="w-full max-w-md bg-white rounded-[2.5rem] p-10 shadow-2xl border border-white animate-in zoom-in-95 duration-300">
-            <button onClick={() => setShowConfirm(false)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-700 transition">
-              <X size={20} />
-            </button>
-            <div className="text-center mb-8">
-              <div className="w-20 h-20 bg-[#1E3A8A] rounded-[2rem] flex items-center justify-center mx-auto mb-6 text-white">
-                <Save size={36} />
-              </div>
-              <h3 className="text-2xl font-black text-[#1E3A8A] uppercase tracking-tight mb-2">Confirmer l'enregistrement</h3>
-              <p className="text-slate-400 text-sm font-medium">Vous allez enregistrer :</p>
+        <aside className="space-y-5">
+          <div className="rounded-2xl bg-white p-6 shadow-xl shadow-blue-900/5 border border-slate-100">
+            <div className="mb-5 flex items-center gap-3">
+              <Calculator className="text-[#FF7A00]" size={22} />
+              <h2 className="font-extrabold text-[#1E3A8A]">Caisse papier</h2>
             </div>
 
-            <div className="space-y-3 mb-8">
-              <div className="flex justify-between items-center bg-slate-50 p-5 rounded-2xl">
-                <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Date journée</span>
-                <span className="text-sm font-extrabold text-[#1E3A8A] capitalize">{dateAff}</span>
-              </div>
-              <div className="flex justify-between items-center bg-emerald-50 p-5 rounded-2xl">
-                <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Total ventes</span>
-                <span className="text-lg font-extrabold text-emerald-600">{totalVentes.toLocaleString()} XAF</span>
-              </div>
-              <div className="flex justify-between items-center bg-orange-50 p-5 rounded-2xl">
-                <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Unités vendues</span>
-                <span className="text-lg font-extrabold text-[#FF7A00]">{totalUnites} bouteilles</span>
-              </div>
-              <div className="flex justify-between items-center bg-blue-50 p-5 rounded-2xl">
-                <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Stocks mis à jour</span>
-                <span className="text-sm font-extrabold text-[#1E3A8A]">{lignes.filter(l => l.qteVendue > 0).length} articles</span>
-              </div>
+            <div className="space-y-4">
+              <Field label="Date" type="date" value={dateJournee} onChange={(v) => setDateJournee(String(v))} />
+              <Field label="Vendeuse" type="text" value={vendeuse} onChange={(v) => setVendeuse(String(v))} />
+              <Field label="Fond debut" value={fondDebut} onChange={(v) => setFondDebut(nombre(v))} />
+              <Field label="Depenses" value={depenses} onChange={(v) => setDepenses(nombre(v))} />
+              <Field label="Remise patron" value={remisePatron} onChange={(v) => setRemisePatron(nombre(v))} />
+              <Field label="Autres recettes" value={autresRecettes} onChange={(v) => setAutresRecettes(nombre(v))} />
+              <Field label="Solde physique" value={soldePhysique} onChange={(v) => setSoldePhysique(nombre(v))} />
             </div>
+          </div>
 
-            <p className="text-xs text-slate-400 font-medium text-center mb-6">
-              Les stocks dans Firebase seront automatiquement ajustés.
+          <div className={`rounded-2xl p-6 shadow-xl border ${ecartCaisse === 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-orange-50 border-orange-100'}`}>
+            <div className="mb-3 flex items-center gap-3">
+              {ecartCaisse === 0 ? <CheckCircle2 className="text-emerald-700" size={22} /> : <AlertTriangle className="text-[#FF7A00]" size={22} />}
+              <h2 className={`font-extrabold ${ecartCaisse === 0 ? 'text-emerald-800' : 'text-orange-800'}`}>Controle</h2>
+            </div>
+            <p className="text-sm font-semibold leading-6 text-slate-600">
+              Le stock de depart est verrouille sur l'inventaire. Les achats doivent etre saisis dans Achats Fournisseurs avant cette reprise.
             </p>
-
-            <div className="flex gap-3">
-              <button onClick={() => setShowConfirm(false)} className="flex-1 h-14 bg-slate-100 text-slate-500 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition-all">
-                Annuler
-              </button>
-              <button onClick={enregistrer} className="flex-1 h-14 bg-[#1E3A8A] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-800 transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2">
-                <CheckCircle2 size={16} /> Confirmer
-              </button>
-            </div>
           </div>
-        </div>
-      )}
 
-      <style>{`.no-scrollbar::-webkit-scrollbar { display: none; }`}</style>
+          <div className="rounded-2xl bg-[#1E3A8A] p-6 text-white shadow-xl shadow-blue-900/10">
+            <div className="mb-4 flex items-center gap-3">
+              <Wallet className="text-orange-300" size={22} />
+              <h2 className="font-extrabold">Resume</h2>
+            </div>
+            <Line label="Ventes" value={totaux.ventes} />
+            <Line label="Recettes" value={totaux.ventes + autresRecettes} />
+            <Line label="Charges" value={depenses + remisePatron} />
+            <Line label="Solde calcule" value={soldeCalcule} />
+          </div>
+        </aside>
+      </section>
     </div>
   );
 };
+
+const Metric = ({ label, value, tone = 'blue' }: { label: string; value: string; tone?: 'blue' | 'green' | 'orange' }) => {
+  const color = tone === 'green' ? 'text-emerald-600' : tone === 'orange' ? 'text-[#FF7A00]' : 'text-[#1E3A8A]';
+  return (
+    <div className="rounded-2xl bg-white p-6 shadow-xl shadow-blue-900/5 border border-slate-100">
+      <p className="text-xs font-bold uppercase tracking-widest text-slate-400">{label}</p>
+      <p className={`mt-3 text-3xl font-black ${color}`}>{value}</p>
+    </div>
+  );
+};
+
+const Field = ({ label, value, onChange, type = 'number' }: { label: string; value: string | number; onChange: (value: string) => void; type?: string }) => (
+  <label className="block">
+    <span className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</span>
+    <input
+      type={type}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="h-12 w-full rounded-xl border border-slate-100 bg-slate-50 px-4 font-bold text-[#1E3A8A] outline-none focus:ring-4 focus:ring-blue-100"
+    />
+  </label>
+);
+
+const Line = ({ label, value }: { label: string; value: number }) => (
+  <div className="flex items-center justify-between border-t border-white/10 py-3 text-sm font-bold">
+    <span className="text-blue-100/70">{label}</span>
+    <span>{value.toLocaleString()} XAF</span>
+  </div>
+);
 
 export default SaisieJournaliere;
