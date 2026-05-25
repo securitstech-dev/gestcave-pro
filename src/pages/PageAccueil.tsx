@@ -12,6 +12,7 @@ import { collection, addDoc, Timestamp, onSnapshot, doc } from 'firebase/firesto
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import toast from 'react-hot-toast';
 import { Upload, ImageIcon, FileCheck } from 'lucide-react';
+import { normalizePlanId } from '../lib/subscriptionPlans';
 
 const PageAccueil = () => {
   const navigate = useNavigate();
@@ -51,6 +52,7 @@ const PageAccueil = () => {
 
       await addDoc(collection(db, 'paiements'), {
         plan: modalPaiement?.plan,
+        plan_id: normalizePlanId(modalPaiement?.plan),
         montant: modalPaiement?.prix,
         email: emailPaiement,
         operateur: operateur,

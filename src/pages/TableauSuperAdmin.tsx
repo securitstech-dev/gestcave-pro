@@ -15,6 +15,7 @@ import { collection, onSnapshot, doc, updateDoc, addDoc, query, where, orderBy, 
 import { clearFirestoreCache } from '../lib/firebase';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import SimulateurTablette from './modules/SimulateurTablette';
+import { MODULES_PAR_PLAN, normalizePlanId, type ModuleId } from '../lib/subscriptionPlans';
 
 type Onglet = 'dashboard' | 'demandes' | 'messages' | 'paiements' | 'etablissements' | 'comptabilite' | 'maintenance' | 'laboratoire' | 'rh_interne' | 'finance_interne' | 'support' | 'caisse' | 'commerciaux';
 
@@ -40,7 +41,7 @@ const TableauSuperAdmin = () => {
   const [modalEtabDetails, setModalEtabDetails] = useState<any | null>(null);
 
   const [modalPaiement, setModalPaiement] = useState<any | null>(null);
-  const [planPaiement, setPlanPaiement] = useState<'mensuel' | 'premium' | 'business'>('mensuel');
+  const [planPaiement, setPlanPaiement] = useState<string>('starter');
   
   const [lienActivation, setLienActivation] = useState<{ url: string; nom: string; email?: string; plan?: string; nomGerant?: string; telephone?: string } | null>(null);
   const [modalAjoutEtab, setModalAjoutEtab] = useState(false);
@@ -195,7 +196,7 @@ const TableauSuperAdmin = () => {
   const nomEtab = (etabId: string) => { const etab = etablissements.find(e => e.id === etabId); return etab?.nom || etab?.contact_principal || `...${etabId?.slice(-6)}`; };
 
   // --- Plan → Modules mapping ---
-  const MODULES_PAR_PLAN: Record<string, string[]> = {
+  const MODULES_PAR_PLAN_LOCAL: Record<string, string[]> = {
     'essai_gratuit': ['pos', 'stock', 'hr', 'compta', 'kds', 'analytics'],
     'starter':       ['pos', 'stock', 'kds'],
     'premium':       ['pos', 'stock', 'hr', 'compta', 'kds'],
@@ -203,6 +204,7 @@ const TableauSuperAdmin = () => {
   };
 
   const NOMS_MODULES: Record<string, string> = {
+    solo:      '✅ Mode Solo patron',
     pos:       '✅ Point de Vente (Caisse / Serveurs)',
     stock:     '✅ Gestion des Stocks & Inventaire',
     hr:        '✅ Ressources Humaines & Pointage',
@@ -212,12 +214,13 @@ const TableauSuperAdmin = () => {
   };
 
   const DESCRIPTIONS_PLAN: Record<string, string> = {
+    solo:          'Solo Mini-Bar - un PIN patron, caisse, tables, cuisine/bar et stock simple',
     essai_gratuit: 'Essai Gratuit 14 jours (tous les modules débloqués)',
     starter:       'Formule Starter — POS, Stocks, KDS',
     premium:       'Formule Premium — POS, Stocks, KDS, RH, Comptabilité',
     business:      'Formule Business — Accès complet à tous les modules',
   };
-
+  const ALL_MODULES: ModuleId[] = ['solo', 'pos', 'stock', 'hr', 'compta', 'kds', 'analytics'];
 
   const validerApprobation = async () => {
     if (!modalApprobation) return;
@@ -235,6 +238,8 @@ const TableauSuperAdmin = () => {
     let statut = 'essai';
     
     if (planApprobation === 'demo') { jours = 14; typePlan = 'essai_gratuit'; statut = 'essai'; }
+    if (planApprobation === 'solo') { jours = 30; typePlan = 'solo'; statut = 'actif'; }
+    if (planApprobation === 'solo_annuel') { jours = 365; typePlan = 'solo'; statut = 'actif'; }
     if (planApprobation === 'mensuel') { jours = 30; typePlan = 'starter'; statut = 'actif'; }
     if (planApprobation === 'starter_annuel') { jours = 365; typePlan = 'starter'; statut = 'actif'; }
     if (planApprobation === 'premium') { jours = 30; typePlan = 'premium'; statut = 'actif'; }
@@ -306,10 +311,12 @@ const TableauSuperAdmin = () => {
     
     try {
       await updateDoc(doc(db, 'paiements', modalPaiement.id), { statut: 'valide', date_validation: new Date().toISOString() });
+      const planNormalise = normalizePlanId(planPaiement || modalPaiement.plan_id || modalPaiement.plan);
       await updateDoc(doc(db, 'etablissements', modalPaiement.etablissement_id), { 
           subscription_status: 'actif', 
-          subscription_plan: planPaiement,
-          subscription_end_date: new Date(Date.now() + jours * 24 * 60 * 60 * 1000).toISOString() 
+          subscription_plan: planNormalise,
+          subscription_end_date: new Date(Date.now() + jours * 24 * 60 * 60 * 1000).toISOString(),
+          modules_actifs: MODULES_PAR_PLAN[planNormalise]
       });
       toast.dismiss(toastId); toast.success(`Paiement validé avec succès.`); setModalPaiement(null);
     } catch (err: any) { toast.dismiss(toastId); toast.error(`Erreur: ${err.message}`); }
@@ -332,11 +339,11 @@ const TableauSuperAdmin = () => {
         nom: nouvelEtab.nom,
         contact_principal: nouvelEtab.contact || 'Administrateur',
         email_contact: nouvelEtab.email,
-        subscription_plan: nouvelEtab.plan,
+        subscription_plan: normalizePlanId(nouvelEtab.plan),
         subscription_status: 'actif',
         subscription_start_date: new Date().toISOString(),
         subscription_end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        modules_actifs: MODULES_PAR_PLAN[nouvelEtab.plan] || MODULES_PAR_PLAN['premium']
+        modules_actifs: MODULES_PAR_PLAN[normalizePlanId(nouvelEtab.plan)] || MODULES_PAR_PLAN['premium']
       });
 
       // 2. Création de l'invitation pour que le gérant puisse s'inscrire
@@ -1742,6 +1749,8 @@ const TableauSuperAdmin = () => {
                         className="w-full h-16 bg-slate-50 border border-slate-100 rounded-2xl px-6 font-bold text-[#1E3A8A] outline-none focus:ring-4 focus:ring-blue-100 transition-all text-sm uppercase tracking-widest"
                      >
                         <option value="demo">Essai Gratuit (14 Jours)</option>
+                        <option value="solo">Solo Mini-Bar (30 Jours)</option>
+                        <option value="solo_annuel">Solo Mini-Bar (Annuel)</option>
                         <option value="mensuel">Starter (30 Jours)</option>
                         <option value="starter_annuel">Starter (Annuel)</option>
                         <option value="premium">Premium (30 Jours)</option>
@@ -1854,9 +1863,10 @@ const TableauSuperAdmin = () => {
                     className="w-full h-16 bg-slate-50 border border-slate-100 rounded-2xl px-6 font-bold text-sm outline-none focus:ring-4 focus:ring-blue-100" />
                   <select value={nouvelEtab.plan} onChange={e => setNouvelEtab({...nouvelEtab, plan: e.target.value})}
                     className="w-full h-16 bg-slate-50 border border-slate-100 rounded-2xl px-6 font-bold text-sm outline-none focus:ring-4 focus:ring-blue-100 uppercase tracking-widest">
+                    <option value="solo">Solo Mini-Bar</option>
+                    <option value="starter">Starter</option>
                     <option value="premium">Premium</option>
                     <option value="business">Business</option>
-                    <option value="starter">Starter</option>
                   </select>
                   <button onClick={ajouterEtabAction} className="w-full h-16 bg-[#FF7A00] text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-orange-500/20 hover:scale-105 transition-all mt-4">
                     Créer l'Établissement
@@ -1968,7 +1978,7 @@ const TableauSuperAdmin = () => {
                      {(MODULES_PAR_PLAN[lienActivation.plan] || []).map(m => (
                        <p key={m} className="text-sm font-bold text-slate-700">{NOMS_MODULES[m]}</p>
                      ))}
-                     {['pos','stock','hr','compta','kds','analytics'].filter(m => !(MODULES_PAR_PLAN[lienActivation.plan] || []).includes(m)).map(m => (
+                     {ALL_MODULES.filter(m => !(MODULES_PAR_PLAN[lienActivation.plan] || []).includes(m)).map(m => (
                        <p key={m} className="text-sm font-bold text-slate-300">❌ {NOMS_MODULES[m]?.replace('✅','')}</p>
                      ))}
                    </div>
@@ -1983,7 +1993,7 @@ const TableauSuperAdmin = () => {
                   {lienActivation.email && (
                     <button onClick={() => {
                       const modules = (MODULES_PAR_PLAN[lienActivation.plan!] || []).map(m => `• ${NOMS_MODULES[m]?.replace('✅ ','')}`).join('%0A');
-                      const inactifs = ['pos','stock','hr','compta','kds','analytics'].filter(m => !(MODULES_PAR_PLAN[lienActivation.plan!]||[]).includes(m)).map(m => `• ${NOMS_MODULES[m]?.replace('✅ ','') || m} (non inclus)`).join('%0A');
+                      const inactifs = ALL_MODULES.filter(m => !(MODULES_PAR_PLAN[lienActivation.plan!]||[]).includes(m)).map(m => `• ${NOMS_MODULES[m]?.replace('✅ ','') || m} (non inclus)`).join('%0A');
                       const sujet = encodeURIComponent(`Votre accès GestCave Pro — ${lienActivation.nom}`);
                       const corps = encodeURIComponent(`Bonjour ${lienActivation.nomGerant || ''},
 

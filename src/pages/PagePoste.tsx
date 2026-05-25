@@ -5,6 +5,7 @@ import { db } from '../lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc, addDoc } from 'firebase/firestore';
 import { usePOSStore } from '../store/posStore';
 import { toast } from 'react-hot-toast';
+import { resolveActiveModules } from '../lib/subscriptionPlans';
 
 const PagePoste = () => {
   const { etablissementId } = useParams<{ etablissementId: string }>();
@@ -159,6 +160,17 @@ const PagePoste = () => {
 
       const employe = snap.docs[0].data();
       const employeId = snap.docs[0].id;
+      const etabSnap = etablissementId ? await getDoc(doc(db, 'etablissements', etablissementId)) : null;
+      const etabData = etabSnap?.exists() ? etabSnap.data() : null;
+      const modulesActifs = resolveActiveModules(etabData?.modules_actifs, etabData?.subscription_plan || etabData?.plan);
+      const moduleRequis = selectedMode.id === 'cuisine' ? 'kds' : selectedMode.id === 'caisse' || selectedMode.id === 'serveur' ? 'pos' : null;
+
+      if (moduleRequis && !modulesActifs.includes(moduleRequis)) {
+        setPinError("CE POSTE N'EST PAS INCLUS DANS LE FORFAIT ACTUEL.");
+        setPin('');
+        setLoading(false);
+        return;
+      }
       
       // Vérification des droits
       if (selectedMode.role !== 'any' && employe.role !== selectedMode.role && employe.role !== 'admin' && employe.role !== 'gerant') {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Monitor, Smartphone, Utensils, Receipt, 
@@ -7,11 +7,15 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { resolveActiveModules } from '../lib/subscriptionPlans';
 
 const PageConsoleTerminaux = () => {
   const navigate = useNavigate();
   const { profil } = useAuthStore();
   const etablissementId = profil?.etablissement_id || localStorage.getItem('gestcave_sim_etab_id');
+  const [modulesActifs, setModulesActifs] = useState<string[]>([]);
 
   const baseUrl = window.location.origin;
 
@@ -62,6 +66,21 @@ const PageConsoleTerminaux = () => {
       type: 'Poste Direction'
     }
   ];
+
+  useEffect(() => {
+    if (!etablissementId) return;
+    return onSnapshot(doc(db, 'etablissements', etablissementId), (snap) => {
+      const data = snap.data();
+      setModulesActifs(resolveActiveModules(data?.modules_actifs, data?.subscription_plan || data?.plan));
+    });
+  }, [etablissementId]);
+
+  const terminauxDisponibles = terminaux.filter((terminal) => {
+    if (terminal.id === 'pointage') return modulesActifs.includes('hr');
+    if (terminal.id === 'cuisine') return modulesActifs.includes('kds');
+    if (['caisse', 'serveur'].includes(terminal.id)) return modulesActifs.includes('pos');
+    return true;
+  });
 
   const copierLien = (url: string) => {
     navigator.clipboard.writeText(url);
@@ -119,7 +138,7 @@ const PageConsoleTerminaux = () => {
 
         {/* Terminals Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-           {terminaux.map((t) => (
+           {terminauxDisponibles.map((t) => (
              <div key={t.id} className="bg-white rounded-[3rem] p-10 border border-slate-100 shadow-xl shadow-blue-900/5 hover:border-blue-100 transition-all flex flex-col group">
                 <div className={`w-16 h-16 ${t.color} text-white rounded-2xl flex items-center justify-center mb-8 shadow-lg shadow-blue-900/10 group-hover:scale-110 transition-transform`}>
                    {t.icon}

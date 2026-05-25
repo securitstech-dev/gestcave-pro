@@ -15,6 +15,7 @@ import { db } from '../lib/firebase';
 import { toast } from 'react-hot-toast';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { aggregateFinancials, buildDailyFinancialSeries, receivedAmount, outstandingAmount } from '../lib/finance';
+import { getPlan, resolveActiveModules } from '../lib/subscriptionPlans';
 
 // Modules
 import InterfaceCaissier from './roles/InterfaceCaissier';
@@ -46,6 +47,7 @@ const TableauClient = () => {
   const [modulesActifs, setModulesActifs] = useState<string[] | null>(null);
   const [statusEtab, setStatusEtab] = useState<string | null>(null);
   const [typeEtab, setTypeEtab] = useState<string | null>(null);
+  const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null);
 
   const etablissementId = etablissementSimuleId || profil?.etablissement_id;
 
@@ -54,7 +56,9 @@ const TableauClient = () => {
     if (!etablissementId) return;
     const unsub = onSnapshot(doc(db, 'etablissements', etablissementId), (snap) => {
       const data = snap.data();
-      setModulesActifs(data?.modules_actifs || []);
+      const plan = data?.subscription_plan || data?.plan || null;
+      setSubscriptionPlan(plan);
+      setModulesActifs(resolveActiveModules(data?.modules_actifs, plan));
       setStatusEtab(data?.subscription_status || data?.statut || null);
       setTypeEtab(data?.type_etablissement || 'bar_restaurant');
     });
@@ -63,6 +67,7 @@ const TableauClient = () => {
 
   const hasModule = (id: string) => modulesActifs?.includes(id) ?? false;
   const isSolo = hasModule('solo');
+  const planActuel = getPlan(subscriptionPlan);
 
   useEffect(() => {
     if (etablissementId) {
@@ -105,6 +110,9 @@ const TableauClient = () => {
               {profil?.etablissement_nom || 'Ma Cave'}
             </h2>
             <p className="text-xs font-semibold text-slate-400">Administration</p>
+            <p className={`mt-2 inline-flex rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-widest ${isSolo ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-[#1E3A8A]'}`}>
+              Pack {planActuel.shortLabel}
+            </p>
           </div>
         </div>
         
@@ -339,9 +347,21 @@ const TableauClient = () => {
             <Routes>
               {/* ── Routes libres (toujours accessibles) ── */}
               <Route path="/" element={<DashboardAccueil profil={profil} etablissementSimuleId={etablissementSimuleId} navigate={navigate} />} />
-              <Route path="/plan-salles" element={<PlanDeSalles />} />
-              <Route path="/tables" element={<GestionTables />} />
-              <Route path="/sessions" element={<GestionSessions />} />
+              <Route path="/plan-salles" element={
+                <ModuleGuard module="pos" modulesActifs={modulesActifs} navigate={navigate}>
+                  <PlanDeSalles />
+                </ModuleGuard>
+              } />
+              <Route path="/tables" element={
+                <ModuleGuard module="pos" modulesActifs={modulesActifs} navigate={navigate}>
+                  <GestionTables />
+                </ModuleGuard>
+              } />
+              <Route path="/sessions" element={
+                <ModuleGuard module="pos" modulesActifs={modulesActifs} navigate={navigate}>
+                  <GestionSessions />
+                </ModuleGuard>
+              } />
               <Route path="/settings" element={<GestionEtablissement />} />
               <Route path="/impression" element={<CentreImpression />} />
               <Route path="/debug" element={<ModuleDebug />} />

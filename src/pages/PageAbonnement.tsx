@@ -13,6 +13,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { db, storage } from '../lib/firebase';
 import { collection, query, where, onSnapshot, doc, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { SUBSCRIPTION_PLANS } from '../lib/subscriptionPlans';
 
 const PageAbonnement = () => {
   const { profil } = useAuthStore();
@@ -27,6 +28,16 @@ const PageAbonnement = () => {
   const [methodePaiement, setMethodePaiement] = useState<'mobile' | 'direction' | null>(null);
 
   const forfaits = [
+    {
+      id: 'solo',
+      nom: SUBSCRIPTION_PLANS.solo.label,
+      prix_mensuel: '9 900 XAF',
+      prix_annuel: '99 000 XAF',
+      montant_mensuel: SUBSCRIPTION_PLANS.solo.monthlyPrice,
+      montant_annuel: SUBSCRIPTION_PLANS.solo.annualPrice,
+      desc: SUBSCRIPTION_PLANS.solo.description,
+      features: ['1 PIN patron', 'Caisse + tables', 'Cuisine/bar simple', 'Stock essentiel'],
+    },
     { 
       id: 'starter', 
       nom: 'Pack Essentiel', 
@@ -96,6 +107,8 @@ const PageAbonnement = () => {
       await addDoc(collection(db, 'paiements'), {
         etablissement_id: profil?.etablissement_id || '',
         etablissement_nom: profil?.etablissement_nom || '',
+        plan_id: forfaitChoisi.id,
+        plan: forfaitChoisi.nom,
         montant: annuel ? forfaitChoisi.montant_annuel : forfaitChoisi.montant_mensuel,
         statut: 'en_attente',
         preuve_url: urlPreuve,

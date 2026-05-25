@@ -10,6 +10,7 @@ import { useAuthStore } from '../../store/authStore';
 import { db } from '../../lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
+import { resolveActiveModules } from '../../lib/subscriptionPlans';
 
 const SelectionMode = () => {
   const navigate = useNavigate();
@@ -117,18 +118,28 @@ const SelectionMode = () => {
         const estAdmin = employe.role === 'admin' || employe.role === 'gerant';
 
         let isSoloMode = false;
+        let modulesActifs: string[] = [];
         if (etablissementId !== 'demo') {
           try {
             const etabDoc = await getDoc(doc(db, 'etablissements', etablissementId));
-            if (etabDoc.exists() && etabDoc.data().modules_actifs?.includes('solo')) {
-              isSoloMode = true;
+            if (etabDoc.exists()) {
+              const etabData = etabDoc.data();
+              modulesActifs = resolveActiveModules(etabData.modules_actifs, etabData.subscription_plan || etabData.plan);
+              isSoloMode = modulesActifs.includes('solo');
             }
           } catch (e) {
             console.error("Erreur vérification mode solo:", e);
           }
         }
 
-        if (estAdmin || employe.role === selectedMode.role || isSoloMode) {
+        const moduleRequis = selectedMode.id === 'cuisine' ? 'kds' : ['serveur', 'caisse'].includes(selectedMode.id) ? 'pos' : null;
+        if (moduleRequis && modulesActifs.length && !modulesActifs.includes(moduleRequis)) {
+          toast.error("Ce poste n'est pas inclus dans le forfait actuel.");
+          setPin('');
+          return;
+        }
+
+        if (estAdmin || employe.role === selectedMode.role || (isSoloMode && estAdmin)) {
           toast.success(`Session : ${employe.nom}`);
           
           sessionStorage.setItem('poste_employe_id', employe.id);

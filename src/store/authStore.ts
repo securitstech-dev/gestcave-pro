@@ -7,7 +7,8 @@ import {
   createUserWithEmailAndPassword,
   type User as FirebaseUser
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, addDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, addDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { getModulesForPlan, normalizePlanId } from '../lib/subscriptionPlans';
 
 const genererPinInitial = () => Math.floor(1000 + Math.random() * 9000).toString();
 
@@ -251,6 +252,13 @@ export const useAuthStore = create<EtatAuth>((set, get) => ({
       if (etabSnap.exists()) {
         const etabData = etabSnap.data();
         statusEtab = etabData.statut || etabData.subscription_status || 'actif';
+        const plan = normalizePlanId(etabData.subscription_plan || invitation.subscription_plan || invitation.plan);
+        if (!Array.isArray(etabData.modules_actifs) || etabData.modules_actifs.length === 0) {
+          await updateDoc(doc(db, 'etablissements', invitation.etablissement_id), {
+            subscription_plan: plan,
+            modules_actifs: getModulesForPlan(plan),
+          });
+        }
         nomEtab = etabData.nom || 'Mon Établissement';
       }
 
