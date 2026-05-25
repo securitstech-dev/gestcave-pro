@@ -6,8 +6,6 @@ import { collection, query, where, getDocs, doc, getDoc, addDoc } from 'firebase
 import { usePOSStore } from '../store/posStore';
 import { toast } from 'react-hot-toast';
 
-const POSTE_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
-
 const PagePoste = () => {
   const { etablissementId } = useParams<{ etablissementId: string }>();
   const navigate = useNavigate();
@@ -192,15 +190,13 @@ const PagePoste = () => {
       toast.success(`Accès autorisé : ${employe.nom}`);
       
       // Sauvegarde des infos pour le hook usePosteSession
-      const authExpiresAt = Date.now() + POSTE_SESSION_TTL_MS;
       sessionStorage.setItem('poste_employe_id', snap.docs[0].id);
       sessionStorage.setItem('poste_employe_nom', employe.nom);
       sessionStorage.setItem('poste_employe_role', employe.role);
       sessionStorage.setItem('poste_etablissement_id', etablissementId);
-      sessionStorage.setItem('poste_auth_expires_at', String(authExpiresAt));
       
       // Compatibilité avec l'ancien système
-      localStorage.setItem('temp_auth_user', JSON.stringify({ ...employe, id: snap.docs[0].id, authExpiresAt }));
+      localStorage.setItem('temp_auth_user', JSON.stringify({ ...employe, id: snap.docs[0].id }));
       
       navigate(selectedMode.route);
       

@@ -42,12 +42,6 @@ const PageTerminalManager = () => {
     }
 
     const user = JSON.parse(storedUser);
-    if (!user.authExpiresAt || Date.now() > Number(user.authExpiresAt)) {
-      localStorage.removeItem('temp_auth_user');
-      toast.error("Session expirée, veuillez vous identifier");
-      navigate(`/poste/${etablissementId}`);
-      return;
-    }
     if ((user.role !== 'gerant' && user.role !== 'admin' && user.role !== 'client_admin') || user.etablissement_id !== etablissementId) {
       toast.error("Accès non autorisé");
       navigate(`/poste/${etablissementId}`);

@@ -27,21 +27,6 @@ export const usePosteSession = () => {
     || localStorage.getItem('gestcave_sim_etab_id')
     || null;
 
-  useEffect(() => {
-    const expiresAt = Number(sessionStorage.getItem('poste_auth_expires_at') || 0);
-    const hasPosteSession = Boolean(sessionStorage.getItem('poste_employe_id'));
-    if ((!hasPosteSession && !expiresAt) || (expiresAt && Date.now() <= expiresAt)) return;
-
-    const etabId = sessionStorage.getItem('poste_etablissement_id');
-    sessionStorage.removeItem('poste_employe_id');
-    sessionStorage.removeItem('poste_employe_nom');
-    sessionStorage.removeItem('poste_employe_role');
-    sessionStorage.removeItem('poste_session_travail_id');
-    sessionStorage.removeItem('poste_auth_expires_at');
-    localStorage.removeItem('temp_auth_user');
-    navigate(etabId ? `/poste/${etabId}` : '/choisir-role');
-  }, [navigate]);
-
   // Si le store n'a pas de données (ex: refresh de page) — on réinitialise
   useEffect(() => {
     if (etablissementId && !posEtabId) {

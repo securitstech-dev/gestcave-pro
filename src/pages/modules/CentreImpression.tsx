@@ -8,28 +8,28 @@ import { initStocksSolo } from '../../lib/initStocksSolo';
 import { toast } from 'react-hot-toast';
 
 const SOLO_PRODUCTS = [
-  { ref: '01', name: 'PRIMUS', price: 500 },
-  { ref: '02', name: 'HEINEKEN', price: 500 },
-  { ref: '03', name: 'NGOK', price: 500 },
-  { ref: '04', name: 'JUS (BRASCO)', price: 500 },
-  { ref: '05', name: 'GINTONIC', price: 600 },
-  { ref: '06', name: 'TURBO', price: 500 },
-  { ref: '07', name: 'CLASS', price: 600 },
-  { ref: '08', name: 'CHATEAU DE FRANCE', price: 500 },
-  { ref: '09', name: '33 EXPORT', price: 600 },
-  { ref: '10', name: 'BLACK', price: 600 },
-  { ref: '11', name: 'RACINE', price: 600 },
-  { ref: '12', name: 'GIN TONIC (BRALICO)', price: 600 },
-  { ref: '13', name: 'JUS (BRALICO)', price: 300 },
-  { ref: '14', name: 'CASTEL', price: 700 },
-  { ref: '15', name: 'BEAUFORD', price: 600 },
-  { ref: '16', name: '3X', price: 700 },
-  { ref: '17', name: 'REACTOR', price: 500 },
-  { ref: '18', name: 'BOOSTER ROUGE', price: 600 },
-  { ref: '19', name: 'CHILL', price: 600 },
-  { ref: '20', name: 'SYNERGIE', price: 500 },
-  { ref: '21', name: 'VIVAL', price: 300 },
-  { ref: '22', name: 'GIN TONIC (BRASCO)', price: 600 },
+  { ref: '01', name: 'PRIMUS', price: 500, buyPrice: 400 },
+  { ref: '02', name: 'HEINEKEN', price: 500, buyPrice: 400 },
+  { ref: '03', name: 'NGOK', price: 500, buyPrice: 400 },
+  { ref: '04', name: 'JUS (BRASCO)', price: 500, buyPrice: 400 },
+  { ref: '05', name: 'GINTONIC', price: 600, buyPrice: 480 },
+  { ref: '06', name: 'TURBO', price: 500, buyPrice: 400 },
+  { ref: '07', name: 'CLASS', price: 600, buyPrice: 480 },
+  { ref: '08', name: 'CHATEAU DE FRANCE', price: 500, buyPrice: 400 },
+  { ref: '09', name: '33 EXPORT', price: 600, buyPrice: 480 },
+  { ref: '10', name: 'BLACK', price: 600, buyPrice: 480 },
+  { ref: '11', name: 'RACINE', price: 600, buyPrice: 480 },
+  { ref: '12', name: 'GIN TONIC (BRALICO)', price: 600, buyPrice: 480 },
+  { ref: '13', name: 'JUS (BRALICO)', price: 300, buyPrice: 240 },
+  { ref: '14', name: 'CASTEL', price: 700, buyPrice: 560 },
+  { ref: '15', name: 'BEAUFORD', price: 600, buyPrice: 480 },
+  { ref: '16', name: '3X', price: 700, buyPrice: 560 },
+  { ref: '17', name: 'REACTOR', price: 500, buyPrice: 400 },
+  { ref: '18', name: 'BOOSTER ROUGE', price: 600, buyPrice: 480 },
+  { ref: '19', name: 'CHILL', price: 600, buyPrice: 480 },
+  { ref: '20', name: 'SYNERGIE', price: 500, buyPrice: 400 },
+  { ref: '21', name: 'VIVAL', price: 300, buyPrice: 240 },
+  { ref: '22', name: 'GIN TONIC (BRASCO)', price: 600, buyPrice: 480 },
 ];
 
 const CentreImpression = () => {
@@ -539,9 +539,9 @@ const CentreImpression = () => {
                                                 <tr key={i} className="h-6">
                                                     <td className="border border-black p-1 text-center font-bold">{p.ref}</td>
                                                     <td className="border border-black p-1 font-bold text-[11px]">{p.name}</td>
-                                                    <td className="border border-black p-1 text-center bg-gray-50"></td>
+                                                    <td className="border border-black p-1 text-center bg-gray-50">{p.buyPrice}</td>
                                                     <td className="border border-black p-1 text-center bg-gray-50">{p.price}</td>
-                                                    <td className="border border-black p-1 text-center bg-gray-50"></td>
+                                                    <td className="border border-black p-1 text-center bg-gray-50">{p.price - p.buyPrice}</td>
                                                     <td className="border border-black p-1"></td>
                                                     <td className="border border-black p-1"></td>
                                                     <td className="border border-black p-1"></td>

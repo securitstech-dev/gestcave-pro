@@ -920,32 +920,6 @@ const PriceCard = ({ name, price, duration = 'MOIS', features, onClick, isRecomm
   </div>
 );
 
-const MODULES_PAR_FORMULE: Record<string, string[]> = {
-  solo: ['solo', 'caisse', 'stock', 'dettes', 'compta'],
-  starter: ['caisse', 'stock', 'kds', 'dettes', 'compta'],
-  premium: ['caisse', 'stock', 'dettes', 'kds', 'rh', 'compta', 'conformite'],
-  business: ['caisse', 'stock', 'dettes', 'kds', 'rh', 'compta', 'analytics', 'conformite'],
-};
-
-const FORMULES_ESSAI = [
-  { id: 'solo', label: 'Solo Mini-Bar', price: '9.900 F/mois' },
-  { id: 'starter', label: 'Starter', price: '30.000 F/mois' },
-  { id: 'premium', label: 'Premium', price: '55.000 F/mois' },
-  { id: 'business', label: 'Business', price: '95.000 F/mois' },
-];
-
-const MODULES_ESSAI = [
-  { id: 'solo', label: 'Mode Solo' },
-  { id: 'caisse', label: 'Caisse / ventes' },
-  { id: 'stock', label: 'Stock + alertes' },
-  { id: 'dettes', label: 'Dettes clients' },
-  { id: 'kds', label: 'Cuisine / bar' },
-  { id: 'rh', label: 'Personnel / pointage' },
-  { id: 'compta', label: 'Finance / PDF' },
-  { id: 'analytics', label: 'Analyses' },
-  { id: 'conformite', label: 'Conformite taxes' },
-];
-
 const InscriptionDirecte = () => {
   const [loading, setLoading] = useState(false);
   const [envoye, setEnvoye] = useState(false);
@@ -956,17 +930,9 @@ const InscriptionDirecte = () => {
     nom_contact: '',
     email_contact: '',
     formule_souhaitee: 'solo',
-    modules_souhaites: MODULES_PAR_FORMULE.solo,
+    modules_souhaites: ['solo', 'stock', 'caisse'],
     accepte_cgu: false,
   });
-
-  const choisirFormule = (formuleId: string) => {
-    setFormData((current) => ({
-      ...current,
-      formule_souhaitee: formuleId,
-      modules_souhaites: MODULES_PAR_FORMULE[formuleId] || [],
-    }));
-  };
 
   const toggleModule = (moduleId: string) => {
     setFormData((current) => {
@@ -1049,11 +1015,16 @@ const InscriptionDirecte = () => {
       <div className="md:col-span-2 space-y-4">
         <label className="text-xs font-bold text-slate-400 uppercase ml-1">Formule a tester pendant 14 jours</label>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {FORMULES_ESSAI.map((plan) => (
+          {[
+            { id: 'solo', label: 'Solo Mini-Bar', price: '9.900 F/mois' },
+            { id: 'starter', label: 'Starter', price: '30.000 F/mois' },
+            { id: 'premium', label: 'Premium', price: '55.000 F/mois' },
+            { id: 'business', label: 'Business', price: '95.000 F/mois' },
+          ].map((plan) => (
             <button
               type="button"
               key={plan.id}
-              onClick={() => choisirFormule(plan.id)}
+              onClick={() => setFormData({ ...formData, formule_souhaitee: plan.id })}
               className={`p-4 rounded-2xl border-2 text-left transition-all ${
                 formData.formule_souhaitee === plan.id
                   ? 'border-[#FF7A00] bg-orange-50 text-[#1E3A8A]'
@@ -1065,14 +1036,21 @@ const InscriptionDirecte = () => {
             </button>
           ))}
         </div>
-        <p className="text-xs font-bold text-slate-400">
-          Le choix de la formule coche automatiquement les modules dedies a cette offre.
-        </p>
       </div>
       <div className="md:col-span-2 space-y-4">
         <label className="text-xs font-bold text-slate-400 uppercase ml-1">Modules a activer pour l'essai</label>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {MODULES_ESSAI.map((module) => (
+          {[
+            { id: 'solo', label: 'Mode Solo' },
+            { id: 'caisse', label: 'Caisse / ventes' },
+            { id: 'stock', label: 'Stock + alertes' },
+            { id: 'dettes', label: 'Dettes clients' },
+            { id: 'kds', label: 'Cuisine / bar' },
+            { id: 'rh', label: 'Personnel / pointage' },
+            { id: 'compta', label: 'Finance / PDF' },
+            { id: 'analytics', label: 'Analyses' },
+            { id: 'conformite', label: 'Conformite taxes' },
+          ].map((module) => (
             <button
               type="button"
               key={module.id}
@@ -1093,7 +1071,7 @@ const InscriptionDirecte = () => {
           ))}
         </div>
         <p className="text-xs font-bold text-slate-400">
-          Le client peut garder les modules de la formule ou les ajuster pour son essai de 14 jours.
+          Meme pendant l'essai de 14 jours, le client choisit la formule et les modules qu'il veut tester.
         </p>
       </div>
       <div className="md:col-span-2 space-y-4 pt-4">

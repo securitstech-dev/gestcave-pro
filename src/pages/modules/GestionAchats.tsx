@@ -72,30 +72,17 @@ const GestionAchats = () => {
             const batch = writeBatch(db);
             const total = quantite * prixAchat;
             const quantiteUnites = modeAchat === 'casier' ? quantite * (produit.unitesParCasier || 1) : quantite;
-
-            // Prix d'achat par unité (bouteille) — pour synchroniser la fiche produit
-            const prixAchatUnitaire = modeAchat === 'casier'
-                ? Math.round(prixAchat / (produit.unitesParCasier || 1))
-                : prixAchat;
             
             const achatRef = doc(collection(db, 'achats'));
             batch.set(achatRef, {
                 produitId, produitNom: produit.nom, modeAchat,
-                quantiteSaisie: quantite, quantiteUnites,
-                prixUnitaire: prixAchat,         // prix saisi (casier ou bouteille)
-                prixAchatUnitaire,               // prix par bouteille/unité
+                quantiteSaisie: quantite, quantiteUnites, prixUnitaire: prixAchat,
                 total, fournisseur, date: new Date().toISOString(),
                 etablissement_id: etablissementId
             });
 
             const produitRef = doc(db, 'produits', produitId);
-            // ↓ Mise à jour du stock ET du prix d'achat unitaire → synchronise la Saisie Journalière
-            batch.update(produitRef, {
-                stockTotal: (produit.stockTotal || 0) + quantiteUnites,
-                prix_achat: prixAchatUnitaire,
-                dernierAchatDate: new Date().toISOString(),
-                dernierAchatFournisseur: fournisseur || 'Non précisé',
-            });
+            batch.update(produitRef, { stockTotal: (produit.stockTotal || 0) + quantiteUnites });
 
             const transactionRef = doc(collection(db, 'transactions_pos'));
             batch.set(transactionRef, {

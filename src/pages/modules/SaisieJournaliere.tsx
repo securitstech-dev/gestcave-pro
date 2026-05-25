@@ -9,7 +9,7 @@ import {
   Search,
   Wallet,
 } from 'lucide-react';
-import { collection, doc, getDocs, onSnapshot, query, where, writeBatch, increment } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, where, writeBatch, increment } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
@@ -115,12 +115,7 @@ const SaisieJournaliere = () => {
 
   const enregistrerJournee = async () => {
     if (!etablissementId) {
-      toast.error('Etablissement introuvable');
-      return;
-    }
-
-    if (!window.navigator.onLine) {
-      toast.error("Connexion requise pour valider une fiche papier sans doublon");
+      toast.error("Etablissement introuvable");
       return;
     }
 
@@ -153,31 +148,14 @@ const SaisieJournaliere = () => {
     }
 
     if (lignes.length === 0 && depenses <= 0 && autresRecettes <= 0) {
-      toast.error('Aucune ligne a enregistrer');
+      toast.error("Aucune ligne a enregistrer");
       return;
     }
 
     setSaving(true);
-    const toastId = toast.loading('Enregistrement de la fiche...');
+    const toastId = toast.loading("Enregistrement de la fiche...");
 
     try {
-      const dejaSaisie = await getDocs(query(
-        collection(db, 'saisies_journalieres'),
-        where('etablissement_id', '==', etablissementId),
-        where('dateAffaire', '==', dateJournee)
-      ));
-      const ancienneSaisie = await getDocs(query(
-        collection(db, 'transactions_pos'),
-        where('etablissement_id', '==', etablissementId),
-        where('type', '==', 'saisie_manuelle'),
-        where('date', '==', dateJournee)
-      ));
-
-      if (!dejaSaisie.empty || !ancienneSaisie.empty) {
-        toast.error("Cette journée a déjà été saisie", { id: toastId });
-        return;
-      }
-
       const batch = writeBatch(db);
       const maintenant = new Date().toISOString();
       const ficheRef = doc(collection(db, 'saisies_journalieres'));
@@ -259,7 +237,7 @@ const SaisieJournaliere = () => {
       }
 
       await batch.commit();
-      toast.success('Journee enregistree sans stock manuel contradictoire', { id: toastId });
+      toast.success("Journee enregistree sans stock manuel contradictoire", { id: toastId });
       setSaisies({});
       setDepenses(0);
       setRemisePatron(0);
@@ -304,10 +282,24 @@ const SaisieJournaliere = () => {
       </header>
 
       <section className="grid gap-4 lg:grid-cols-4">
-        <Metric label="Ventes papier" value={`${totaux.ventes.toLocaleString()} XAF`} />
-        <Metric label="Articles sortis" value={totaux.sorties.toLocaleString()} />
-        <Metric label="Solde calcule" value={`${soldeCalcule.toLocaleString()} XAF`} tone="green" />
-        <Metric label="Ecart caisse" value={`${ecartCaisse.toLocaleString()} XAF`} tone={ecartCaisse === 0 ? 'blue' : 'orange'} />
+        <div className="rounded-2xl bg-white p-6 shadow-xl shadow-blue-900/5 border border-slate-100">
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Ventes papier</p>
+          <p className="mt-3 text-3xl font-black text-[#1E3A8A]">{totaux.ventes.toLocaleString()} XAF</p>
+        </div>
+        <div className="rounded-2xl bg-white p-6 shadow-xl shadow-blue-900/5 border border-slate-100">
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Articles sortis</p>
+          <p className="mt-3 text-3xl font-black text-[#1E3A8A]">{totaux.sorties.toLocaleString()}</p>
+        </div>
+        <div className="rounded-2xl bg-white p-6 shadow-xl shadow-blue-900/5 border border-slate-100">
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Solde calcule</p>
+          <p className="mt-3 text-3xl font-black text-emerald-600">{soldeCalcule.toLocaleString()} XAF</p>
+        </div>
+        <div className="rounded-2xl bg-white p-6 shadow-xl shadow-blue-900/5 border border-slate-100">
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Ecart caisse</p>
+          <p className={`mt-3 text-3xl font-black ${ecartCaisse === 0 ? 'text-[#1E3A8A]' : 'text-[#FF7A00]'}`}>
+            {ecartCaisse.toLocaleString()} XAF
+          </p>
+        </div>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1fr_340px]">
@@ -404,7 +396,7 @@ const SaisieJournaliere = () => {
 
             <div className="space-y-4">
               <Field label="Date" type="date" value={dateJournee} onChange={(v) => setDateJournee(String(v))} />
-              <Field label="Vendeuse" type="text" value={vendeuse} onChange={(v) => setVendeuse(String(v))} />
+              <Field label="Vendeuse" value={vendeuse} onChange={(v) => setVendeuse(String(v))} />
               <Field label="Fond debut" value={fondDebut} onChange={(v) => setFondDebut(nombre(v))} />
               <Field label="Depenses" value={depenses} onChange={(v) => setDepenses(nombre(v))} />
               <Field label="Remise patron" value={remisePatron} onChange={(v) => setRemisePatron(nombre(v))} />
@@ -435,16 +427,6 @@ const SaisieJournaliere = () => {
           </div>
         </aside>
       </section>
-    </div>
-  );
-};
-
-const Metric = ({ label, value, tone = 'blue' }: { label: string; value: string; tone?: 'blue' | 'green' | 'orange' }) => {
-  const color = tone === 'green' ? 'text-emerald-600' : tone === 'orange' ? 'text-[#FF7A00]' : 'text-[#1E3A8A]';
-  return (
-    <div className="rounded-2xl bg-white p-6 shadow-xl shadow-blue-900/5 border border-slate-100">
-      <p className="text-xs font-bold uppercase tracking-widest text-slate-400">{label}</p>
-      <p className={`mt-3 text-3xl font-black ${color}`}>{value}</p>
     </div>
   );
 };

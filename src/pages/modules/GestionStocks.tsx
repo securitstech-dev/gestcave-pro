@@ -146,22 +146,7 @@ const GestionStocks = () => {
     const qte = type === 'casier' ? delta * (p.unitesParCasier || 1) : delta;
     const nouveau = Math.max(0, p.stockTotal + qte);
     try {
-      const batch = writeBatch(db);
-      batch.update(doc(db, 'produits', p.id), { stockTotal: nouveau });
-
-      const logRef = doc(collection(db, 'historique_stocks'));
-      batch.set(logRef, {
-        produitId: p.id,
-        produitNom: p.nom,
-        type: 'ajustement_rapide',
-        ancienStock: p.stockTotal,
-        nouveauStock: nouveau,
-        ecart: qte,
-        date: new Date().toISOString(),
-        etablissement_id: profil?.etablissement_id || ''
-      });
-
-      await batch.commit();
+      await updateDoc(doc(db, 'produits', p.id), { stockTotal: nouveau });
       toast.success(delta > 0 ? "Approvisionnement réussi" : "Sortie enregistrée");
     } catch {
       toast.error("Erreur système");
