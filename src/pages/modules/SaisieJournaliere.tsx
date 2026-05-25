@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   ClipboardList, Save, RotateCcw, CheckCircle2, AlertTriangle,
-  ChevronDown, ChevronUp, Printer, Calendar, X, Package, TrendingDown, FileText
+  ChevronDown, ChevronUp, Printer, Calendar, X, Package, TrendingDown, FileText, Lock
 } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import jsPDF from 'jspdf';
@@ -48,9 +48,10 @@ const SaisieJournaliere = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [dateJournee, setDateJournee] = useState(new Date().toISOString().slice(0, 10));
+  const [dateJournee, setDateJournee] = useState(new Date().toISOString().split('T')[0]);
   const [observation, setObservation] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
+  const [dejaEnregistre, setDejaEnregistre] = useState(false);
 
   // Input refs pour navigation clavier (Tab entre lignes)
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -67,30 +68,59 @@ const SaisieJournaliere = () => {
           where('etablissement_id', '==', etablissementId)
         );
         const snap = await getDocs(q);
-        const liste = snap.docs.map((d, idx) => ({
-          id: d.id,
-          ...(d.data() as Omit<Produit, 'id'>),
-        })) as Produit[];
-
-        // Trier par nom
+        const liste = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Produit[];
         liste.sort((a, b) => a.nom.localeCompare(b.nom));
         setProduits(liste);
 
-        // Construire les lignes de saisie
-        const nouvLignes: LigneVente[] = liste.map((p, i) => ({
-          produitId: p.id,
-          ref: String(i + 1).padStart(2, '0'),
-          nom: p.nom,
-          prix: p.prix,
-          prixAchat: p.prix_achat || 0,
-          emoji: p.emoji || '🍺',
-          qteVendue: 0,
-          stockDebut: p.stockTotal,
-          stockFin: p.stockTotal,
-          stockAlerte: p.stockAlerte || 5,
-          unitesParCasier: p.unitesParCasier || 12,
-        }));
-        setLignes(nouvLignes);
+        const qSaisie = query(
+          collection(db, 'transactions_pos'), 
+          where('etablissement_id', '==', etablissementId),
+          where('type', '==', 'saisie_manuelle'),
+          where('date', '==', dateJournee)
+        );
+        const snapSaisie = await getDocs(qSaisie);
+        
+        if (!snapSaisie.empty) {
+          const saisieData = snapSaisie.docs[0].data();
+          setObservation(saisieData.observation || '');
+          setDejaEnregistre(true);
+          const mapSaisie = new Map(saisieData.lignes?.map((l: any) => [l.produitId, l.qteVendue]) || []);
+          
+          const nouvLignes: LigneVente[] = liste.map((p, i) => {
+            const qte = mapSaisie.get(p.id) || 0;
+            return {
+              produitId: p.id,
+              ref: String(i + 1).padStart(2, '0'),
+              nom: p.nom,
+              prix: p.prix,
+              prixAchat: p.prix_achat || 0,
+              emoji: p.emoji || '🍺',
+              qteVendue: qte,
+              stockDebut: p.stockTotal + qte,
+              stockFin: p.stockTotal,
+              stockAlerte: p.stockAlerte || 5,
+              unitesParCasier: p.unitesParCasier || 12,
+            };
+          });
+          setLignes(nouvLignes);
+        } else {
+          setDejaEnregistre(false);
+          setObservation('');
+          const nouvLignes: LigneVente[] = liste.map((p, i) => ({
+            produitId: p.id,
+            ref: String(i + 1).padStart(2, '0'),
+            nom: p.nom,
+            prix: p.prix,
+            prixAchat: p.prix_achat || 0,
+            emoji: p.emoji || '🍺',
+            qteVendue: 0,
+            stockDebut: p.stockTotal,
+            stockFin: p.stockTotal,
+            stockAlerte: p.stockAlerte || 5,
+            unitesParCasier: p.unitesParCasier || 12,
+          }));
+          setLignes(nouvLignes);
+        }
       } catch (e) {
         toast.error('Erreur lors du chargement des produits');
       } finally {
@@ -98,11 +128,13 @@ const SaisieJournaliere = () => {
       }
     };
 
-    charger();
-  }, [etablissementId]);
+   useEffect(() => {
+    chargerProduits();
+  }, [etablissementId, dateJournee]);
 
   // ── Mise à jour d'une ligne ───────────────────────────────────────────────
   const majQteVendue = (idx: number, val: number) => {
+    if (dejaEnregistre) return;
     setLignes(prev => prev.map((l, i) => {
       if (i !== idx) return l;
       const qte = Math.max(0, val);
@@ -115,6 +147,7 @@ const SaisieJournaliere = () => {
   };
 
   const majStockDebut = (idx: number, val: number) => {
+    if (dejaEnregistre) return;
     setLignes(prev => prev.map((l, i) => {
       if (i !== idx) return l;
       const debut = Math.max(0, val);
@@ -127,6 +160,7 @@ const SaisieJournaliere = () => {
   };
 
   const majStockFin = (idx: number, val: number) => {
+    if (dejaEnregistre) return;
     setLignes(prev => prev.map((l, i) => {
       if (i !== idx) return l;
       const fin = Math.max(0, val);
@@ -171,12 +205,14 @@ const SaisieJournaliere = () => {
       }
 
       // 2. Enregistrement d'une transaction de synthèse journalière
-      const txRef = doc(collection(db, 'transactions'));
+      const txRef = doc(collection(db, 'transactions_pos'));
       batch.set(txRef, {
+        etablissement_id: etablissementId,
         type: 'saisie_manuelle',
-        date: new Date(dateJournee).toISOString(),
-        dateJournee,
-        montantTotal: totalVentes,
+        date: new Date(dateJournee).toISOString().split('T')[0],
+        total: totalVentes,
+        montantRecu: totalVentes,
+        modePaiement: 'comptant',
         totalUnites,
         lignes: lignesVendues.map(l => ({
           produitId: l.produitId,
@@ -184,7 +220,7 @@ const SaisieJournaliere = () => {
           prixUnitaire: l.prix,
           prixAchat: l.prixAchat,
           margeUnitaire: l.prix - l.prixAchat,
-          quantite: l.qteVendue,
+          qteVendue: l.qteVendue,
           montant: l.qteVendue * l.prix,
           margeTotal: l.qteVendue * (l.prix - l.prixAchat),
           stockDebut: l.stockDebut,
@@ -192,7 +228,6 @@ const SaisieJournaliere = () => {
         })),
         observation,
         caissierNom: profil?.prenom || profil?.nom || 'Gérant',
-        etablissement_id: etablissementId,
         createdAt: new Date().toISOString(),
       });
 
@@ -215,6 +250,7 @@ const SaisieJournaliere = () => {
 
       toast.success(`✅ Journée du ${new Date(dateJournee).toLocaleDateString('fr-FR')} enregistrée !`);
       setSaved(true);
+      setDejaEnregistre(true);
     } catch (e: any) {
       toast.error('Erreur : ' + e.message);
     } finally {
@@ -317,6 +353,20 @@ const SaisieJournaliere = () => {
         </div>
       </div>
 
+      {dejaEnregistre && (
+        <div className="bg-emerald-50 border border-emerald-100 rounded-[1.5rem] p-5 flex items-center gap-4">
+          <div className="w-10 h-10 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600 shrink-0">
+            <Lock size={20} />
+          </div>
+          <div>
+            <p className="text-sm font-black text-emerald-700">Journée déjà enregistrée</p>
+            <p className="text-xs text-emerald-600 font-medium mt-0.5">
+              Les données de cette date sont en lecture seule pour protéger l'intégrité de la comptabilité et des stocks.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ── Alerte ruptures ── */}
       {lignesEnAlerte.length > 0 && (
         <div className="bg-rose-50 border border-rose-100 rounded-[1.5rem] p-5 flex items-center gap-4">
@@ -415,6 +465,7 @@ const SaisieJournaliere = () => {
                       <input
                         type="number"
                         min={0}
+                        disabled={dejaEnregistre}
                         value={l.qteVendue === 0 ? '' : l.qteVendue}
                         placeholder="0"
                         onChange={e => majQteVendue(idx, Number(e.target.value) || 0)}
@@ -429,7 +480,11 @@ const SaisieJournaliere = () => {
                             inputRefs.current[(idx - 1) * 3]?.focus();
                           }
                         }}
-                        className="w-full h-11 text-center text-xl font-black text-[#FF7A00] bg-white border-2 border-orange-200 rounded-xl outline-none focus:border-[#FF7A00] focus:shadow-[0_0_0_3px_rgba(255,122,0,0.15)] transition-all"
+                        className={`w-full h-11 text-center text-xl font-black rounded-xl outline-none transition-all ${
+                          dejaEnregistre 
+                            ? 'bg-transparent text-slate-400 border-none'
+                            : 'text-[#FF7A00] bg-white border-2 border-orange-200 focus:border-[#FF7A00] focus:shadow-[0_0_0_3px_rgba(255,122,0,0.15)]'
+                        }`}
                       />
                     </td>
 
@@ -475,11 +530,14 @@ const SaisieJournaliere = () => {
                       <input
                         type="number"
                         min={0}
+                        disabled={dejaEnregistre}
                         value={l.stockDebut === 0 ? '' : l.stockDebut}
                         placeholder="0"
                         onChange={e => majStockDebut(idx, Number(e.target.value) || 0)}
                         ref={el => (inputRefs.current[idx * 3 + 1] = el)}
-                        className="w-full h-11 text-center text-sm font-bold text-[#1E3A8A] bg-white border border-blue-100 rounded-xl outline-none focus:border-[#1E3A8A] transition-all"
+                        className={`w-full h-11 text-center text-sm font-bold rounded-xl outline-none transition-all ${
+                          dejaEnregistre ? 'bg-transparent text-slate-400 border-none' : 'text-[#1E3A8A] bg-white border border-blue-100 focus:border-[#1E3A8A]'
+                        }`}
                       />
                     </td>
 
@@ -488,14 +546,17 @@ const SaisieJournaliere = () => {
                       <input
                         type="number"
                         min={0}
+                        disabled={dejaEnregistre}
                         value={l.stockFin === 0 ? '' : l.stockFin}
                         placeholder="0"
                         onChange={e => majStockFin(idx, Number(e.target.value) || 0)}
                         ref={el => (inputRefs.current[idx * 3 + 2] = el)}
-                        className={`w-full h-11 text-center text-sm font-bold bg-white border rounded-xl outline-none transition-all ${
-                          enAlerte
-                            ? 'text-rose-600 border-rose-300 focus:border-rose-500'
-                            : 'text-[#1E3A8A] border-blue-100 focus:border-[#1E3A8A]'
+                        className={`w-full h-11 text-center text-sm font-bold rounded-xl outline-none transition-all ${
+                          dejaEnregistre 
+                            ? 'bg-transparent text-slate-400 border-none' 
+                            : enAlerte
+                              ? 'bg-white text-rose-600 border border-rose-300 focus:border-rose-500'
+                              : 'bg-white text-[#1E3A8A] border border-blue-100 focus:border-[#1E3A8A]'
                         }`}
                       />
                     </td>
@@ -535,11 +596,16 @@ const SaisieJournaliere = () => {
           Observations / Notes du Gérant
         </label>
         <textarea
+          disabled={dejaEnregistre}
           value={observation}
           onChange={e => setObservation(e.target.value)}
           placeholder="Ex: Panne de frigo, commande spéciale, événement particulier..."
           rows={3}
-          className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 outline-none focus:border-[#1E3A8A] transition-all font-medium text-sm text-slate-700 resize-none"
+          className={`w-full border rounded-2xl px-5 py-4 outline-none transition-all font-medium text-sm resize-none ${
+            dejaEnregistre 
+              ? 'bg-transparent border-slate-100 text-slate-500' 
+              : 'bg-slate-50 border-slate-100 text-slate-700 focus:border-[#1E3A8A]'
+          }`}
         />
       </div>
 
