@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   ClipboardList, Save, RotateCcw, CheckCircle2, AlertTriangle,
-  ChevronDown, ChevronUp, Printer, Calendar, X, Package, TrendingDown
+  ChevronDown, ChevronUp, Printer, Calendar, X, Package, TrendingDown, FileText
 } from 'lucide-react';
 import { db } from '../../lib/firebase';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import {
   collection, query, where, getDocs, addDoc, updateDoc, doc, writeBatch
 } from 'firebase/firestore';
@@ -218,6 +220,55 @@ const SaisieJournaliere = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  // ── Export PDF ────────────────────────────────────────────────────────────
+  const telechargerPDF = () => {
+    const doc = new jsPDF('p', 'mm', 'a4');
+    
+    // Titre
+    doc.setFontSize(16);
+    doc.setTextColor(30, 58, 138); // #1E3A8A
+    doc.text(`Rapport de Journée - ${profil?.etablissement_nom || 'Mon Etablissement'}`, 14, 20);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Date : ${new Date(dateJournee).toLocaleDateString('fr-FR')}`, 14, 28);
+    doc.text(`Total Unités : ${totalUnites} | Total Encaissé : ${totalVentes.toLocaleString()} XAF`, 14, 34);
+
+    const tableData = lignes.map(l => [
+      l.ref,
+      l.nom,
+      l.prix.toLocaleString(),
+      l.qteVendue.toString(),
+      (l.qteVendue * l.prix).toLocaleString(),
+      l.stockDebut.toString(),
+      l.stockFin.toString()
+    ]);
+
+    autoTable(doc, {
+      startY: 42,
+      head: [['Réf', 'Article', 'Prix Vente', 'Qté Vendue', 'Montant', 'Stock Début', 'Stock Fin']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [30, 58, 138], textColor: 255 },
+      styles: { fontSize: 8 },
+      columnStyles: {
+        3: { fontStyle: 'bold', textColor: [255, 122, 0] }, // Qté vendue
+        4: { fontStyle: 'bold', textColor: [16, 185, 129] } // Montant
+      }
+    });
+
+    if (observation) {
+      const finalY = (doc as any).lastAutoTable.finalY || 42;
+      doc.setFontSize(10);
+      doc.setTextColor(30, 58, 138);
+      doc.text('Observations :', 14, finalY + 10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(observation, 14, finalY + 16, { maxWidth: 180 });
+    }
+
+    doc.save(`Rapport_Ventes_${dateJournee}.pdf`);
   };
 
   // ── Rendu ─────────────────────────────────────────────────────────────────
@@ -521,7 +572,13 @@ const SaisieJournaliere = () => {
           </div>
 
           {/* Boutons */}
-          <div className="flex gap-3 w-full sm:w-auto">
+          <div className="flex gap-3 w-full sm:w-auto flex-wrap sm:flex-nowrap">
+            <button
+              onClick={telechargerPDF}
+              className="h-14 px-6 bg-slate-100 text-[#1E3A8A] rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition-all flex items-center gap-2"
+            >
+              <FileText size={16} /> Exporter PDF
+            </button>
             <button
               onClick={reinitialiser}
               className="h-14 px-6 bg-slate-100 text-slate-500 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition-all flex items-center gap-2"
