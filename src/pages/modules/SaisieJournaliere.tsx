@@ -26,6 +26,7 @@ interface LigneVente {
   ref: string;
   nom: string;
   prix: number;
+  prixAchat: number;
   emoji: string;
   qteVendue: number;
   stockDebut: number;
@@ -78,6 +79,7 @@ const SaisieJournaliere = () => {
           ref: String(i + 1).padStart(2, '0'),
           nom: p.nom,
           prix: p.prix,
+          prixAchat: 0,
           emoji: p.emoji || '🍺',
           qteVendue: 0,
           stockDebut: p.stockTotal,
@@ -128,15 +130,22 @@ const SaisieJournaliere = () => {
       return {
         ...l,
         stockFin: fin,
-        // Recalcule la qté vendue en fonction du stock fin saisi
         qteVendue: Math.max(0, l.stockDebut - fin),
       };
+    }));
+  };
+
+  const majPrixAchat = (idx: number, val: number) => {
+    setLignes(prev => prev.map((l, i) => {
+      if (i !== idx) return l;
+      return { ...l, prixAchat: Math.max(0, val) };
     }));
   };
 
   // ── Totaux ────────────────────────────────────────────────────────────────
   const totalVentes = lignes.reduce((s, l) => s + l.qteVendue * l.prix, 0);
   const totalUnites = lignes.reduce((s, l) => s + l.qteVendue, 0);
+  const totalMarge  = lignes.reduce((s, l) => s + l.qteVendue * (l.prix - l.prixAchat), 0);
   const lignesEnAlerte = lignes.filter(l => l.stockFin <= l.stockAlerte);
 
   // ── Réinitialiser ─────────────────────────────────────────────────────────
@@ -173,8 +182,11 @@ const SaisieJournaliere = () => {
           produitId: l.produitId,
           nom: l.nom,
           prixUnitaire: l.prix,
+          prixAchat: l.prixAchat,
+          margeUnitaire: l.prix - l.prixAchat,
           quantite: l.qteVendue,
           montant: l.qteVendue * l.prix,
+          margeTotal: l.qteVendue * (l.prix - l.prixAchat),
           stockDebut: l.stockDebut,
           stockFin: l.stockFin,
         })),
@@ -297,8 +309,11 @@ const SaisieJournaliere = () => {
                 <th className="px-4 py-4 w-10">#</th>
                 <th className="px-4 py-4">Article</th>
                 <th className="px-4 py-4 text-center w-28">Prix Vente</th>
+                <th className="px-4 py-4 text-center w-28 bg-slate-100/80 border-x border-slate-200">Prix Achat</th>
                 <th className="px-4 py-4 text-center w-28 bg-orange-50/50 border-x border-orange-100">Qté Vendue</th>
                 <th className="px-4 py-4 text-center w-32">Montant</th>
+                <th className="px-4 py-4 text-center w-28 bg-emerald-50/50 border-x border-emerald-100">Marge U.</th>
+                <th className="px-4 py-4 text-center w-28 bg-emerald-50/50 border-r border-emerald-100">Marge Tot.</th>
                 <th className="px-4 py-4 text-center w-28 bg-blue-50/50 border-x border-blue-100">Stk Début</th>
                 <th className="px-4 py-4 text-center w-28 bg-blue-50/50">Stk Fin</th>
               </tr>
@@ -334,6 +349,18 @@ const SaisieJournaliere = () => {
                       <span className="text-[9px] text-slate-300 font-bold ml-1">XAF</span>
                     </td>
 
+                    {/* Prix achat — saisie manuelle */}
+                    <td className="px-2 py-2 bg-slate-50/50 border-x border-slate-100">
+                      <input
+                        type="number"
+                        min={0}
+                        value={l.prixAchat === 0 ? '' : l.prixAchat}
+                        placeholder="0"
+                        onChange={e => majPrixAchat(idx, Number(e.target.value) || 0)}
+                        className="w-full h-11 text-center text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-xl outline-none focus:border-slate-400 transition-all"
+                      />
+                    </td>
+
                     {/* Quantité vendue — saisie principale */}
                     <td className="px-2 py-2 bg-orange-50/30 border-x border-orange-100">
                       <input
@@ -363,6 +390,34 @@ const SaisieJournaliere = () => {
                         <span className="font-extrabold text-emerald-600 text-sm">{montant.toLocaleString()} <span className="text-[9px] text-slate-300 font-bold">XAF</span></span>
                       ) : (
                         <span className="text-slate-200 font-bold text-sm">—</span>
+                      )}
+                    </td>
+
+                    {/* Marge Unitaire = Prix Vente - Prix Achat */}
+                    <td className="px-4 py-3 text-center bg-emerald-50/20 border-x border-emerald-100">
+                      {l.prixAchat > 0 ? (
+                        <span className={`font-extrabold text-sm ${
+                          l.prix - l.prixAchat > 0 ? 'text-emerald-600' : 'text-rose-500'
+                        }`}>
+                          {(l.prix - l.prixAchat).toLocaleString()}
+                          <span className="text-[9px] text-slate-300 font-bold ml-1">XAF</span>
+                        </span>
+                      ) : (
+                        <span className="text-slate-200 text-sm font-bold">—</span>
+                      )}
+                    </td>
+
+                    {/* Marge Totale = Marge U. × Qté */}
+                    <td className="px-4 py-3 text-center bg-emerald-50/20 border-r border-emerald-100">
+                      {l.prixAchat > 0 && l.qteVendue > 0 ? (
+                        <span className={`font-extrabold text-sm ${
+                          (l.prix - l.prixAchat) * l.qteVendue > 0 ? 'text-emerald-600' : 'text-rose-500'
+                        }`}>
+                          {((l.prix - l.prixAchat) * l.qteVendue).toLocaleString()}
+                          <span className="text-[9px] text-slate-300 font-bold ml-1">XAF</span>
+                        </span>
+                      ) : (
+                        <span className="text-slate-200 text-sm font-bold">—</span>
                       )}
                     </td>
 
@@ -400,12 +455,12 @@ const SaisieJournaliere = () => {
               })}
             </tbody>
 
-            {/* Totaux */}
             <tfoot>
               <tr className="bg-[#1E3A8A] text-white">
                 <td colSpan={3} className="px-6 py-4">
                   <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Totaux de la Journée</span>
                 </td>
+                <td className="px-2 py-4" />
                 <td className="px-4 py-4 text-center">
                   <span className="text-xl font-black text-[#FF7A00]">{totalUnites}</span>
                   <span className="text-[10px] text-blue-300 font-bold ml-1 uppercase">unités</span>
@@ -413,6 +468,10 @@ const SaisieJournaliere = () => {
                 <td className="px-4 py-4 text-center">
                   <span className="text-xl font-black text-emerald-400">{totalVentes.toLocaleString()}</span>
                   <span className="text-[10px] text-blue-300 font-bold ml-1 uppercase">XAF</span>
+                </td>
+                <td className="px-4 py-4 text-center bg-emerald-900/20" colSpan={2}>
+                  <span className="text-xl font-black text-emerald-300">{totalMarge.toLocaleString()}</span>
+                  <span className="text-[10px] text-blue-300 font-bold ml-1 uppercase">XAF marge</span>
                 </td>
                 <td colSpan={2} />
               </tr>
@@ -449,6 +508,12 @@ const SaisieJournaliere = () => {
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Unités Vendues</p>
               <p className="text-2xl font-black text-[#1E3A8A]">{totalUnites}</p>
             </div>
+            {totalMarge > 0 && (
+              <div className="text-center">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Marge Brute</p>
+                <p className="text-2xl font-black text-emerald-500">{totalMarge.toLocaleString()} <span className="text-xs text-slate-400">XAF</span></p>
+              </div>
+            )}
             {lignesEnAlerte.length > 0 && (
               <div className="text-center">
                 <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1">Articles Critiques</p>
