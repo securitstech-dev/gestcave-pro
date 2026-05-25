@@ -15,6 +15,7 @@ interface Produit {
   id: string;
   nom: string;
   prix: number;
+  prix_achat?: number;
   stockTotal: number;
   stockAlerte: number;
   unitesParCasier?: number;
@@ -79,7 +80,7 @@ const SaisieJournaliere = () => {
           ref: String(i + 1).padStart(2, '0'),
           nom: p.nom,
           prix: p.prix,
-          prixAchat: 0,
+          prixAchat: p.prix_achat || 0,
           emoji: p.emoji || '🍺',
           qteVendue: 0,
           stockDebut: p.stockTotal,
@@ -136,10 +137,7 @@ const SaisieJournaliere = () => {
   };
 
   const majPrixAchat = (idx: number, val: number) => {
-    setLignes(prev => prev.map((l, i) => {
-      if (i !== idx) return l;
-      return { ...l, prixAchat: Math.max(0, val) };
-    }));
+    // Prix achat est chargé depuis Firebase - non éditable ici
   };
 
   // ── Totaux ────────────────────────────────────────────────────────────────
@@ -349,16 +347,16 @@ const SaisieJournaliere = () => {
                       <span className="text-[9px] text-slate-300 font-bold ml-1">XAF</span>
                     </td>
 
-                    {/* Prix achat — saisie manuelle */}
-                    <td className="px-2 py-2 bg-slate-50/50 border-x border-slate-100">
-                      <input
-                        type="number"
-                        min={0}
-                        value={l.prixAchat === 0 ? '' : l.prixAchat}
-                        placeholder="0"
-                        onChange={e => majPrixAchat(idx, Number(e.target.value) || 0)}
-                        className="w-full h-11 text-center text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-xl outline-none focus:border-slate-400 transition-all"
-                      />
+                    {/* Prix achat — lu depuis Firebase, lecture seule */}
+                    <td className="px-4 py-3 text-center bg-slate-50/50 border-x border-slate-100">
+                      {l.prixAchat > 0 ? (
+                        <>
+                          <span className="font-bold text-slate-500 text-sm">{l.prixAchat.toLocaleString()}</span>
+                          <span className="text-[9px] text-slate-300 font-bold ml-1">XAF</span>
+                        </>
+                      ) : (
+                        <span className="text-slate-200 text-xs font-bold">—</span>
+                      )}
                     </td>
 
                     {/* Quantité vendue — saisie principale */}
