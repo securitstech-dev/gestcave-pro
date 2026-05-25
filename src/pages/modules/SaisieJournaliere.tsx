@@ -84,7 +84,7 @@ const SaisieJournaliere = () => {
           const saisieData = snapSaisie.docs[0].data();
           setObservation(saisieData.observation || '');
           setDejaEnregistre(true);
-          const mapSaisie = new Map(saisieData.lignes?.map((l: any) => [l.produitId, l.qteVendue]) || []);
+          const mapSaisie = new Map<string, number>(saisieData.lignes?.map((l: any) => [l.produitId, Number(l.qteVendue) || 0]) || []);
           
           const nouvLignes: LigneVente[] = liste.map((p, i) => {
             const qte = mapSaisie.get(p.id) || 0;
@@ -128,8 +128,7 @@ const SaisieJournaliere = () => {
       }
     };
 
-   useEffect(() => {
-    chargerProduits();
+    charger();
   }, [etablissementId, dateJournee]);
 
   // ── Mise à jour d'une ligne ───────────────────────────────────────────────
@@ -464,12 +463,12 @@ const SaisieJournaliere = () => {
                     <td className="px-2 py-2 bg-orange-50/30 border-x border-orange-100">
                       <input
                         type="number"
-                        min={0}
+                        min="0"
                         disabled={dejaEnregistre}
                         value={l.qteVendue === 0 ? '' : l.qteVendue}
                         placeholder="0"
                         onChange={e => majQteVendue(idx, Number(e.target.value) || 0)}
-                        ref={el => (inputRefs.current[idx * 3] = el)}
+                        ref={el => { inputRefs.current[idx * 3] = el; }}
                         onKeyDown={e => {
                           if (e.key === 'Enter' || e.key === 'ArrowDown') {
                             e.preventDefault();
@@ -534,7 +533,7 @@ const SaisieJournaliere = () => {
                         value={l.stockDebut === 0 ? '' : l.stockDebut}
                         placeholder="0"
                         onChange={e => majStockDebut(idx, Number(e.target.value) || 0)}
-                        ref={el => (inputRefs.current[idx * 3 + 1] = el)}
+                        ref={el => { inputRefs.current[idx * 3 + 1] = el; }}
                         className={`w-full h-11 text-center text-sm font-bold rounded-xl outline-none transition-all ${
                           dejaEnregistre ? 'bg-transparent text-slate-400 border-none' : 'text-[#1E3A8A] bg-white border border-blue-100 focus:border-[#1E3A8A]'
                         }`}
@@ -550,7 +549,7 @@ const SaisieJournaliere = () => {
                         value={l.stockFin === 0 ? '' : l.stockFin}
                         placeholder="0"
                         onChange={e => majStockFin(idx, Number(e.target.value) || 0)}
-                        ref={el => (inputRefs.current[idx * 3 + 2] = el)}
+                        ref={el => { inputRefs.current[idx * 3 + 2] = el; }}
                         className={`w-full h-11 text-center text-sm font-bold rounded-xl outline-none transition-all ${
                           dejaEnregistre 
                             ? 'bg-transparent text-slate-400 border-none' 
