@@ -20,10 +20,11 @@ export const initStocksSolo = async (etablissementId: string, products: any[]) =
       const newDocRef = doc(articlesRef);
       batch.set(newDocRef, {
         nom: p.name,
+        categorie: 'Boisson',
+        prix_achat: 0,
         prix: p.price,
-        prix_achat: p.buyPrice,
-        stock: 0, // Stock initial de 0 comme demandé (ils feront leur inventaire)
-        categorie: 'Boissons',
+        stock: 0,
+        stockAlerte: 10,
         unite: 'Bouteille',
         reference: p.ref,
         actif: true,
