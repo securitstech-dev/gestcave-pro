@@ -5,7 +5,7 @@ import {
   Layout, LayoutDashboard, Zap, Activity, ShieldCheck, Shield, ShieldAlert,
   Calendar, ArrowUpRight, ArrowDownRight, MoreVertical, DollarSign,
   Bell, Search, Menu, X, PlusCircle, Globe, History, ArrowRight, ArrowLeft, Receipt, Clock, Terminal,
-  ChefHat, Flame, Timer, Wallet, Bot, Monitor, BookOpen, Loader2, Scale, Printer
+  ChefHat, Flame, Timer, Wallet, Bot, Monitor, BookOpen, Loader2, Scale, Printer, ClipboardList
 } from 'lucide-react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -33,6 +33,7 @@ import IAIntelligence from './modules/IAIntelligence';
 import GestionConformite from './modules/GestionConformite';
 import ModuleDebug from './modules/ModuleDebug';
 import CentreImpression from './modules/CentreImpression';
+import SaisieJournaliere from './modules/SaisieJournaliere';
 import SimulationLab from '../components/SimulationLab';
 
 const TableauClient = () => {
@@ -158,6 +159,9 @@ const TableauClient = () => {
             {hasModule('hr') && <SidebarLink icon={<Clock size={18} />} label="Borne de Pointage" path={`/pointage/${etablissementId}`} />}
             {hasModule('compta') && <SidebarLink icon={<Scale size={18} />} label="Conformité & Taxes" path="/tableau-de-bord/conformite" />}
             <SidebarLink icon={<Printer size={18} />} label="Fiches à Imprimer" path="/tableau-de-bord/impression" />
+            {isSolo && (
+              <SidebarLink icon={<ClipboardList size={18} />} label="Saisie Journalière" path="/tableau-de-bord/saisie-journaliere" />
+            )}
             <SidebarLink icon={<Settings size={18} />} label="Paramètres" path="/tableau-de-bord/settings" />
           </div>
         </div>
@@ -342,6 +346,7 @@ const TableauClient = () => {
               <Route path="/sessions" element={<GestionSessions />} />
               <Route path="/settings" element={<GestionEtablissement />} />
               <Route path="/impression" element={<CentreImpression />} />
+              <Route path="/saisie-journaliere" element={<SaisieJournaliere />} />
               <Route path="/debug" element={<ModuleDebug />} />
 
               {/* ── POS ── */}
