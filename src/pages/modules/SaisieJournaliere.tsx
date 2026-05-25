@@ -9,7 +9,7 @@ import {
   Search,
   Wallet,
 } from 'lucide-react';
-import { collection, doc, onSnapshot, query, where, writeBatch, increment } from 'firebase/firestore';
+import { collection, doc, getDocs, onSnapshot, query, where, writeBatch, increment } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
@@ -119,6 +119,11 @@ const SaisieJournaliere = () => {
       return;
     }
 
+    if (!window.navigator.onLine) {
+      toast.error("Connexion requise pour valider une fiche papier sans doublon");
+      return;
+    }
+
     const lignes = produits
       .map((produit) => {
         const saisie = saisies[produit.id];
@@ -156,6 +161,23 @@ const SaisieJournaliere = () => {
     const toastId = toast.loading('Enregistrement de la fiche...');
 
     try {
+      const dejaSaisie = await getDocs(query(
+        collection(db, 'saisies_journalieres'),
+        where('etablissement_id', '==', etablissementId),
+        where('dateAffaire', '==', dateJournee)
+      ));
+      const ancienneSaisie = await getDocs(query(
+        collection(db, 'transactions_pos'),
+        where('etablissement_id', '==', etablissementId),
+        where('type', '==', 'saisie_manuelle'),
+        where('date', '==', dateJournee)
+      ));
+
+      if (!dejaSaisie.empty || !ancienneSaisie.empty) {
+        toast.error("Cette journée a déjà été saisie", { id: toastId });
+        return;
+      }
+
       const batch = writeBatch(db);
       const maintenant = new Date().toISOString();
       const ficheRef = doc(collection(db, 'saisies_journalieres'));

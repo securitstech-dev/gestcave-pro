@@ -152,13 +152,13 @@ const InterfaceServeur = () => {
   if (etape === 'tables') {
     return (
       <div className="h-screen bg-slate-50 flex flex-col font-['Inter',sans-serif] overflow-hidden">
-        <header className="h-28 bg-[#1E3A8A] px-10 flex items-center justify-between shadow-xl relative z-20 shrink-0">
-            <div className="flex items-center gap-8">
-                <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-[#FF7A00] shadow-lg border border-white/10">
+        <header className="min-h-24 bg-[#1E3A8A] px-4 md:px-10 py-4 flex items-center justify-between shadow-xl relative z-20 shrink-0 gap-4">
+            <div className="flex items-center gap-4 md:gap-8 min-w-0">
+                <div className="hidden sm:flex w-14 h-14 md:w-16 md:h-16 bg-white/10 backdrop-blur-md rounded-2xl items-center justify-center text-[#FF7A00] shadow-lg border border-white/10 shrink-0">
                     <User size={32} />
                 </div>
-                <div>
-                    <h1 className="text-white font-black text-2xl tracking-tighter uppercase leading-none">
+                <div className="min-w-0">
+                    <h1 className="text-white font-black text-lg md:text-2xl tracking-tighter uppercase leading-none truncate">
                         Bienvenue, <span className="text-[#FF7A00]">{nomEmploye?.split(' ')[0]}</span> !
                     </h1>
                     <div className="flex items-center gap-2 mt-2">
@@ -179,7 +179,7 @@ const InterfaceServeur = () => {
             </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-10 no-scrollbar">
+        <main className="flex-1 overflow-y-auto p-4 md:p-10 no-scrollbar">
             {zones.map(zone => (
                 <section key={zone} className="mb-16">
                     <div className="flex items-center gap-4 mb-8">
@@ -200,7 +200,7 @@ const InterfaceServeur = () => {
                             </button>
                         )}
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-8">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4 md:gap-8">
                         { (zone === 'comptoir' ? commandes.filter(c => c.tableNom.startsWith('Comptoir') && c.statut !== 'payee') : tables.filter(t => t.zone === zone) ).map(item => {
                            const isTable = 'zone' in item;
                            const table = isTable ? (item as TablePlan) : null;
@@ -230,7 +230,7 @@ const InterfaceServeur = () => {
                                    }
                                  }
                                }}
-                               className={`h-48 rounded-[2.5rem] border-2 flex flex-col items-center justify-center gap-4 transition-all relative overflow-hidden group shadow-sm ${
+                               className={`h-36 sm:h-44 md:h-48 rounded-[1.5rem] md:rounded-[2.5rem] border-2 flex flex-col items-center justify-center gap-3 md:gap-4 transition-all relative overflow-hidden group shadow-sm ${
                                  isOccupee || !isTable ? 'bg-[#1E3A8A] border-[#1E3A8A] text-white shadow-xl shadow-blue-900/20' : 
                                  isAddition ? 'bg-orange-50 border-orange-200 text-[#FF7A00]' : 
                                  'bg-white border-slate-100 text-slate-400 hover:border-blue-100 hover:bg-slate-50'
@@ -310,19 +310,19 @@ const InterfaceServeur = () => {
   return (
     <div className="h-screen bg-slate-50 flex flex-col font-['Inter',sans-serif] text-slate-800 overflow-hidden">
         {/* Terminal Header */}
-        <header className="h-20 bg-white border-b border-slate-200 px-8 flex items-center justify-between relative z-30">
-            <div className="flex items-center gap-4">
+        <header className="min-h-20 bg-white border-b border-slate-200 px-4 md:px-8 py-3 flex items-center justify-between relative z-30 gap-3">
+            <div className="flex items-center gap-3 md:gap-4 min-w-0">
                 <button onClick={() => setEtape('tables')} className="p-3 bg-slate-50 text-[#1E3A8A] rounded-2xl hover:bg-blue-50 transition-all">
                     <ArrowLeft size={24} />
                 </button>
-                <div className="h-8 w-[1px] bg-slate-100 mx-2" />
-                <div>
-                    <h2 className="text-xl font-black text-[#1E3A8A] tracking-tight uppercase leading-none">{tableSelectionnee?.nom}</h2>
+                <div className="hidden sm:block h-8 w-[1px] bg-slate-100 mx-2" />
+                <div className="min-w-0">
+                    <h2 className="text-base md:text-xl font-black text-[#1E3A8A] tracking-tight uppercase leading-none truncate">{tableSelectionnee?.nom}</h2>
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{nombreCouverts} Couverts • # {commandeId?.slice(-4).toUpperCase()}</p>
                 </div>
             </div>
 
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3 md:gap-6 shrink-0">
                 <div className="bg-orange-50 px-5 py-2 rounded-2xl border border-orange-100">
                     <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest leading-none">Total Net</p>
                     <p className="text-xl font-black text-[#1E3A8A] tracking-tighter">{(commandeActive?.total || 0).toLocaleString()} <span className="text-[10px] opacity-40">XAF</span></p>
@@ -330,11 +330,11 @@ const InterfaceServeur = () => {
             </div>
         </header>
 
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
             {/* Products Selection Area */}
             <div className="flex-1 flex flex-col bg-white overflow-hidden">
                 {/* Categories Scroll */}
-                <div className="h-24 px-8 flex items-center gap-4 overflow-x-auto no-scrollbar border-b border-slate-50 shrink-0">
+                <div className="h-20 md:h-24 px-4 md:px-8 flex items-center gap-3 md:gap-4 overflow-x-auto no-scrollbar border-b border-slate-50 shrink-0">
                     {categories.map(cat => (
                         <button key={cat} onClick={() => setCategorieActive(cat)}
                           className={`px-8 py-3.5 rounded-2xl whitespace-nowrap text-xs font-black uppercase tracking-widest transition-all ${
@@ -349,8 +349,8 @@ const InterfaceServeur = () => {
                 </div>
 
                 {/* Products Grid */}
-                <div className="flex-1 overflow-y-auto p-8 no-scrollbar bg-slate-50/50">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                <div className="flex-1 overflow-y-auto p-4 md:p-8 no-scrollbar bg-slate-50/50">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
                         {produitsFiltres.map(p => (
                             <button key={p.id} onClick={() => {
                                 if (commandeActive && commandeActive.serveurId !== idEmploye) {
@@ -359,7 +359,7 @@ const InterfaceServeur = () => {
                                 }
                                 ajouterLigne(commandeId!, p);
                             }}
-                              className="aspect-[4/5] bg-white rounded-[2.5rem] p-6 border border-slate-100 shadow-xl shadow-blue-900/5 flex flex-col justify-between text-left group hover:border-[#FF7A00] transition-all hover:-translate-y-1"
+                              className="aspect-[4/5] bg-white rounded-[1.5rem] md:rounded-[2.5rem] p-4 md:p-6 border border-slate-100 shadow-xl shadow-blue-900/5 flex flex-col justify-between text-left group hover:border-[#FF7A00] transition-all hover:-translate-y-1"
                             >
                                 <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-2xl shadow-inner group-hover:bg-blue-50 transition-colors">
                                     {(p.categorie || '').toLowerCase().includes('biere') ? '🍺' : 
@@ -394,13 +394,13 @@ const InterfaceServeur = () => {
             </div>
 
             {/* Cart Sidebar Area */}
-            <div className="w-[480px] bg-white border-l border-slate-100 flex flex-col shadow-2xl relative z-20">
-                <div className="h-16 px-10 flex items-center justify-between border-b border-slate-50 shrink-0">
+            <div className="w-full lg:w-[480px] max-h-[48vh] lg:max-h-none bg-white border-t lg:border-t-0 lg:border-l border-slate-100 flex flex-col shadow-2xl relative z-20">
+                <div className="h-14 md:h-16 px-4 md:px-10 flex items-center justify-between border-b border-slate-50 shrink-0">
                     <h3 className="text-sm font-black text-[#1E3A8A] uppercase tracking-widest">Panier Actuel</h3>
                     <div className="px-3 py-1 bg-blue-50 text-[#1E3A8A] rounded-full text-[10px] font-black uppercase tracking-widest">{panierActuel.length} articles</div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-8 space-y-4 no-scrollbar">
+                <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4 no-scrollbar">
                     {/* Items ready for submission */}
                     {panierActuel.map((ligne, idx) => (
                         <div key={idx} className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 flex items-center gap-6 animate-in slide-in-from-right duration-300">
@@ -456,7 +456,7 @@ const InterfaceServeur = () => {
                     )}
                 </div>
 
-                <div className="p-8 md:p-10 bg-white border-t border-slate-50 space-y-6">
+                <div className="p-4 md:p-10 bg-white border-t border-slate-50 space-y-4 md:space-y-6">
                     {commandeActive?.lignes.some(l => l.statut === 'pret') && (
                       commandeActive.serveurId === idEmploye ? (
                         <button 
