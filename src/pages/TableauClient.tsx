@@ -262,7 +262,7 @@ const TableauClient = () => {
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
       {/* Alerte Validation */}
       {(statusEtab === 'en_attente_validation' || (!statusEtab && profil?.etablissement_status === 'en_attente_validation')) && statusEtab !== 'actif' && (
-        <div className="mb-10 bg-orange-50 border-2 border-orange-200 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center gap-8 animate-in slide-in-from-top duration-700 shadow-xl shadow-orange-900/5">
+        <div className="mb-6 lg:mb-10 bg-orange-50 border-2 border-orange-200 p-6 lg:p-8 rounded-[2rem] lg:rounded-[2.5rem] flex flex-col md:flex-row items-center gap-6 lg:gap-8 animate-in slide-in-from-top duration-700 shadow-xl shadow-orange-900/5">
           <div className="w-20 h-20 bg-[#FF7A00] rounded-[1.5rem] flex items-center justify-center text-white shadow-lg shadow-orange-200 shrink-0">
              <ShieldAlert size={40} />
           </div>
@@ -280,14 +280,14 @@ const TableauClient = () => {
       )}
 
       {/* Header Info */}
-        <header className="h-20 bg-white border-b border-slate-100 flex items-center justify-between px-8 flex-shrink-0 z-50">
-          <div className="flex items-center gap-6">
+        <header className="h-20 bg-white border-b border-slate-100 flex items-center justify-between px-4 lg:px-8 flex-shrink-0 z-50">
+          <div className="flex items-center gap-4 lg:gap-6 w-full lg:w-auto">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2.5 bg-slate-50 text-slate-600 rounded-xl">
               <Menu size={20} />
             </button>
-            <div className="hidden md:flex items-center gap-3 bg-slate-50 rounded-2xl px-5 h-12 w-[400px] border border-slate-100 group focus-within:border-blue-200 transition-all">
+            <div className="hidden md:flex items-center gap-3 bg-slate-50 rounded-2xl px-5 h-12 w-full max-w-[400px] border border-slate-100 group focus-within:border-blue-200 transition-all">
               <Search size={18} className="text-slate-400 group-focus-within:text-[#1E3A8A]" />
-              <input type="text" placeholder="Rechercher une transaction, un employé..." className="bg-transparent border-none outline-none text-sm w-full text-slate-700 font-medium" />
+              <input type="text" placeholder="Rechercher..." className="bg-transparent border-none outline-none text-sm w-full text-slate-700 font-medium" />
             </div>
             
             {window.location.hostname === 'localhost' && (
@@ -297,13 +297,13 @@ const TableauClient = () => {
             )}
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 lg:gap-6">
             <div className="hidden sm:flex items-center gap-3 h-12 px-5 bg-blue-50/50 rounded-2xl text-[#1E3A8A] font-bold text-sm border border-blue-100/50">
                <Calendar size={18} className="text-[#FF7A00]" />
-               <span>{new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+               <span className="hidden lg:inline">{new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
             </div>
             
-            <div className="flex items-center gap-5 pl-8 border-l border-slate-100">
+            <div className="flex items-center gap-3 lg:gap-5 lg:pl-8 lg:border-l border-slate-100">
                <div className="text-right hidden md:block">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Session Propriétaire</p>
                   <p className="text-lg font-black text-[#1E3A8A] tracking-tighter leading-none">
@@ -319,8 +319,8 @@ const TableauClient = () => {
         </header>
 
         {/* Dynamic Content */}
-        <div className="flex-1 overflow-y-auto p-8 no-scrollbar bg-slate-50/50">
-          <div className="max-w-7xl mx-auto">
+        <div className="flex-1 overflow-y-auto p-4 lg:p-8 no-scrollbar bg-slate-50/50">
+          <div className="max-w-7xl mx-auto w-full">
             {!modulesActifs ? (
               <div className="h-full flex flex-col items-center justify-center py-40 gap-6">
                 <Loader2 className="animate-spin text-blue-500" size={64} />
@@ -452,8 +452,8 @@ const DashboardAccueil = ({ profil, etablissementSimuleId, navigate }: any) => {
   }, [transactions]);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      <div className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-xl shadow-blue-900/5 relative overflow-hidden border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-8">
+    <div className="space-y-6 lg:space-y-8 animate-in fade-in duration-700">
+      <div className="bg-white p-6 md:p-12 rounded-[2rem] lg:rounded-[2.5rem] shadow-xl shadow-blue-900/5 relative overflow-hidden border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6 lg:gap-8">
         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-[80px] -mr-32 -mt-32 opacity-50" />
         
         <div className="relative z-10 text-center md:text-left">
@@ -503,16 +503,16 @@ const DashboardAccueil = ({ profil, etablissementSimuleId, navigate }: any) => {
       </div>
       
       {/* Metrics Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         <MetricCard label="CA Encaissé" valeur={totals.encaisse} unit="XAF" icon={<Wallet className="text-[#1E3A8A]" />} />
         <MetricCard label="Potentiel (En salle)" valeur={potentielSalle} unit="XAF" icon={<Activity className="text-[#FF7A00]" />} />
         <MetricCard label="Encaissé (Espèces)" valeur={especes} unit="XAF" icon={<DollarSign className="text-emerald-500" />} />
         <MetricCard label="Dettes Clients" valeur={totals.dettes} unit="XAF" icon={<AlertTriangle className="text-rose-500" />} trend="danger" />
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
-          <div className="bg-white p-8 rounded-[2rem] shadow-xl shadow-blue-900/5 border border-slate-100">
+      <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
+        <div className="lg:col-span-2 space-y-6 lg:space-y-8">
+          <div className="bg-white p-6 lg:p-8 rounded-[2rem] shadow-xl shadow-blue-900/5 border border-slate-100">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
               <div>
                 <h3 className="text-xl font-bold text-[#1E3A8A]">Courbe des chiffres justifies</h3>
@@ -548,7 +548,7 @@ const DashboardAccueil = ({ profil, etablissementSimuleId, navigate }: any) => {
           </div>
 
           {/* Suivi des Salles */}
-          <div className="bg-white p-8 rounded-[2rem] shadow-xl shadow-blue-900/5 border border-slate-100">
+          <div className="bg-white p-6 lg:p-8 rounded-[2rem] shadow-xl shadow-blue-900/5 border border-slate-100">
              <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
                 <div className="flex items-center gap-4">
                    <div className="w-12 h-12 bg-blue-50 text-[#1E3A8A] rounded-2xl flex items-center justify-center shadow-sm"><Activity size={24} /></div>

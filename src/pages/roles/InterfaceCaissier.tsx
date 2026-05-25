@@ -215,44 +215,44 @@ const InterfaceCaissier = () => {
   return (
     <div className="h-screen bg-slate-50 flex flex-col font-['Inter',sans-serif] text-slate-800 overflow-hidden">
       {/* Caissier Header */}
-      <header className="h-24 bg-[#1E3A8A] px-10 flex items-center justify-between shadow-2xl relative z-30">
-          <div className="flex items-center gap-8">
+      <header className="h-auto min-h-[6rem] py-4 bg-[#1E3A8A] px-4 lg:px-10 flex flex-col lg:flex-row items-center justify-between gap-4 shadow-2xl relative z-30">
+          <div className="flex flex-col lg:flex-row items-center gap-4 lg:gap-8 w-full lg:w-auto">
               <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-[#1E3A8A] shadow-lg shadow-blue-900/20">
-                      {profil?.type_etablissement === 'boutique' ? <ShoppingBag size={28} /> : <Wallet size={28} />}
+                  <div className="w-10 h-10 lg:w-12 lg:h-12 bg-white rounded-2xl flex items-center justify-center text-[#1E3A8A] shadow-lg shadow-blue-900/20">
+                      {profil?.type_etablissement === 'boutique' ? <ShoppingBag size={24} /> : <Wallet size={24} />}
                   </div>
                   <div>
-                      <h1 className="text-white font-black text-xl tracking-tight uppercase leading-none">
-                        {profil?.type_etablissement === 'boutique' ? 'Caisse Boutique' : 'Caisse Bar/Resto'} • <span className="text-[#FF7A00]">{nomEmploye?.split(' ')[0]}</span>
+                      <h1 className="text-white font-black text-lg lg:text-xl tracking-tight uppercase leading-none">
+                        {profil?.type_etablissement === 'boutique' ? 'Caisse Boutique' : 'Caisse'} • <span className="text-[#FF7A00]">{nomEmploye?.split(' ')[0]}</span>
                       </h1>
                       <div className="flex items-center gap-2 mt-2">
                         <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                        <p className="text-blue-300 font-bold text-[10px] uppercase tracking-widest">
+                        <p className="text-blue-300 font-bold text-[9px] lg:text-[10px] uppercase tracking-widest truncate max-w-[200px] lg:max-w-none">
                           Session Active • {sessionActive?.caissierNom || nomEmploye}
                         </p>
                       </div>
                   </div>
               </div>
-              <div className="h-8 w-[1px] bg-white/10" />
-              <div className="flex gap-4">
-                  <button onClick={() => ouvrirVenteEmporter(idEmploye || 'inconnu', nomEmploye || 'Caissier')} className="h-12 px-6 bg-[#FF7A00] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-orange-600 transition-all shadow-lg shadow-orange-900/20 flex items-center gap-2">
-                    <Plus size={16} /> {profil?.type_etablissement === 'boutique' ? 'Nouvelle Vente' : 'Vente Directe'}
+              <div className="hidden lg:block h-8 w-[1px] bg-white/10" />
+              <div className="flex gap-2 lg:gap-4 w-full lg:w-auto">
+                  <button onClick={() => ouvrirVenteEmporter(idEmploye || 'inconnu', nomEmploye || 'Caissier')} className="flex-1 lg:flex-none h-12 px-4 lg:px-6 bg-[#FF7A00] text-white rounded-xl text-[9px] lg:text-[10px] font-black uppercase tracking-widest hover:bg-orange-600 transition-all shadow-lg shadow-orange-900/20 flex items-center justify-center gap-2">
+                    <Plus size={16} /> <span className="hidden sm:inline">{profil?.type_etablissement === 'boutique' ? 'Nouvelle Vente' : 'Vente Directe'}</span><span className="sm:hidden">Nouvelle</span>
                   </button>
-                  <button onClick={() => setShowClotureModal(true)} className="h-12 px-6 bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/20 transition-all border border-white/10 flex items-center gap-2">
-                    <Lock size={16} /> Fermer Caisse
+                  <button onClick={() => setShowClotureModal(true)} className="flex-1 lg:flex-none h-12 px-4 lg:px-6 bg-white/10 text-white rounded-xl text-[9px] lg:text-[10px] font-black uppercase tracking-widest hover:bg-white/20 transition-all border border-white/10 flex items-center justify-center gap-2">
+                    <Lock size={16} /> Fermer
                   </button>
               </div>
           </div>
 
-          <div className="flex items-center gap-6">
-              <button onClick={handleDeconnexion} className="flex items-center gap-3 px-5 py-3 bg-rose-500/10 text-rose-400 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all border border-rose-500/20 group">
+          <div className="flex items-center w-full lg:w-auto">
+              <button onClick={handleDeconnexion} className="w-full lg:w-auto flex items-center justify-center gap-3 px-5 py-3 bg-rose-500/10 text-rose-400 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all border border-rose-500/20 group">
                 Déconnexion <LogOut size={14} className="group-hover:translate-x-1 transition-transform" />
               </button>
           </div>
       </header>
       
       {/* Real-time Financial Dashboard */}
-      <div className="bg-white border-b border-slate-100 px-10 py-6 grid grid-cols-1 md:grid-cols-4 gap-6 shrink-0 relative z-20">
+      <div className="bg-white border-b border-slate-100 px-4 lg:px-10 py-4 lg:py-6 grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 shrink-0 relative z-20">
           <div className="bg-emerald-50 p-6 rounded-3xl border border-emerald-100 flex items-center gap-4 group hover:bg-emerald-100 transition-all">
               <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm">
                   <Banknote size={24} />
@@ -298,10 +298,10 @@ const InterfaceCaissier = () => {
       </div>
 
       {/* Main Interface Layout */}
-      <main className="flex-1 flex overflow-hidden">
+      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
         {/* Left Side: Orders Selection */}
-        <div className="flex-1 flex flex-col bg-slate-50/50 overflow-hidden">
-            <div className="p-8 pb-4">
+        <div className="flex-1 flex flex-col bg-slate-50/50 overflow-hidden w-full">
+            <div className="p-4 lg:p-8 lg:pb-4">
                 <div className="relative group">
                     <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#1E3A8A] transition-colors" size={20} />
                     <input 
@@ -329,7 +329,7 @@ const InterfaceCaissier = () => {
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-8 pt-4 no-scrollbar">
+            <div className="flex-1 overflow-y-auto p-4 lg:p-8 pt-4 no-scrollbar pb-24 lg:pb-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {commandesActives.map((cmd) => {
                         const table = tables.find(t => t.id === cmd.tableId);
@@ -453,8 +453,8 @@ const InterfaceCaissier = () => {
 
         {/* Right Side: Payment Processing Area */}
         {commandeSelectionnee ? (
-            <div className="w-[500px] bg-white border-l border-slate-100 flex flex-col shadow-2xl relative z-20">
-                <div className="flex-1 overflow-y-auto p-10 space-y-12 no-scrollbar">
+            <div className="absolute inset-0 z-50 lg:relative lg:z-20 w-full lg:w-[500px] bg-white border-l border-slate-100 flex flex-col shadow-2xl">
+                <div className="flex-1 overflow-y-auto p-4 lg:p-10 space-y-8 lg:space-y-12 no-scrollbar pb-32 lg:pb-10">
                     {/* Items List Summary */}
                     <section>
                         <div className="flex items-center justify-between mb-8">
@@ -605,7 +605,7 @@ const InterfaceCaissier = () => {
                     )}
                 </div>
 
-                <div className="p-10 bg-white border-t border-slate-50 space-y-6">
+                <div className="fixed lg:relative bottom-0 left-0 right-0 lg:p-10 p-4 bg-white border-t border-slate-50 space-y-4 lg:space-y-6 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] lg:shadow-none z-50">
                     <div className="flex justify-between items-center px-4">
                         <div className="text-left">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] block">Déjà versé</span>
@@ -657,7 +657,7 @@ const InterfaceCaissier = () => {
                 </div>
             </div>
         ) : (
-            <div className="w-[500px] bg-white border-l border-slate-100 flex flex-col items-center justify-center text-center p-20 space-y-8">
+            <div className="hidden lg:flex w-[500px] bg-white border-l border-slate-100 flex-col items-center justify-center text-center p-20 space-y-8">
                 <div className="w-32 h-32 bg-slate-50 rounded-[3rem] flex items-center justify-center text-[#1E3A8A] shadow-inner opacity-40">
                     <Database size={64} />
                 </div>
