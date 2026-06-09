@@ -21,7 +21,8 @@ interface CartItem extends Product {
 }
 
 export default function CaisseExpress() {
-  const { user } = useAuthStore();
+  const { profil, etablissementSimuleId } = useAuthStore();
+  const etablissementId = etablissementSimuleId || profil?.etablissement_id;
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,7 +38,7 @@ export default function CaisseExpress() {
     try {
       const q = query(
         collection(db, 'articles'),
-        where('etablissementId', '==', user?.etablissementId)
+        where('etablissementId', '==', etablissementId)
       );
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => ({
@@ -108,9 +109,9 @@ export default function CaisseExpress() {
     try {
       // 1. Enregistrer la commande
       const orderData = {
-        etablissementId: user?.etablissementId,
-        serveurId: user?.uid,
-        serveurNom: user?.nom,
+        etablissementId,
+        serveurId: profil?.id,
+        serveurNom: profil?.nom,
         items: cart,
         total,
         methodePaiement: paymentMethod,

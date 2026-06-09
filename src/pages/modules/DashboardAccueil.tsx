@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   TrendingUp, Users, AlertCircle, ShoppingBag, 
-  Activity, Star, Clock, Calendar, ArrowRight, Wallet
+  Star, Wallet, Package, ClipboardList, Truck
 } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
@@ -11,7 +11,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { aggregateFinancials, buildDailyFinancialSeries, type TransactionLike } from '../../lib/finance';
 import { Link } from 'react-router-dom';
 
-const DashboardAccueil = () => {
+const DashboardAccueil = ({ isSolo = false }: { isSolo?: boolean }) => {
   const { profil, etablissementSimuleId } = useAuthStore();
   const etablissementId = etablissementSimuleId || profil?.etablissement_id;
   
@@ -63,15 +63,46 @@ const DashboardAccueil = () => {
         <div className="relative z-10">
           <h2 className="text-3xl font-black mb-2 tracking-tight">Bonjour, {profil?.nom} 👋</h2>
           <p className="text-brand-primary-light/80 font-medium max-w-lg">
-            Voici un aperçu de l'activité de votre établissement aujourd'hui. Tout est sous contrôle.
+            {isSolo
+              ? "Mode Solo: creez vos articles, approvisionnez le stock et saisissez directement les ventes du jour."
+              : "Voici un aperçu de l'activité de votre établissement aujourd'hui. Tout est sous contrôle."}
           </p>
         </div>
         <div className="relative z-10 flex gap-4">
-          <Link to="/caisse-mode" className="btn btn-accent btn-lg">
-            <ShoppingBag size={18} /> Ouvrir la Caisse
-          </Link>
+          {isSolo ? (
+            <Link to="/tableau-de-bord?tab=saisie-journaliere" className="btn btn-accent btn-lg">
+              <ClipboardList size={18} /> Saisie directe
+            </Link>
+          ) : (
+            <Link to="/caisse-mode" className="btn btn-accent btn-lg">
+              <ShoppingBag size={18} /> Ouvrir la Caisse
+            </Link>
+          )}
         </div>
       </div>
+
+      {isSolo && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <SoloShortcut
+            to="/tableau-de-bord?tab=stocks"
+            icon={<Package size={24} />}
+            title="Creer les articles"
+            text="Boissons, nourriture, prix et seuils de stock."
+          />
+          <SoloShortcut
+            to="/tableau-de-bord?tab=achats"
+            icon={<Truck size={24} />}
+            title="Acheter / approvisionner"
+            text="Chaque achat augmente le stock disponible."
+          />
+          <SoloShortcut
+            to="/tableau-de-bord?tab=saisie-journaliere"
+            icon={<ClipboardList size={24} />}
+            title="Saisie directe"
+            text="Les ventes et pertes diminuent le stock."
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
@@ -89,23 +120,23 @@ const DashboardAccueil = () => {
           trend={5.2} 
           variant="default" 
         />
-        <StatCard 
+        {!isSolo && <StatCard
           title="Staff Présent" 
           value={employesPresents} 
           icon={<Users size={24} />} 
           variant="default" 
-        />
+        />}
         <StatCard 
           title="Crédits Clients" 
           value={dettes.toLocaleString()} 
           suffix="XAF"
           icon={<AlertCircle size={24} />} 
           trend={-2.4} 
-          variant="warning" 
+          variant="danger"
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {!isSolo && <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 card p-8 relative overflow-hidden">
           <div className="section-header">
             <div>
@@ -165,9 +196,19 @@ const DashboardAccueil = () => {
             Voir le rapport détaillé
           </button>
         </div>
-      </div>
+      </div>}
     </div>
   );
 };
+
+const SoloShortcut = ({ to, icon, title, text }: { to: string; icon: React.ReactNode; title: string; text: string }) => (
+  <Link to={to} className="card p-6 transition-all hover:-translate-y-1 hover:shadow-xl">
+    <div className="w-12 h-12 rounded-xl bg-brand-light text-brand flex items-center justify-center mb-5">
+      {icon}
+    </div>
+    <h3 className="font-black text-lg text-text-primary mb-2">{title}</h3>
+    <p className="text-sm font-medium text-text-muted leading-6">{text}</p>
+  </Link>
+);
 
 export default DashboardAccueil;

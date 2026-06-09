@@ -3,7 +3,7 @@ import {
   Home, ShoppingBag, Users, Landmark, 
   Settings, ChevronLeft, ChevronRight,
   UserCheck, AlertCircle, Calendar, Target,
-  LogOut, ShieldAlert, Printer
+  LogOut, Printer, Package, ClipboardList, Truck
 } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
@@ -11,6 +11,9 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 const navItems = [
   { id: 'dashboard', label: 'Tableau de Bord', icon: <Home size={20} />, path: '/tableau-de-bord' },
+  { id: 'stocks', label: 'Articles & Stocks', icon: <Package size={20} />, path: '/tableau-de-bord?tab=stocks', solo: true },
+  { id: 'achats', label: 'Achats Fournisseurs', icon: <Truck size={20} />, path: '/tableau-de-bord?tab=achats', solo: true },
+  { id: 'saisie-journaliere', label: 'Saisie Directe', icon: <ClipboardList size={20} />, path: '/tableau-de-bord?tab=saisie-journaliere', solo: true },
   { id: 'caisse-express', label: 'Caisse Express', icon: <ShoppingBag size={20} />, path: '/tableau-de-bord?tab=caisse-express' },
   { id: 'caisse', label: 'Caisse Avancée', icon: <Landmark size={20} />, path: '/choisir-role' },
   { id: 'finances', label: 'Trésorerie & Flux', icon: <Landmark size={20} />, path: '/tableau-de-bord?tab=finances' },
@@ -23,14 +26,14 @@ const navItems = [
   { id: 'parametres', label: 'Configuration', icon: <Settings size={20} />, path: '/tableau-de-bord?tab=parametres' },
 ];
 
-export const Sidebar = ({ activeTab, onTabChange }: { activeTab: string, onTabChange: (id: string) => void }) => {
+export const Sidebar = ({ activeTab, onTabChange, isSolo = false }: { activeTab: string, onTabChange: (id: string) => void, isSolo?: boolean }) => {
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
-  const { profil, logout } = useAuthStore();
+  const { profil, deconnexion } = useAuthStore();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     if (window.confirm('Voulez-vous vraiment vous déconnecter ?')) {
-      await logout();
+      await deconnexion();
       navigate('/connexion');
     }
   };
@@ -75,7 +78,7 @@ export const Sidebar = ({ activeTab, onTabChange }: { activeTab: string, onTabCh
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-4 space-y-1 no-scrollbar">
-        {navItems.map(item => {
+        {navItems.filter(item => !isSolo || item.id === 'dashboard' || item.solo).map(item => {
           const isActive = activeTab === item.id || (item.id === 'dashboard' && !activeTab);
           
           if (item.path.includes('?tab=')) {

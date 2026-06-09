@@ -16,7 +16,8 @@ interface Product {
 }
 
 export default function ModeHybride() {
-  const { user, profil } = useAuthStore();
+  const { profil, etablissementSimuleId } = useAuthStore();
+  const etablissementId = etablissementSimuleId || profil?.etablissement_id;
   const [activeTab, setActiveTab] = useState<'impression' | 'saisie'>('impression');
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -36,7 +37,7 @@ export default function ModeHybride() {
       try {
         const q = query(
           collection(db, 'articles'),
-          where('etablissementId', '==', user?.etablissementId)
+          where('etablissementId', '==', etablissementId)
         );
         const snapshot = await getDocs(q);
         const data = snapshot.docs.map(doc => ({
@@ -63,12 +64,12 @@ export default function ModeHybride() {
       }
     };
     fetchProducts();
-  }, [user]);
+  }, [etablissementId]);
 
   const genererPDF = () => {
     const doc = new jsPDF();
     const dateStr = new Date().toLocaleDateString('fr-FR');
-    const nomBar = profil?.nom_etablissement || "CAVE SUPRÊME";
+    const nomBar = profil?.etablissement_nom || "CAVE SUPRÊME";
 
     // --- PAGE 1 : TABLEAU OPÉRATIONNEL ---
     doc.setFillColor(50, 50, 50);

@@ -8,7 +8,7 @@ import {
   ArrowRight, Search, Filter, RefreshCcw
 } from 'lucide-react';
 import { db } from '../../lib/firebase';
-import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, writeBatch } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, writeBatch, increment } from 'firebase/firestore';
 import { useAuthStore } from '../../store/authStore';
 import type { Produit } from '../../store/posStore';
 import toast from 'react-hot-toast';
@@ -82,7 +82,7 @@ const GestionAchats = () => {
             });
 
             const produitRef = doc(db, 'produits', produitId);
-            batch.update(produitRef, { stockTotal: (produit.stockTotal || 0) + quantiteUnites });
+            batch.update(produitRef, { stockTotal: increment(quantiteUnites) });
 
             const transactionRef = doc(collection(db, 'transactions_pos'));
             batch.set(transactionRef, {
